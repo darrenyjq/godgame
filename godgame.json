@@ -1,0 +1,69 @@
+{
+    "env": "test",
+    "baseCfg": {
+        "etcdCfg": {
+            "EndPoints": ["http://127.0.0.1:2379"],
+            "User": "iceberg",
+            "Psw": "123456",
+            "Timeout": 3
+        }
+    },
+    "mysqlCfg": {
+        "Host": {
+            "read": "rdswwwnpeszufnbrr8xoq.mysql.rds.aliyuncs.com",
+            "write": "rdswwwnpeszufnbrr8xoq.mysql.rds.aliyuncs.com"
+        },
+        "Port": 3306,
+        "User": "qa",
+        "Psw": "laoyuegoutest",
+        "DbName": "app"
+    },
+    "redisCfg": {
+        "Addr": "127.0.0.1:6390",
+        "Psw": "",
+        "DBNo": 0
+    },
+    "default_lang": "cn",
+    "mns": {
+        "url": "",
+        "access_id": "",
+        "access_key": "",
+        "queue_name": "",
+        "purse_queue_name": ""
+    },
+    "es":{
+        "host": [""],
+        "pw_index": "",
+        "pw_type": ""
+    },
+    "im": {
+        "addr": "",
+        "app_id": "",
+        "app_token": ""
+    },
+    "nsq": {
+        "topic": "",
+        "writers": [""],
+        "lookups": [""]
+    },
+    "oss": {
+        "oss_accessid": "",
+        "oss_accesskey": ""
+    },
+    "urls": {
+        "level_jump": "laoyuegou://open?url=https://h5v2.lygou.cc/x/event/levelhelp.html",
+        "level_jump_tu": "laoyuegou://open?url=https://appv2.lygou.cc/unSign/DJBZ",
+        "god_help_jump": "laoyuegou://open?url=https://latest-test-h5v2.lygou.cc/x/event/levelhelp.html",
+        "tip": "点击开启推送通知，及时获得订单和消息提醒"
+    },
+    "mix": {
+        "jsy_appver_ios": "20702",
+        "jsy_appver_android": "20703"
+    },
+    "shence": {
+        "timeout": 10000,
+        "url": "https://shen.lygou.cc/sa",
+        "project": "default"
+    },
+    "god_lts_duration": 100
+}
