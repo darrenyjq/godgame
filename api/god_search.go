@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
-	"play/plorder/pb"
+	order_const "laoyuegou.pb/plorder/constants"
+	"laoyuegou.pb/plorder/pb"
 	"reflect"
 	"strconv"
 	"strings"
@@ -236,11 +237,11 @@ func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGame, err
 	result.SevenDaysHours = sortResp.GetData().GetGameSeventHoursCnt()
 	result.RejectOrder = sortResp.GetData().GetBadOrder()
 	result.Weight = gg.dao.GetGodGameWeight(godID, gameID)
-	if sortResp.GetData().GetStatus() == constants.PW_STATUS_BUSY {
+	if sortResp.GetData().GetStatus() == order_const.PW_STATUS_BUSY {
 		result.Weight = 0
 	}
 	result.PassedTime = godGame.Passedtime
-	if godGame.PeiwanPriceType == constants.PW_PRICE_TYPE_BY_OM {
+	if godGame.PeiwanPriceType == order_const.PW_PRICE_TYPE_BY_OM {
 		result.Price = godGame.PeiwanPrice
 	} else {
 		result.PriceID = accpetOrderSetting.PriceID

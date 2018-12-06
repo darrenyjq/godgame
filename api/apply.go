@@ -3,12 +3,13 @@ package api
 import (
 	"encoding/json"
 	"iceberg/frame"
+	game_const "laoyuegou.pb/game/constants"
+	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
-	"lfs/pb"
+	"laoyuegou.pb/lfs/pb"
 	"play/common/util"
-	"play/game/pb"
 )
 
 // 获取可以申请的游戏列表及大神游戏状态
@@ -109,7 +110,7 @@ func (gg *GodGame) GodGameApply(c frame.Context) error {
 		GameId: req.GameId,
 	})
 	if err == nil && gameStateResp.GetErrcode() == 0 {
-		if gameStateResp.GetData().GetState() == constants.GAME_STATE_NO {
+		if gameStateResp.GetData().GetState() == game_const.GAME_STATE_NO {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "品类已下架", nil)
 		}
 	}

@@ -1,14 +1,15 @@
 package api
 
 import (
-	pb_chatroom "chatroom/pb"
 	"encoding/json"
 	"iceberg/frame"
+	pb_chatroom "laoyuegou.pb/chatroom/pb"
+	game_const "laoyuegou.pb/game/constants"
+	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
-	"play/game/pb"
-	"play/plorder/pb"
+	"laoyuegou.pb/plorder/pb"
 	"sort"
 )
 
@@ -42,7 +43,7 @@ func (gg *GodGame) Feeds(c frame.Context) error {
 	if len(currentUser.GameIds) > 0 {
 		tmpMap := make(map[int64]byte)
 		for _, userGame := range currentUser.GameIds {
-			if myGameID, ok = constants.GameDicst[userGame]; ok {
+			if myGameID, ok = game_const.GameDicst[userGame]; ok {
 				tmpMap[myGameID] = 1
 			}
 		}

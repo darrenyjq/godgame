@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
+	"godgame/config"
 	"iceberg/frame"
 	"iceberg/frame/util"
 	user_pb "laoyuegou.pb/user/pb"
-	"play/godgame/config"
 )
 
 // Dao core dao

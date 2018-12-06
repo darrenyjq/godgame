@@ -8,12 +8,13 @@ import (
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	log "iceberg/frame/icelog"
+	game_const "laoyuegou.pb/game/constants"
+	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
+	plcommentpb "laoyuegou.pb/plcomment/pb"
+	"laoyuegou.pb/plorder/pb"
 	"play/common/key"
-	"play/game/pb"
-	plcommentpb "play/play-comment/pb"
-	"play/plorder/pb"
 	purse_pb "purse/pb"
 	"time"
 )
@@ -517,6 +518,8 @@ func (dao *Dao) GetOldData(godID, gameID int64) (model.GodGameApply, error) {
 	var err error
 	err = dao.dbr.Table("play_god_games_apply").Where("userid=? AND gameid=?", godID, gameID).First(&data).Error
 	if err == nil && data.ID > 0 {
+		data.Video = ""
+		data.Videos = ""
 		return data, nil
 	}
 	err = dao.dbr.Table("play_god_games").Where("userid=? AND gameid=?", godID, gameID).First(&data).Error
@@ -557,7 +560,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	})
 	if err != nil || gameStateResp.GetErrcode() != 0 {
 		return v1, fmt.Errorf("数据加载失败")
-	} else if gameStateResp.GetData().GetState() != constants.GAME_STATE_OK {
+	} else if gameStateResp.GetData().GetState() != game_const.GAME_STATE_OK {
 		return v1, fmt.Errorf("游戏已下架")
 	}
 	var acceptNum int64

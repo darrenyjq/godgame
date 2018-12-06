@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/olivere/elastic"
 	shence "github.com/sensorsdata/sa-sdk-go"
+	"godgame/config"
+	"godgame/core"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/httpkit/lyghttp/middleware"
@@ -11,8 +13,6 @@ import (
 	"laoyuegou.pb/godgame/model"
 	user_pb "laoyuegou.pb/user/pb"
 	"play/common/imclient"
-	"play/godgame/config"
-	"play/godgame/core"
 	"strconv"
 )
 

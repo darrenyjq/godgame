@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
+	"laoyuegou.pb/plcomment/pb"
+	"laoyuegou.pb/plorder/pb"
 	"play/common/key"
-	"play/play-comment/pb"
-	"play/plorder/pb"
 )
 
 // 重新计算大神陪玩等级

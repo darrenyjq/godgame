@@ -1,0 +1,94 @@
+stages:
+  - test
+  - deploy
+
+test:
+  stage: test
+  tags:
+    - iceberg
+  before_script:
+    - pwd
+    - cd `pwd` && cd ..
+    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
+    - pwd
+  script:
+    - echo $GOPATH
+    - cd $GOPATH/src/godgame
+    - go test -short $(go list ./...)
+  after_script:
+    - rm -rf $GOPATH/src/godgame
+
+deploydev:
+  only:
+    - release/dev
+  stage: deploy
+  tags:
+    - iceberg
+  before_script:
+    - pwd
+    - cd `pwd` && cd ..
+    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
+    - pwd
+  script:
+    - ./deploy.sh godgame linux dev
+  environment:
+    name: dev
+  after_script:
+    - rm -rf $GOPATH/src/godgame
+
+deployqa:
+  only:
+    - release/qa
+  stage: deploy
+  tags:
+    - iceberg
+  before_script:
+    - pwd
+    - cd `pwd` && cd ..
+    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
+    - pwd
+  script:
+    - ./deploy.sh godgame linux qa
+  environment:
+    name: qa
+  after_script:
+    - rm -rf $GOPATH/src/godgame
+
+deploystaging:
+  only:
+    - release/staging
+  stage: deploy
+  tags:
+    - iceberg
+  before_script:
+    - pwd
+    - cd `pwd` && cd ..
+    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
+    - pwd
+  script:
+    - ./deploy.sh godgame linux staging
+  environment:
+    name: staging
+  after_script:
+    - rm -rf $GOPATH/src/godgame
+  when: manual
+
+deployprod:
+  only:
+    - release/master
+  stage: deploy
+  tags:
+    - iceberg
+  before_script:
+    - pwd
+    - cd `pwd` && cd ..
+    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
+    - pwd
+  script:
+    - ./deploy.sh godgame linux prod
+  environment:
+    name: prod
+  after_script:
+    - rm -rf $GOPATH/src/godgame
+  when: manual
+

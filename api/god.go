@@ -1,29 +1,31 @@
 package api
 
 import (
-	"chatroom/pb"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/jinzhu/gorm"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
+	"laoyuegou.pb/chatroom/pb"
+	game_const "laoyuegou.pb/game/constants"
+	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/imapi/pb"
 	"laoyuegou.pb/keyword/pb"
+	"laoyuegou.pb/lfs/pb"
+	plcommentpb "laoyuegou.pb/plcomment/pb"
+	order_const "laoyuegou.pb/plorder/constants"
+	"laoyuegou.pb/plorder/pb"
+	sapb "laoyuegou.pb/sa/pb"
 	user_pb "laoyuegou.pb/user/pb"
 	"laoyuegou.pb/vip/pb"
-	"lfs/pb"
 	"play/common/key"
 	"play/common/util"
-	"play/game/pb"
-	plcommentpb "play/play-comment/pb"
-	"play/plorder/pb"
-	sapb "sa/pb"
 	"sort"
 	"time"
 )
@@ -101,7 +103,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		GameId: req.GetGameId(),
 	})
 	if err == nil && gameStateResp.GetErrcode() == 0 {
-		if gameStateResp.GetData().GetState() == constants.GAME_STATE_NO {
+		if gameStateResp.GetData().GetState() == game_const.GAME_STATE_NO {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "品类已下架", nil)
 		}
 	}
@@ -146,18 +148,18 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		GodId: v1.GodID,
 	})
 	if err != nil || freeResp.GetErrcode() != 0 {
-		freeStatus = constants.PW_STATUS_FREE
-		freeStatusDesc = constants.PW_STATS_DESC[constants.PW_STATUS_FREE]
+		freeStatus = order_const.PW_STATUS_FREE
+		freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_FREE]
 	} else {
 		freeStatus = freeResp.GetData().GetStatus()
 		freeStatusDesc = freeResp.GetData().GetStatusDesc()
-		if freeStatus == constants.PW_STATUS_FREE {
+		if freeStatus == order_const.PW_STATUS_FREE {
 			seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
 				UserId: v1.GodID,
 			})
 			if err == nil && seatResp.GetData() != nil {
-				freeStatus = constants.PW_STATUS_ON_SEAT
-				freeStatusDesc = constants.PW_STATS_DESC[constants.PW_STATUS_ON_SEAT]
+				freeStatus = order_const.PW_STATUS_ON_SEAT
+				freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_ON_SEAT]
 				roomID = seatResp.GetData().GetRoomId()
 			}
 		}
@@ -661,7 +663,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 			"age":            lyg_util.Age(userinfo.GetBirthday()),
 			"game_id":        god.GameID,
 			"status":         pwObj.PeiWanStatus,
-			"status_desc":    constants.PW_STATS_DESC[pwObj.PeiWanStatus],
+			"status_desc":    order_const.PW_STATS_DESC[pwObj.PeiWanStatus],
 			"voice":          god.Voice,
 			"voice_duration": god.VoiceDuration,
 			"aac":            god.Aac,
@@ -1240,7 +1242,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 
 	redisConn := gg.dao.GetPlayRedisPool().Get()
 	defer redisConn.Close()
-	if resp.GetData().GetJsy() == constants.GAME_SUPPORT_JSY_YES {
+	if resp.GetData().GetJsy() == game_const.GAME_SUPPORT_JSY_YES {
 		// 判断客户端版本是否支持即时约，iOS: appverion>=20702 Android: appverion>=20703
 		if (currentUser.Platform == constants.APP_OS_IOS && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_ios"]) ||
 			(currentUser.Platform == constants.APP_OS_Android && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_android"]) {
@@ -1414,18 +1416,18 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		GodId: v1.GodID,
 	})
 	if err != nil || freeResp.GetErrcode() != 0 {
-		freeStatus = constants.PW_STATUS_FREE
-		freeStatusDesc = constants.PW_STATS_DESC[constants.PW_STATUS_FREE]
+		freeStatus = order_const.PW_STATUS_FREE
+		freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_FREE]
 	} else {
 		freeStatus = freeResp.GetData().GetStatus()
 		freeStatusDesc = freeResp.GetData().GetStatusDesc()
-		if freeStatus == constants.PW_STATUS_FREE {
+		if freeStatus == order_const.PW_STATUS_FREE {
 			seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
 				UserId: v1.GodID,
 			})
 			if err == nil && seatResp.GetData() != nil {
-				freeStatus = constants.PW_STATUS_ON_SEAT
-				freeStatusDesc = constants.PW_STATS_DESC[constants.PW_STATUS_ON_SEAT]
+				freeStatus = order_const.PW_STATUS_ON_SEAT
+				freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_ON_SEAT]
 				roomID = seatResp.GetData().GetRoomId()
 			}
 		}

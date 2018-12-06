@@ -3,9 +3,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
 	"iceberg/frame"
 	"laoyuegou.com/util"
+	game_const "laoyuegou.pb/game/constants"
+	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
@@ -13,7 +15,6 @@ import (
 	"laoyuegou.pb/user/pb"
 	"play/common/key"
 	internal_util "play/common/util"
-	"play/game/pb"
 	"sort"
 	"time"
 )
@@ -326,7 +327,7 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 			resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
 				GameId: v1.GameID,
 			})
-			if err != nil || resp.GetErrcode() != 0 || resp.GetData().GetJsy() != constants.GAME_SUPPORT_JSY_YES {
+			if err != nil || resp.GetErrcode() != 0 || resp.GetData().GetJsy() != game_const.GAME_SUPPORT_JSY_YES {
 				continue
 			}
 			if userInfo.GetData().GetAppForm() == constants.APP_OS_IOS && userInfo.GetData().GetAppVersion() < gg.cfg.Mix["jsy_appver_ios"] {
@@ -544,7 +545,7 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 	} else if gameInfo.GetErrcode() != 0 {
 		c.Warnf("%s", gameInfo.GetErrmsg())
 		return c.JSON2(ERR_CODE_INTERNAL, "内部错误[2]", nil)
-	} else if gameInfo.GetData().GetState() != constants.GAME_STATE_OK {
+	} else if gameInfo.GetData().GetState() != game_const.GAME_STATE_OK {
 		return c.JSON2(ERR_CODE_FORBIDDEN, "游戏已下架", nil)
 	}
 	gods := gg.dao.GetJSYPaiDanGods(req.GetGameId(), req.GetGender())

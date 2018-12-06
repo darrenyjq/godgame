@@ -4,24 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"github.com/olivere/elastic"
+	"godgame/core"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/geo"
 	lyg_util "laoyuegou.com/util"
+	game_const "laoyuegou.pb/game/constants"
+	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
+	"laoyuegou.pb/plcomment/pb"
+	"laoyuegou.pb/plorder/pb"
+	sapb "laoyuegou.pb/sa/pb"
 	"laoyuegou.pb/union/pb"
 	"laoyuegou.pb/user/pb"
 	"play/common/imclient"
 	"play/common/util"
-	"play/game/pb"
-	"play/godgame/core"
-	"play/play-comment/pb"
-	"play/plorder/pb"
 	purse_pb "purse/pb"
-	sapb "sa/pb"
 	"strconv"
 	"strings"
 	"time"
@@ -1156,7 +1157,7 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 		GameId: req.GetGameId(),
 	})
 	if err == nil && gameStateResp.GetErrcode() == 0 {
-		if gameStateResp.GetData().GetState() == constants.GAME_STATE_NO {
+		if gameStateResp.GetData().GetState() == game_const.GAME_STATE_NO {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "品类已下架", nil)
 		}
 	}

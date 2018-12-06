@@ -3,14 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"godgame/api"
+	godGameCfg "godgame/config"
 	"iceberg/frame/config"
 	log "iceberg/frame/icelog"
 	"laoyuegou.com/version"
 	"laoyuegou.pb/godgame/pb"
 	"os"
 	"path/filepath"
-	"play/godgame/api"
-	godGameCfg "play/godgame/config"
 )
 
 var (
