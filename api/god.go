@@ -201,7 +201,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		"gl":                 util.FormatRMB2Gouliang(uniprice),
 		"order_cnt":          v1.AcceptNum,
 		"order_cnt_desc":     util.FormatAcceptOrderNumber(v1.AcceptNum),
-		"order_rate":         "0%",
+		"order_rate":         "100%",
 		"regions":            v1.Regions,
 		"levels":             v1.Levels,
 		"score":              v1.Score,
@@ -1238,6 +1238,12 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 				"newAppName":        currentUser.AppID,
 				"snatchingSwitchok": req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN,
 			}, true)
+		gg.shence.Track(fmt.Sprintf("%d", currentUser.UserID),
+			"PaidanSwitch",
+			map[string]interface{}{
+				"newAppName":     currentUser.AppID,
+				"PaidanSwitchok": req.GetGrabSwitch3() == constants.GRAB_SWITCH3_OPEN,
+			}, true)
 	}()
 
 	redisConn := gg.dao.GetPlayRedisPool().Get()
@@ -1465,7 +1471,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"gl":                 util.FormatRMB2Gouliang(uniprice),
 		"order_cnt":          v1.AcceptNum,
 		"order_cnt_desc":     util.FormatAcceptOrderNumber(v1.AcceptNum),
-		"order_rate":         "0%",
+		"order_rate":         "100%",
 		"regions":            v1.Regions,
 		"levels":             v1.Levels,
 		"score":              v1.Score,

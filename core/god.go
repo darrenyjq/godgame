@@ -518,8 +518,16 @@ func (dao *Dao) GetOldData(godID, gameID int64) (model.GodGameApply, error) {
 	var err error
 	err = dao.dbr.Table("play_god_games_apply").Where("userid=? AND gameid=?", godID, gameID).First(&data).Error
 	if err == nil && data.ID > 0 {
-		data.Video = ""
-		data.Videos = ""
+		if data.Status == constants.GOD_GAME_APPLY_STATUS_REFUSED {
+			// 被拒绝的老视频,不返回；返回老的已通过的视频
+			data.Video = ""
+			data.Videos = ""
+			var data2 model.GodGameApply
+			if err = dao.dbr.Table("play_god_games").Where("userid=? AND gameid=?", godID, gameID).First(&data2).Error; err == nil {
+				data.Video = data2.Video
+				data.Videos = data2.Videos
+			}
+		}
 		return data, nil
 	}
 	err = dao.dbr.Table("play_god_games").Where("userid=? AND gameid=?", godID, gameID).First(&data).Error

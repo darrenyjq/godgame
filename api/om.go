@@ -1240,7 +1240,7 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 		"gl":                 util.FormatRMB2Gouliang(uniprice),
 		"order_cnt":          v1.AcceptNum,
 		"order_cnt_desc":     util.FormatAcceptOrderNumber(v1.AcceptNum),
-		"order_rate":         "0%",
+		"order_rate":         "100%",
 		"regions":            v1.Regions,
 		"levels":             v1.Levels,
 		"score":              v1.Score,

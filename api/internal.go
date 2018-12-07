@@ -211,18 +211,15 @@ func (gg *GodGame) GodOrderSettings(c frame.Context) error {
 	}
 	settings := make([]*godgamepb.GodOrderSettingsResp_OrderSettings, 0, len(godGames))
 	for _, godGame := range godGames {
-		if godGame.GrabSwitch2 != constants.GRAB_SWITCH2_OPEN {
-			// 接单开关关闭不返回
-			continue
-		} else if len(godGame.Regions) == 0 || len(godGame.Levels) == 0 {
-			continue
-		}
 		settings = append(settings, &godgamepb.GodOrderSettingsResp_OrderSettings{
 			GameId:         godGame.GameID,
 			Regions:        godGame.Regions,
 			Levels:         godGame.Levels,
 			HighestLevelId: godGame.HighestLevelID,
 			GrabStatus:     godGame.GrabStatus == constants.GRAB_STATUS_YES,
+			GrabSwitch:     godGame.GrabSwitch,
+			GrabSwitch2:    godGame.GrabSwitch2,
+			GrabSwitch3:    godGame.GrabSwitch3,
 		})
 	}
 	return c.JSON2(StatusOK_V3, "", settings)
@@ -593,4 +590,53 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 		return c.JSON2(ERR_CODE_INTERNAL, "内部错误[5]", nil)
 	}
 	return c.JSON2(StatusOK_V3, "", len(gods))
+}
+
+func (gg *GodGame) GetGodGameInfo(c frame.Context) error {
+	var req godgamepb.GetGodGameInfoReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetGodId() == 0 || req.GetGameId() == 0 {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "参数错误[1]", nil)
+	}
+	god := gg.dao.GetGod(req.GetGodId())
+	if god.Status != constants.GOD_STATUS_PASSED {
+		return c.JSON2(StatusOK_V3, "1", nil)
+	}
+	v1, err := gg.dao.GetGodSpecialGameV1(req.GetGodId(), req.GetGameId())
+	if err != nil {
+		c.Errorf("%s", err.Error())
+		return c.JSON2(StatusOK_V3, "2", nil)
+	}
+	if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+		return c.JSON2(StatusOK_V3, "3", nil)
+	}
+
+	acceptResp, err := gamepb.Accept(c, &gamepb.AcceptReq{
+		GameId:   v1.GameID,
+		AcceptId: v1.HighestLevelID,
+	})
+	if err != nil || acceptResp.GetErrcode() != 0 {
+		return c.JSON2(StatusOK_V3, "4", nil)
+	}
+
+	var uniprice int64
+	if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+		uniprice = v1.PeiWanPrice
+	} else {
+		cfgResp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+			GameId: v1.GameID,
+		})
+		if err != nil || cfgResp.GetErrcode() != 0 {
+			return c.JSON2(StatusOK_V3, "5", nil)
+		}
+		uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
+	}
+	resp := &godgamepb.GetGodGameInfoResp_Data{
+		Gl:       internal_util.FormatRMB2Gouliang(uniprice),
+		PwPrice:  internal_util.FormatPriceV1(uniprice),
+		GameName: acceptResp.GetData().GetGameName(),
+	}
+	return c.JSON2(StatusOK_V3, "", resp)
 }
