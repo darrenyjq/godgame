@@ -127,7 +127,8 @@ func (dao *Dao) BlockGod(godID int64) error {
 	err = dao.dbw.Model(&god).Update("status", constants.GOD_STATUS_BLOCKED).Error
 	if err == nil {
 		// 冻结后，自动将所有游戏的接单开关设为关闭，解冻不恢复开关状态，需要让大神自己手动开启
-		dao.dbw.Table("play_god_accept_setting").Where("god_id=?", godID).Update("grab_switch", constants.GRAB_SWITCH_CLOSE)
+		dao.dbw.Table("play_god_accept_setting").Where("god_id=?", godID).Updates(map[string]interface{}{"grab_switch": constants.GRAB_SWITCH_CLOSE, "grab_switch2": constants.GRAB_SWITCH2_CLOSE, "grab_switch3": constants.GRAB_SWITCH3_CLOSE})
+		// Update("grab_switch", constants.GRAB_SWITCH_CLOSE)
 		bs, _ := json.Marshal(god)
 		c := dao.cpool.Get()
 		defer c.Close()
@@ -461,7 +462,7 @@ func (dao *Dao) BlockGodGame(godID, gameID int64) error {
 	}
 	err = dao.dbw.Model(&godGame).Update("status", constants.GOD_GAME_STATUS_BLOCKED).Error
 	// 冻结后，自动游戏的接单开关设为关闭，解冻不恢复开关状态，需要让大神自己手动开启
-	dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", godID, gameID).Updates(map[string]interface{}{"grab_switch": constants.GRAB_SWITCH_CLOSE, "grab_switch2": constants.GRAB_SWITCH2_CLOSE})
+	dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", godID, gameID).Updates(map[string]interface{}{"grab_switch": constants.GRAB_SWITCH_CLOSE, "grab_switch2": constants.GRAB_SWITCH2_CLOSE, "grab_switch3": constants.GRAB_SWITCH3_CLOSE})
 	c := dao.cpool.Get()
 	c.Do("DEL", key.RKGodGameInfo(godID, gameID), key.RKGodGameV1(godID), key.RKBlockedGodGameV1(godID), key.GodAcceptOrderSettingKey(godID))
 	c.Close()
