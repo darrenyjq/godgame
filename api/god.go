@@ -1005,7 +1005,9 @@ func (gg *GodGame) OldData(c frame.Context) error {
 		"desc":             data.Desc,
 	}
 	if data.Video != "" {
-		ret["video"] = gg.formatVideoInfo(c, data.Video)
+		tmpStr := gg.formatVideoInfo(c, data.Video)
+		ret["video"] = tmpStr
+		ret["videos"] = []string{tmpStr}
 	}
 	if data.Videos != "" {
 		var tmpVideos []string
