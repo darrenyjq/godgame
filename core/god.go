@@ -640,6 +640,9 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	if comment != nil && comment.GetData() != nil {
 		v1.Score = comment.GetData().GetScore()
 	}
+	v1.GrabSwitch = constants.GRAB_SWITCH2_CLOSE
+	v1.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
+	v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
 	accpetOrderSetting, err := dao.GetGodSpecialAcceptOrderSetting(godID, gameID)
 	if err == nil {
 		v1.PriceID = accpetOrderSetting.PriceID
@@ -1010,6 +1013,9 @@ func (dao *Dao) GetGodBlockedGameV1(godID int64) (model.GodGameV1sSortedByAccept
 		}
 		for _, game := range games {
 			if v1, err := dao.GetGodSpecialBlockedGameV1(godID, game.GameID); err == nil {
+				v1.GrabSwitch = constants.GRAB_SWITCH_CLOSE
+				v1.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
+				v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
 				v1s = append(v1s, v1)
 			}
 		}
