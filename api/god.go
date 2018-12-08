@@ -212,7 +212,9 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		"shareurl":           gg.GenPeiWanShareURL(tmpImages[0], userinfo.GetUsername(), "", v1.GodID, v1.GameID),
 	}
 	if v1.Video != "" {
-		data["video"] = gg.formatVideoInfo(c, v1.Video)
+		tmpStr := gg.formatVideoInfo(c, v1.Video)
+		data["video"] = tmpStr
+		data["videos"] = []string{tmpStr}
 	}
 	if v1.Videos != "" {
 		var tmpVideos []string
@@ -1482,7 +1484,9 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"shareurl":           gg.GenPeiWanShareURL(tmpImages[0], userinfo.GetUsername(), "", v1.GodID, v1.GameID),
 	}
 	if v1.Video != "" {
-		data["video"] = gg.formatVideoInfo(c, v1.Video)
+		tmpStr := gg.formatVideoInfo(c, v1.Video)
+		data["video"] = tmpStr
+		data["videos"] = []string{tmpStr}
 	}
 	if v1.Videos != "" {
 		var tmpVideos []string
