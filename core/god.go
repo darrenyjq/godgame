@@ -200,6 +200,7 @@ func (dao *Dao) ModifyVideos(apply model.GodGameApply) error {
 	} else {
 		apply.Status = constants.GOD_GAME_APPLY_STATUS_PENDING
 		apply.Createdtime = time.Now()
+		apply.ID = 0
 		err = dao.dbw.Create(&apply).Error
 		if err == nil {
 			bs, _ = json.Marshal(apply)

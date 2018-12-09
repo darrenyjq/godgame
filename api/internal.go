@@ -551,7 +551,7 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 	}
 	gender := constants.GENDER_DESC[req.GetGender()]
 	if gender == "" {
-		gender = "全部"
+		gender = "不限"
 	}
 	title := "收到新的" + gameInfo.GetData().GetGameName() + "派单"
 	msg := map[string]interface{}{
