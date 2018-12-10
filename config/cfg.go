@@ -50,7 +50,7 @@ type Config struct {
 		Timeout int    `json:"timeout"`
 		URL     string `json:"url"`
 		Project string `json:"project"`
-	}
+	} `json:"shence"`
 
 	GodLTSDuration int `json:"god_lts_duration"`
 }

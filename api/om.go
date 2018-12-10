@@ -85,6 +85,11 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 			}
 			// 神策埋点
 			go func() {
+				gg.shence.ProfileSet(fmt.Sprintf("%d", req.GetGodId()),
+					map[string]interface{}{
+						"godplayerok": true,
+						"frozen":      false,
+					}, true)
 				gg.shence.Track(fmt.Sprintf("%d", req.GetGodId()),
 					"ApplyforGod",
 					map[string]interface{}{
@@ -349,7 +354,6 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 			gg.dao.RemoveFromJSYPaiDanGodPool(v1.GameID, req.GetGodId())
 		}
 	}
-
 	msg := imclient.CommonSystemMessage{
 		Title:   "大神身份冻结",
 		Content: fmt.Sprintf("您的大神身份被冻结\n冻结原因：%s", req.GetReason()),
@@ -371,6 +375,11 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 		"status": constants.GOD_STATUS_BLOCKED,
 	})
 	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
+	go gg.shence.ProfileSet(fmt.Sprintf("%d", req.GetGodId()),
+		map[string]interface{}{
+			"godplayerok": true,
+			"frozen":      true,
+		}, true)
 	return c.JSON2(StatusOK_V3, "", nil)
 }
 
@@ -426,6 +435,11 @@ func (gg *GodGame) UnBlockGod(c frame.Context) error {
 		"status": constants.GOD_STATUS_PASSED,
 	})
 	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
+	go gg.shence.ProfileSet(fmt.Sprintf("%d", req.GetGodId()),
+		map[string]interface{}{
+			"godplayerok": true,
+			"frozen":      false,
+		}, true)
 	return c.JSON2(StatusOK_V3, "", nil)
 }
 
