@@ -1204,11 +1204,11 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		req.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 		req.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
 	}
-	if req.GetGrabSwitch2() != constants.GRAB_SWITCH2_CLOSE {
-		req.GrabSwitch2 = constants.GRAB_SWITCH2_OPEN
+	if req.GetGrabSwitch2() != constants.GRAB_SWITCH2_OPEN {
+		req.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 	}
-	if req.GetGrabSwitch3() != constants.GRAB_SWITCH3_CLOSE {
-		req.GrabSwitch3 = constants.GRAB_SWITCH3_OPEN
+	if req.GetGrabSwitch3() != constants.GRAB_SWITCH3_OPEN {
+		req.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
 	}
 	bs, err := json.Marshal(req.GetAcceptSettings())
 	if err != nil {
