@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/gomodule/redigo/redis"
 	"laoyuegou.pb/godgame/model"
-	"play/common/key"
 )
 
 // 获取大神所有游戏的接单设置
@@ -13,7 +12,7 @@ func (dao *Dao) GetGodAcceptOrderSettings(godID int64) ([]model.OrderAcceptSetti
 	var err error
 	var tmpOas model.OrderAcceptSetting
 	redisConn := dao.cpool.Get()
-	redisKey := key.GodAcceptOrderSettingKey(godID)
+	redisKey := GodAcceptOrderSettingKey(godID)
 	defer redisConn.Close()
 	if exists, _ := redis.Bool(redisConn.Do("EXISTS", redisKey)); exists {
 		vals, _ := redis.ByteSlices(redisConn.Do("HVALS", redisKey))
@@ -55,7 +54,7 @@ func (dao *Dao) GetGodSpecialAcceptOrderSetting(godID, gameID int64) (model.Orde
 	var oas model.OrderAcceptSetting
 	var err error
 	redisConn := dao.cpool.Get()
-	redisKey := key.GodAcceptOrderSettingKey(godID)
+	redisKey := GodAcceptOrderSettingKey(godID)
 	defer redisConn.Close()
 	if bs, err := redis.Bytes(redisConn.Do("HGET", redisKey, gameID)); err == nil {
 		err = json.Unmarshal(bs, &oas)
@@ -98,7 +97,7 @@ func (dao *Dao) ModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) e
 		return err
 	}
 	redisConn := dao.cpool.Get()
-	redisConn.Do("DEL", key.GodAcceptOrderSettingKey(settings.GodID), key.RKGodGameV1(settings.GodID))
+	redisConn.Do("DEL", GodAcceptOrderSettingKey(settings.GodID), RKGodGameV1(settings.GodID))
 	redisConn.Close()
 	dao.GetGodSpecialGameV1(settings.GodID, settings.GameID)
 	return nil

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/olivere/elastic"
+	"godgame/core"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
@@ -24,8 +25,6 @@ import (
 	sapb "laoyuegou.pb/sa/pb"
 	user_pb "laoyuegou.pb/user/pb"
 	"laoyuegou.pb/vip/pb"
-	"play/common/key"
-	"play/common/util"
 	"sort"
 	"time"
 )
@@ -198,14 +197,14 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		"ext":                tmpExt,
 		"desc":               v1.Desc,
 		"uniprice":           uniprice,
-		"gl":                 util.FormatRMB2Gouliang(uniprice),
+		"gl":                 FormatRMB2Gouliang(uniprice),
 		"order_cnt":          v1.AcceptNum,
-		"order_cnt_desc":     util.FormatAcceptOrderNumber(v1.AcceptNum),
+		"order_cnt_desc":     FormatAcceptOrderNumber(v1.AcceptNum),
 		"order_rate":         "100%",
 		"regions":            v1.Regions,
 		"levels":             v1.Levels,
 		"score":              v1.Score,
-		"score_desc":         util.FormatScore(v1.Score),
+		"score_desc":         FormatScore(v1.Score),
 		"status":             freeStatus,
 		"status_desc":        freeStatusDesc,
 		"room_id":            roomID,
@@ -672,9 +671,9 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 			"imgs":           []string{fmt.Sprintf("%s/400", tmpImages[0])},
 			"god_icon":       god.GodIcon,
 			"uniprice":       uniprice,
-			"gl":             util.FormatRMB2Gouliang(uniprice),
+			"gl":             FormatRMB2Gouliang(uniprice),
 			"order_cnt":      god.AcceptNum,
-			"order_cnt_desc": util.FormatAcceptOrderNumber(god.AcceptNum),
+			"order_cnt_desc": FormatAcceptOrderNumber(god.AcceptNum),
 		})
 	}
 	if len(invalidItems) > 0 {
@@ -790,10 +789,10 @@ func (gg *GodGame) GodGamesV2(c frame.Context) error {
 		}
 		uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
 	}
-	tmpData["pw_price"] = util.FormatPriceV1(uniprice)
-	tmpData["gl"] = util.FormatRMB2Gouliang(uniprice)
+	tmpData["pw_price"] = FormatPriceV1(uniprice)
+	tmpData["gl"] = FormatRMB2Gouliang(uniprice)
 	tmpData["game_id"] = v1.GameID
-	tmpData["score"] = util.FormatScore(v1.Score)
+	tmpData["score"] = FormatScore(v1.Score)
 	acceptResp, err := gamepb.Accept(c, &gamepb.AcceptReq{
 		GameId:   v1.GameID,
 		AcceptId: v1.HighestLevelID,
@@ -804,7 +803,7 @@ func (gg *GodGame) GodGamesV2(c frame.Context) error {
 	} else {
 		return c.JSON2(StatusOK_V3, "", nil)
 	}
-	tmpData["accept_num"] = util.FormatAcceptOrderNumber(v1.AcceptNum)
+	tmpData["accept_num"] = FormatAcceptOrderNumber(v1.AcceptNum)
 	tmpData["status"] = constants.GOD_GAME_STATUS_PASSED
 	return c.JSON2(StatusOK_V3, "", tmpData)
 }
@@ -843,10 +842,10 @@ func (gg *GodGame) GodGamesV3(c frame.Context) error {
 			}
 			uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
 		}
-		tmpData["pw_price"] = util.FormatPriceV1(uniprice)
-		tmpData["gl"] = util.FormatRMB2Gouliang(uniprice)
+		tmpData["pw_price"] = FormatPriceV1(uniprice)
+		tmpData["gl"] = FormatRMB2Gouliang(uniprice)
 		tmpData["game_id"] = v1.GameID
-		tmpData["score"] = util.FormatScore(v1.Score)
+		tmpData["score"] = FormatScore(v1.Score)
 		acceptResp, err := gamepb.Accept(c, &gamepb.AcceptReq{
 			GameId:   v1.GameID,
 			AcceptId: v1.HighestLevelID,
@@ -858,7 +857,7 @@ func (gg *GodGame) GodGamesV3(c frame.Context) error {
 			icelog.Errorf("### Accept error:%s, %d", err, acceptResp.GetErrcode())
 			continue
 		}
-		tmpData["accept_num"] = util.FormatAcceptOrderNumber(v1.AcceptNum)
+		tmpData["accept_num"] = FormatAcceptOrderNumber(v1.AcceptNum)
 		tmpData["status"] = constants.GOD_GAME_STATUS_PASSED
 		data = append(data, tmpData)
 	}
@@ -902,8 +901,8 @@ func (gg *GodGame) GodGamesV4(c frame.Context) error {
 					return
 				}
 				currentUserID := gg.getCurrentUserID(c)
-				// gg.msgSender.SendMessage(godID, currentUserID, imclient.MESSAGE_CONTENT_TYPE_TEXT,
-				// 	imclient.MESSAGE_SUBTYPE_CHAT, lyg_util.CreatePrivateMessageThread(godID, currentUserID).String(),
+				// gg.msgSender.SendMessage(godID, currentUserID, imapipb.MESSAGE_CONTENT_TYPE_TEXT,
+				// 	imapipb.MESSAGE_SUBTYPE_CHAT, lyg_util.CreatePrivateMessageThread(godID, currentUserID).String(),
 				// 	god.Desc, "", string(extBytes), true, []int64{})
 				sendResp, err := imapipb.SendMessage(c, &imapipb.SendMessageReq{
 					Thread:      lyg_util.CreatePrivateMessageThread(godID, currentUserID).String(),
@@ -945,10 +944,10 @@ func (gg *GodGame) GodGamesV4(c frame.Context) error {
 			}
 			uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
 		}
-		tmpData["pw_price"] = util.FormatPriceV1(uniprice)
-		tmpData["gl"] = util.FormatRMB2Gouliang(uniprice)
+		tmpData["pw_price"] = FormatPriceV1(uniprice)
+		tmpData["gl"] = FormatRMB2Gouliang(uniprice)
 		tmpData["game_id"] = v1.GameID
-		tmpData["score"] = util.FormatScore(v1.Score)
+		tmpData["score"] = FormatScore(v1.Score)
 		acceptResp, err := gamepb.Accept(c, &gamepb.AcceptReq{
 			GameId:   v1.GameID,
 			AcceptId: v1.HighestLevelID,
@@ -960,7 +959,7 @@ func (gg *GodGame) GodGamesV4(c frame.Context) error {
 			icelog.Errorf("### Accept error:%s, %d", err, acceptResp.GetErrcode())
 			continue
 		}
-		tmpData["accept_num"] = util.FormatAcceptOrderNumber(v1.AcceptNum)
+		tmpData["accept_num"] = FormatAcceptOrderNumber(v1.AcceptNum)
 		tmpData["status"] = constants.GOD_GAME_STATUS_PASSED
 		data = append(data, tmpData)
 	}
@@ -1024,7 +1023,7 @@ func (gg *GodGame) OldData(c frame.Context) error {
 		ret["realname"] = godApply.RealName
 		ret["idcard"] = godApply.IDcard
 		ret["idcardurl"] = godApply.IDcardurl
-		ret["idcardurl2"] = util.GenIDCardURL(godApply.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey)
+		ret["idcardurl2"] = GenIDCardURL(godApply.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey)
 		ret["idcardtype"] = godApply.IDcardtype
 		ret["phone"] = godApply.Phone
 	}
@@ -1059,7 +1058,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	})
 	if err == nil && orderResp.GetData() != nil {
 		data["accept_num"] = orderResp.GetData().GetCompletedHoursAmount()
-		data["accept_num_desc"] = util.FormatAcceptOrderNumber(orderResp.GetData().GetCompletedHoursAmount())
+		data["accept_num_desc"] = FormatAcceptOrderNumber(orderResp.GetData().GetCompletedHoursAmount())
 	}
 	commentCountResp, err := plcommentpb.GetGodCommentCount(frame.TODO(), &plcommentpb.GetGodCommentCountReq{
 		GodId: currentUserID,
@@ -1136,7 +1135,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"grab_switch2":        godGame.GrabSwitch2,
 			"grab_switch3":        godGame.GrabSwitch3,
 			"order_cnt":           godGame.AcceptNum,
-			"order_cnt_desc":      util.FormatAcceptOrderNumber(godGame.AcceptNum),
+			"order_cnt_desc":      FormatAcceptOrderNumber(godGame.AcceptNum),
 		})
 	}
 	data["order_settings"] = settings
@@ -1256,8 +1255,8 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		// 判断客户端版本是否支持即时约，iOS: appverion>=20702 Android: appverion>=20703
 		if (currentUser.Platform == constants.APP_OS_IOS && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_ios"]) ||
 			(currentUser.Platform == constants.APP_OS_Android && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_android"]) {
-			jsyKey := key.RKJSYGods(req.GetGameId(), godInfo.Gender)
-			jsyPaiDanKey := key.RKJSYPaiDanGods(req.GetGameId(), godInfo.Gender)
+			jsyKey := core.RKJSYGods(req.GetGameId(), godInfo.Gender)
+			jsyPaiDanKey := core.RKJSYPaiDanGods(req.GetGameId(), godInfo.Gender)
 			if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
 				redisConn.Do("ZADD", jsyKey, time.Now().Unix(), currentUser.UserID)
 			} else {
@@ -1275,13 +1274,13 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	}
 	for _, region := range godGame.Regions {
 		for _, level := range godGame.Levels {
-			redisConn.Do("ZREM", key.GodsRedisKey3(req.GetGameId(), region, level), currentUser.UserID)
+			redisConn.Do("ZREM", core.GodsRedisKey3(req.GetGameId(), region, level), currentUser.UserID)
 		}
 	}
 	if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
 		for _, tmpRegion := range req.GetAcceptSettings().GetRegionId() {
 			for _, tmpLevel := range req.GetAcceptSettings().GetLevelId() {
-				redisConn.Do("ZADD", key.GodsRedisKey3(req.GetGameId(), tmpRegion, tmpLevel), godGame.HighestLevelID, currentUser.UserID)
+				redisConn.Do("ZADD", core.GodsRedisKey3(req.GetGameId(), tmpRegion, tmpLevel), godGame.HighestLevelID, currentUser.UserID)
 			}
 		}
 	}
@@ -1472,14 +1471,14 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"ext":                tmpExt,
 		"desc":               v1.Desc,
 		"uniprice":           uniprice,
-		"gl":                 util.FormatRMB2Gouliang(uniprice),
+		"gl":                 FormatRMB2Gouliang(uniprice),
 		"order_cnt":          v1.AcceptNum,
-		"order_cnt_desc":     util.FormatAcceptOrderNumber(v1.AcceptNum),
+		"order_cnt_desc":     FormatAcceptOrderNumber(v1.AcceptNum),
 		"order_rate":         "100%",
 		"regions":            v1.Regions,
 		"levels":             v1.Levels,
 		"score":              v1.Score,
-		"score_desc":         util.FormatScore(v1.Score),
+		"score_desc":         FormatScore(v1.Score),
 		"status":             freeStatus,
 		"status_desc":        freeStatusDesc,
 		"room_id":            roomID,

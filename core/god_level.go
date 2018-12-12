@@ -6,7 +6,6 @@ import (
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/plcomment/pb"
 	"laoyuegou.pb/plorder/pb"
-	"play/common/key"
 )
 
 // 重新计算大神陪玩等级
@@ -68,7 +67,7 @@ func (dao *Dao) ReCalcGodLevel(godID, gameID int64) error {
 	bs, _ := json.Marshal(v1)
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("HSET", key.RKGodGameV1(godID), gameID, string(bs))
-	c.Do("DEL", key.RKGodGameInfo(godID, gameID))
+	c.Do("HSET", RKGodGameV1(godID), gameID, string(bs))
+	c.Do("DEL", RKGodGameInfo(godID, gameID))
 	return nil
 }

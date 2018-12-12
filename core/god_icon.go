@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"laoyuegou.pb/godgame/model"
-	"play/common/key"
 	"time"
 )
 
@@ -19,7 +18,7 @@ func (dao *Dao) AddGodIcon(godIcon model.GodIcon) (*model.GodIcon, error) {
 	}
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("HSET", key.RKGodIcons(), godIcon.ID, godIcon.Url)
+	c.Do("HSET", RKGodIcons(), godIcon.ID, godIcon.Url)
 	return &godIcon, nil
 }
 
@@ -39,7 +38,7 @@ func (dao *Dao) DisableGodIcon(id int64) error {
 	}
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("HDEL", key.RKGodIcons(), id)
+	c.Do("HDEL", RKGodIcons(), id)
 	return nil
 }
 
@@ -71,7 +70,7 @@ func (dao *Dao) ModifyGodIcon(godIcon model.GodIcon) (*model.GodIcon, error) {
 func (dao *Dao) SetGodIcon(godID, iconID, begin, end int64) error {
 	c := dao.cpool.Get()
 	defer c.Close()
-	if url, _ := redis.String(c.Do("HGET", key.RKGodIcons(), iconID)); url == "" {
+	if url, _ := redis.String(c.Do("HGET", RKGodIcons(), iconID)); url == "" {
 		return fmt.Errorf("无效的标签ID")
 	}
 	tmpGodIcon := model.TmpGodIcon{
@@ -83,7 +82,7 @@ func (dao *Dao) SetGodIcon(godID, iconID, begin, end int64) error {
 	if err != nil {
 		return err
 	}
-	c.Do("SET", key.RKGodIcon(godID), string(bs), "EX", (end - time.Now().Unix()))
+	c.Do("SET", RKGodIcon(godID), string(bs), "EX", (end - time.Now().Unix()))
 	return nil
 }
 
@@ -92,7 +91,7 @@ func (dao *Dao) GetGodIcon(godID int64) (*model.TmpGodIcon, error) {
 	var err error
 	c := dao.cpool.Get()
 	defer c.Close()
-	bs, err := redis.Bytes(c.Do("GET", key.RKGodIcon(godID)))
+	bs, err := redis.Bytes(c.Do("GET", RKGodIcon(godID)))
 	if err != nil {
 		return nil, err
 	}
@@ -106,5 +105,5 @@ func (dao *Dao) GetGodIcon(godID int64) (*model.TmpGodIcon, error) {
 func (dao *Dao) RemoveGodIcon(godID int64) {
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("DEL", key.RKGodIcon(godID))
+	c.Do("DEL", RKGodIcon(godID))
 }

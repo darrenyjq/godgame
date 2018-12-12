@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic"
+	"godgame/core"
 	"iceberg/frame"
 	"laoyuegou.com/util"
 	game_const "laoyuegou.pb/game/constants"
@@ -13,8 +14,6 @@ import (
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/imapi/pb"
 	"laoyuegou.pb/user/pb"
-	"play/common/key"
-	internal_util "play/common/util"
 	"sort"
 	"time"
 )
@@ -84,20 +83,20 @@ func (gg *GodGame) SimpleGodGame(c frame.Context) error {
 		tmpData.GodImgs = []string{tmpImgs[0] + "/400"}
 		if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
 			tmpData.Uniprice = v1.PeiWanPrice
-			tmpData.Gl = internal_util.FormatRMB2Gouliang(v1.PeiWanPrice)
+			tmpData.Gl = FormatRMB2Gouliang(v1.PeiWanPrice)
 		} else {
 			tmpCfgV2, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
 				GameId: req.GetGameId(),
 			})
 			if err == nil {
 				tmpData.Uniprice = tmpCfgV2.GetData().GetPrices()[v1.PriceID]
-				tmpData.Gl = internal_util.FormatRMB2Gouliang(tmpCfgV2.GetData().GetPrices()[v1.PriceID])
+				tmpData.Gl = FormatRMB2Gouliang(tmpCfgV2.GetData().GetPrices()[v1.PriceID])
 			} else {
 				continue
 			}
 		}
 		tmpData.OrderCnt = v1.AcceptNum
-		tmpData.OrderCntDesc = internal_util.FormatAcceptOrderNumber(v1.AcceptNum)
+		tmpData.OrderCntDesc = FormatAcceptOrderNumber(v1.AcceptNum)
 		tmpData.Score = fmt.Sprintf("%.1f", float64(v1.Score))
 		data = append(data, tmpData)
 	}
@@ -333,10 +332,10 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 				continue
 			}
 			if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN {
-				redisConn.Do("ZADD", key.RKJSYGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
+				redisConn.Do("ZADD", core.RKJSYGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
 			}
 			if v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
-				redisConn.Do("ZADD", key.RKJSYPaiDanGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
+				redisConn.Do("ZADD", core.RKJSYPaiDanGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
 			}
 		}
 	}
@@ -365,7 +364,7 @@ func (gg *GodGame) GetGodVCard(c frame.Context) error {
 		rows = append(rows, &godgamepb.GetGodVCardResp_Row{
 			GameId:        v1.GameID,
 			AcceptNum:     v1.AcceptNum,
-			AcceptNumDesc: internal_util.FormatAcceptOrderNumber2(v1.AcceptNum),
+			AcceptNumDesc: FormatAcceptOrderNumber2(v1.AcceptNum),
 		})
 	}
 	return c.JSON2(StatusOK_V3, "", rows)
@@ -634,8 +633,8 @@ func (gg *GodGame) GetGodGameInfo(c frame.Context) error {
 		uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
 	}
 	resp := &godgamepb.GetGodGameInfoResp_Data{
-		Gl:       internal_util.FormatRMB2Gouliang(uniprice),
-		PwPrice:  internal_util.FormatPriceV1(uniprice),
+		Gl:       FormatRMB2Gouliang(uniprice),
+		PwPrice:  FormatPriceV1(uniprice),
 		GameName: acceptResp.GetData().GetGameName(),
 	}
 	return c.JSON2(StatusOK_V3, "", resp)

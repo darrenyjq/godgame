@@ -5,7 +5,6 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
-	"play/common/key"
 )
 
 func (dao *Dao) CreateGodLeader(godLeader model.GodLeader) (model.GodLeader, error) {
@@ -17,7 +16,7 @@ func (dao *Dao) ModifyGodLeader(godLeader model.GodLeader) (model.GodLeader, err
 	err := dao.dbw.Save(&godLeader).Error
 	if err == nil {
 		c := dao.cpool.Get()
-		c.Do("DEL", key.RKGodLeaderInfo(godLeader.ID))
+		c.Do("DEL", RKGodLeaderInfo(godLeader.ID))
 		c.Close()
 	}
 	return godLeader, err
@@ -45,7 +44,7 @@ func (dao *Dao) GetGodLeaderByID(leaderID int64) *model.GodLeader {
 	var godLeader model.GodLeader
 	c := dao.cpool.Get()
 	defer c.Close()
-	redisKey := key.RKGodLeaderInfo(leaderID)
+	redisKey := RKGodLeaderInfo(leaderID)
 	bs, _ := redis.Bytes(c.Do("GET", redisKey))
 	err := json.Unmarshal(bs, &godLeader)
 	if err == nil {

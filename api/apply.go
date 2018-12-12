@@ -9,7 +9,6 @@ import (
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/lfs/pb"
-	"play/common/util"
 )
 
 // 获取可以申请的游戏列表及大神游戏状态
@@ -63,7 +62,7 @@ func (gg *GodGame) GodApply(c frame.Context) error {
 	} else if oldGod := gg.dao.GetGodByPhone(req.GetPhone()); oldGod != nil && oldGod.UserID != currentUser.UserID {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号已被注册", nil)
 	}
-	gender, birthday, err := util.GetGenderAndBirthdayByIDCardNumber(req.GetIdcard())
+	gender, birthday, err := GetGenderAndBirthdayByIDCardNumber(req.GetIdcard())
 	if err != nil {
 		gender = constants.GENDER_MALE
 		birthday = currentUser.Birthday

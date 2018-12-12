@@ -12,7 +12,6 @@ import (
 	"laoyuegou.com/keyword"
 	"laoyuegou.pb/godgame/model"
 	user_pb "laoyuegou.pb/user/pb"
-	"play/common/imclient"
 	"strconv"
 )
 
@@ -20,7 +19,6 @@ import (
 type GodGame struct {
 	dao           *core.Dao
 	cfg           config.Config
-	msgSender     *imclient.MsgSender
 	esClient      *elastic.Client
 	esChan        chan ESParams
 	shence        shence.SensorsAnalytics
@@ -34,7 +32,6 @@ func NewGodGame(cfg config.Config) *GodGame {
 	gg.dao = core.NewDao(cfg)
 	shenceConsumer, _ := shence.InitDefaultConsumer(cfg.Shence.URL, cfg.Shence.Timeout)
 	gg.shence = shence.InitSensorsAnalytics(shenceConsumer, cfg.Shence.Project, false)
-	gg.msgSender = imclient.NewMsgSender(cfg.IM.Addr, cfg.IM.AppID, cfg.IM.AppToken)
 	esClient, err := elastic.NewClient(
 		elastic.SetURL(cfg.ES.Host...),
 		elastic.SetMaxRetries(10))

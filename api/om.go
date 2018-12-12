@@ -15,25 +15,17 @@ import (
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
+	"laoyuegou.pb/imapi/pb"
 	"laoyuegou.pb/plcomment/pb"
 	"laoyuegou.pb/plorder/pb"
 	sapb "laoyuegou.pb/sa/pb"
 	"laoyuegou.pb/union/pb"
 	"laoyuegou.pb/user/pb"
-	"play/common/imclient"
-	"play/common/util"
 	purse_pb "purse/pb"
 	"strconv"
 	"strings"
 	"time"
 )
-
-func (gg *GodGame) sendGodStatusChangeCMD(godID, status int64) {
-	msg2, _ := json.Marshal(map[string]interface{}{
-		"status": status,
-	})
-	gg.msgSender.SendSystemNotification([]int64{godID}, 6014, string(msg2), "", "", false)
-}
 
 // 大神审核
 func (gg *GodGame) GodAudit(c frame.Context) error {
@@ -66,19 +58,19 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
 	}
 	gameName := recordResp.GetData().GetGameName()
-	var msg imclient.CommonSystemMessage
-	var push imclient.PushNotification
+	var msg imapipb.CommonSystemMessage
+	var push imapipb.PushNotification
 
 	if req.GetStatus() == constants.GOD_GAME_STATUS_PASSED {
 		if newGame {
-			msg = imclient.CommonSystemMessage{
+			msg = imapipb.CommonSystemMessage{
 				Title:   fmt.Sprintf("%s大神审核通过", gameName),
 				Content: fmt.Sprintf("恭喜您已成为%s大神，赶快去设置接单吧", gameName),
 				JText:   "查看详情",
-				JUrl:    imclient.LYG_URL_WSDS,
+				JUrl:    imapipb.LYG_URL_WSDS,
 			}
-			push = imclient.PushNotification{
-				UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+			push = imapipb.PushNotification{
+				UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 				Title:      fmt.Sprintf("%s大神审核通过", gameName),
 				Desc:       fmt.Sprintf("恭喜您已成为%s大神，赶快去设置接单吧", gameName),
 				Sound:      "default",
@@ -100,60 +92,87 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 			// 更新上一次修改资料时间，限制一周只可以改一次
 			gg.dao.ModifyLastModifyInfoTime(req.GetGodId(), req.GetGameId())
 
-			msg = imclient.CommonSystemMessage{
+			msg = imapipb.CommonSystemMessage{
 				Title:   fmt.Sprintf("%s资料修改已通过", gameName),
 				Content: fmt.Sprintf("您的%s资料修改通过，赶快去看看吧", gameName),
 				JText:   "查看详情",
-				JUrl:    imclient.LYG_URL_WSDS,
+				JUrl:    imapipb.LYG_URL_WSDS,
 			}
-			push = imclient.PushNotification{
-				UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+			push = imapipb.PushNotification{
+				UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 				Title:      fmt.Sprintf("%s资料修改已通过", gameName),
 				Desc:       fmt.Sprintf("您的%s资料修改通过，赶快去看看吧", gameName),
 				Sound:      "default",
 			}
 		}
 		if !isGod {
-			gg.sendGodStatusChangeCMD(req.GetGodId(), constants.GOD_STATUS_PASSED)
-			ext := imclient.SingleImgTextExt{
+			// gg.sendGodStatusChangeCMD(req.GetGodId(), constants.GOD_STATUS_PASSED)
+			msg2, _ := json.Marshal(map[string]interface{}{
+				"status": constants.GOD_STATUS_PASSED,
+			})
+			imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+				Subtype: 6014,
+				Message: string(msg2),
+				Apn:     "",
+				Ext:     "",
+				ToId:    req.GetGodId(),
+			})
+
+			ext := imapipb.SingleImgTextExt{
 				Title: "大神接单攻略",
 				Img:   "https://s7.lygou.cc/hot_res/jiedangonglue.jpg",
 				Href:  "laoyuegou://enterfeed?result=%7b%22id%22%3a%22575045%22%2c%22item_type%22%3a%221%22%7d",
 			}
 			extContent, _ := json.Marshal(ext)
-			gg.msgSender.SendPublicNotification(req.GetGodId(), 1024,
-				imclient.MESSAGE_CONTENT_TYPE_SINGLE_IMAGE_TEXT,
-				imclient.MESSAGE_SUBTYPE_CHAT,
-				"大神接单攻略", "", string(extContent), true)
+			// gg.msgSender.SendPublicNotification(req.GetGodId(), 1024,
+			// 	imapipb.MESSAGE_CONTENT_TYPE_SINGLE_IMAGE_TEXT,
+			// 	imapipb.MESSAGE_SUBTYPE_CHAT,
+			// 	"大神接单攻略", "", string(extContent), true)
+			imapipb.SendPublicMsg(c, &imapipb.SendPublicMsgReq{
+				ContentType: imapipb.MESSAGE_CONTENT_TYPE_SINGLE_IMAGE_TEXT,
+				Subtype:     imapipb.MESSAGE_SUBTYPE_CHAT,
+				Message:     "大神接单攻略",
+				Apn:         "",
+				Ext:         string(extContent),
+				PubId:       imapipb.PUBLIC_XIAO_MI_SHU,
+				ToId:        req.GetGodId(),
+			})
 		}
 	} else if req.GetStatus() == constants.GOD_GAME_APPLY_STATUS_REFUSED {
 		if newGame {
-			msg = imclient.CommonSystemMessage{
+			msg = imapipb.CommonSystemMessage{
 				Title:   fmt.Sprintf("%s大神审核未通过", gameName),
 				Content: fmt.Sprintf("很抱歉%s大神申请未通过，失败原因：%s", gameName, req.GetReason()),
 			}
-			push = imclient.PushNotification{
+			push = imapipb.PushNotification{
 				Title:      fmt.Sprintf("%s大神审核未通过", gameName),
 				Desc:       "很抱歉大神申请未通过，请查看失败原因或重新申请",
-				UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+				UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 				Sound:      "default",
 			}
 		} else {
-			msg = imclient.CommonSystemMessage{
+			msg = imapipb.CommonSystemMessage{
 				Title:   fmt.Sprintf("%s资料修改未通过", gameName),
 				Content: fmt.Sprintf("%s大神修改资料未通过，失败原因：%s", gameName, req.GetReason()),
 			}
-			push = imclient.PushNotification{
+			push = imapipb.PushNotification{
 				Title:      fmt.Sprintf("%s资料修改未通过", gameName),
 				Desc:       fmt.Sprintf("%s大神修改资料未通过", gameName),
-				UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+				UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 				Sound:      "default",
 			}
 		}
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+		Subtype: 5001,
+		Message: string(msgContent),
+		Apn:     string(pushContent),
+		Ext:     "",
+		ToId:    req.GetGodId(),
+	})
 	if req.GetRecommend() == constants.RECOMMEND_YES {
 		data, err := gg.BuildESGodGameData(req.GetGodId(), req.GetGameId())
 		if err != nil {
@@ -225,8 +244,8 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 			"voice_duration":   godGame.VoiceDuration,
 			"aac":              godGame.Aac,
 			"desc":             godGame.Desc,
-			"createdtime":      util.FormatDatetime(godGame.Createdtime),
-			"updatedtime":      util.FormatDatetime(godGame.Updatedtime),
+			"createdtime":      FormatDatetime(godGame.Createdtime),
+			"updatedtime":      FormatDatetime(godGame.Updatedtime),
 			"status":           godGame.Status,
 			"grab_status":      godGame.GrabStatus,
 			"recommend":        godGame.Recommend,
@@ -260,7 +279,7 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 			"realname":    god.RealName,
 			"idcard":      god.IDcard,
 			"idcard_type": god.IDcardtype,
-			"idcardurl":   util.GenIDCardURL(god.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
+			"idcardurl":   GenIDCardURL(god.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
 			"phone":       god.Phone,
 			"sex":         god.Gender,
 			"birthday":    userV1.Birthday,
@@ -304,7 +323,7 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 			}
 		}
 		if userV1.LTS > 0 {
-			item["last_login_time"] = util.FormatDatetimeV2(time.Unix(userV1.LTS, 0))
+			item["last_login_time"] = FormatDatetimeV2(time.Unix(userV1.LTS, 0))
 		}
 		unionResp, err := unionpb.Member(c, &unionpb.MemberReq{
 			MemberId: godGame.UserID,
@@ -354,27 +373,41 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 			gg.dao.RemoveFromJSYPaiDanGodPool(v1.GameID, req.GetGodId())
 		}
 	}
-	msg := imclient.CommonSystemMessage{
+	msg := imapipb.CommonSystemMessage{
 		Title:   "大神身份冻结",
 		Content: fmt.Sprintf("您的大神身份被冻结\n冻结原因：%s", req.GetReason()),
 		JText:   "点击申诉",
-		JUrl:    imclient.LYG_URL_COMPLAIN,
+		JUrl:    imapipb.LYG_URL_COMPLAIN,
 	}
-	push := imclient.PushNotification{
-		UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+	push := imapipb.PushNotification{
+		UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 		Title:      "大神身份冻结",
 		Desc:       fmt.Sprintf("您的大神身份被冻结\n冻结原因：%s", req.GetReason()),
 		Sound:      "default",
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+		Subtype: 5001,
+		Message: string(msgContent),
+		Apn:     string(pushContent),
+		Ext:     "",
+		ToId:    req.GetGodId(),
+	})
 
 	// send backgroup notify
 	msg2, _ := json.Marshal(map[string]interface{}{
 		"status": constants.GOD_STATUS_BLOCKED,
 	})
-	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
+	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
+	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+		Subtype: 6014,
+		Message: string(msg2),
+		Apn:     "",
+		Ext:     "",
+		ToId:    req.GetGodId(),
+	})
 	go gg.shence.ProfileSet(fmt.Sprintf("%d", req.GetGodId()),
 		map[string]interface{}{
 			"godplayerok": true,
@@ -414,27 +447,41 @@ func (gg *GodGame) UnBlockGod(c frame.Context) error {
 			}
 		}
 	}
-	msg := imclient.CommonSystemMessage{
+	msg := imapipb.CommonSystemMessage{
 		Title:   "大神身份解除冻结",
 		Content: "您的大神身份被解除冻结，请重新设置接单",
 		JText:   "设置接单",
-		JUrl:    imclient.LYG_URL_WSDS,
+		JUrl:    imapipb.LYG_URL_WSDS,
 	}
-	push := imclient.PushNotification{
-		UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+	push := imapipb.PushNotification{
+		UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 		Title:      "大神身份解除冻结",
 		Desc:       "您的大神身份被解除冻结，请重新设置接单",
 		Sound:      "default",
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+		Subtype: 5001,
+		Message: string(msgContent),
+		Apn:     string(pushContent),
+		Ext:     "",
+		ToId:    req.GetGodId(),
+	})
 
 	// send backgroup notify
 	msg2, _ := json.Marshal(map[string]interface{}{
 		"status": constants.GOD_STATUS_PASSED,
 	})
-	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
+	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
+	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+		Subtype: 6014,
+		Message: string(msg2),
+		Apn:     "",
+		Ext:     "",
+		ToId:    req.GetGodId(),
+	})
 	go gg.shence.ProfileSet(fmt.Sprintf("%d", req.GetGodId()),
 		map[string]interface{}{
 			"godplayerok": true,
@@ -468,21 +515,28 @@ func (gg *GodGame) BlockGodGame(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "冻结大神品类失败", nil)
 	}
-	msg := imclient.CommonSystemMessage{
+	msg := imapipb.CommonSystemMessage{
 		Title:   fmt.Sprintf("%s大神身份冻结", recordResp.GetData().GetGameName()),
 		Content: fmt.Sprintf("您的%s大神身份被冻结\n冻结原因：%s", recordResp.GetData().GetGameName(), req.GetReason()),
 		JText:   "点击申诉",
-		JUrl:    imclient.LYG_URL_COMPLAIN,
+		JUrl:    imapipb.LYG_URL_COMPLAIN,
 	}
-	push := imclient.PushNotification{
-		UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+	push := imapipb.PushNotification{
+		UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 		Title:      fmt.Sprintf("%s大神身份冻结", recordResp.GetData().GetGameName()),
 		Desc:       fmt.Sprintf("您的%s大神身份被冻结\n冻结原因：%s", recordResp.GetData().GetGameName(), req.GetReason()),
 		Sound:      "default",
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+		Subtype: 5001,
+		Message: string(msgContent),
+		Apn:     string(pushContent),
+		Ext:     "",
+		ToId:    req.GetGodId(),
+	})
 	// 如果大神被推荐到首页，冻结则需要从首页下掉
 	if v1.Recommend == constants.RECOMMEND_YES {
 		gg.ESDeleteGodGame(fmt.Sprintf("%d-%d", req.GetGodId(), req.GetGameId()))
@@ -520,21 +574,28 @@ func (gg *GodGame) UnBlockGodGame(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "解除冻结大神品类失败", nil)
 	}
-	msg := imclient.CommonSystemMessage{
+	msg := imapipb.CommonSystemMessage{
 		Title:   fmt.Sprintf("%s大神身份解除冻结", recordResp.GetData().GetGameName()),
 		Content: fmt.Sprintf("您的%s大神身份被解除冻结，请重新设置接单", recordResp.GetData().GetGameName()),
 		JText:   "设置接单",
-		JUrl:    imclient.LYG_URL_WSDS,
+		JUrl:    imapipb.LYG_URL_WSDS,
 	}
-	push := imclient.PushNotification{
-		UserDefine: imclient.PushUserDefine{UrlScheme: imclient.LYG_URL_SYSTEM_MSG}.Marshall(),
+	push := imapipb.PushNotification{
+		UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 		Title:      fmt.Sprintf("%s大神身份解除冻结", recordResp.GetData().GetGameName()),
 		Desc:       fmt.Sprintf("您的%s大神身份被解除冻结，请重新设置接单", recordResp.GetData().GetGameName()),
 		Sound:      "default",
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
+	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+		Subtype: 5001,
+		Message: string(msgContent),
+		Apn:     string(pushContent),
+		Ext:     "",
+		ToId:    req.GetGodId(),
+	})
 	if godGame.Recommend == constants.RECOMMEND_YES {
 		oldData, err := gg.BuildESGodGameData(godGame.UserID, godGame.GameID)
 		if err != nil {
@@ -609,8 +670,8 @@ func (gg *GodGame) OMOldData(c frame.Context) error {
 			"idcardtype":  godInfo.IDcardtype,
 			"idcardurl":   godInfo.IDcardurl,
 			"phone":       godInfo.Phone,
-			"createdtime": util.FormatDatetime(godInfo.Createdtime),
-			"updatedtime": util.FormatDatetime(godInfo.Updatedtime),
+			"createdtime": FormatDatetime(godInfo.Createdtime),
+			"updatedtime": FormatDatetime(godInfo.Updatedtime),
 			"status":      godInfo.Status,
 			"sex":         godInfo.Gender,
 			"birthday":    userInfo.GetBirthday(),
@@ -633,9 +694,9 @@ func (gg *GodGame) OMOldData(c frame.Context) error {
 			"tags":              tmpTags,
 			"ext":               tmpExt,
 			"desc":              gameInfo.Desc,
-			"createdtime":       util.FormatDatetime(gameInfo.Createdtime),
-			"updatedtime":       util.FormatDatetime(gameInfo.Updatedtime),
-			"passedtime":        util.FormatDatetime(gameInfo.Passedtime),
+			"createdtime":       FormatDatetime(gameInfo.Createdtime),
+			"updatedtime":       FormatDatetime(gameInfo.Updatedtime),
+			"passedtime":        FormatDatetime(gameInfo.Passedtime),
 			"status":            gameInfo.Status,
 			"grab_status":       gameInfo.GrabStatus,
 			"recommend":         gameInfo.Recommend,
@@ -814,7 +875,7 @@ func (gg *GodGame) ModifyGodInfo(c frame.Context) error {
 		(req.GetLeaderSwitch() == constants.GOD_LEADER_SWITCH_OPEN && req.GetLeaderId() == 0) || len(req.GetCerts()) == 0 {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "参数错误", nil)
 	}
-	if !util.IDCARD_RE.MatchString(req.GetIdcard()) {
+	if !IDCARD_RE.MatchString(req.GetIdcard()) {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "身份证号码格式有误", nil)
 	}
 	if !gg.dao.IsGod(req.GetGodId()) {
@@ -852,7 +913,7 @@ func (gg *GodGame) AddGodLeader(c frame.Context) error {
 	if req.GetRealname() == "" || req.GetIdcard() == "" ||
 		req.GetPhone() == "" || req.GetAlipay() == "" {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
-	} else if !util.IDCARD_RE.MatchString(req.GetIdcard()) {
+	} else if !IDCARD_RE.MatchString(req.GetIdcard()) {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "身份证号码格式有误", nil)
 	}
 	godLeader := model.GodLeader{
@@ -881,7 +942,7 @@ func (gg *GodGame) ModifyGodLeader(c frame.Context) error {
 	if req.GetLeaderId() == 0 || req.GetRealname() == "" || req.GetIdcard() == "" ||
 		req.GetPhone() == "" || req.GetAlipay() == "" {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
-	} else if !util.IDCARD_RE.MatchString(req.GetIdcard()) {
+	} else if !IDCARD_RE.MatchString(req.GetIdcard()) {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "身份证号码格式有误", nil)
 	}
 	godLeader := model.GodLeader{
@@ -1002,10 +1063,10 @@ func (gg *GodGame) GodModifyList(c frame.Context) error {
 			"sex":           godHistory.Gender,
 			"phone":         godHistory.Phone,
 			"idcard":        godHistory.IDcard,
-			"idcard_url":    util.GenIDCardURL(godHistory.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
+			"idcard_url":    GenIDCardURL(godHistory.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
 			"alipay":        godHistory.Alipay,
 			"certs":         certsJSON,
-			"createdtime":   util.FormatDatetime(godHistory.Createdtime),
+			"createdtime":   FormatDatetime(godHistory.Createdtime),
 			"status":        godHistory.Status,
 			"leader_switch": godHistory.LeaderSwitch,
 		}
@@ -1051,11 +1112,11 @@ func (gg *GodGame) OldGodInfo(c frame.Context) error {
 		"sex":           god.Gender,
 		"phone":         god.Phone,
 		"idcard":        god.IDcard,
-		"idcard_url":    util.GenIDCardURL(god.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
+		"idcard_url":    GenIDCardURL(god.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
 		"alipay":        godAlipay,
 		"leader_switch": god.LeaderSwitch,
-		"createdtime":   util.FormatDatetime(god.Createdtime),
-		"updatedtime":   util.FormatDatetime(god.Updatedtime),
+		"createdtime":   FormatDatetime(god.Createdtime),
+		"updatedtime":   FormatDatetime(god.Updatedtime),
 	}
 	var godLeader *model.GodLeader
 	if god.LeaderSwitch == constants.GOD_LEADER_SWITCH_OPEN {
@@ -1251,14 +1312,14 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 		"ext":                tmpExt,
 		"desc":               v1.Desc,
 		"uniprice":           uniprice,
-		"gl":                 util.FormatRMB2Gouliang(uniprice),
+		"gl":                 FormatRMB2Gouliang(uniprice),
 		"order_cnt":          v1.AcceptNum,
-		"order_cnt_desc":     util.FormatAcceptOrderNumber(v1.AcceptNum),
+		"order_cnt_desc":     FormatAcceptOrderNumber(v1.AcceptNum),
 		"order_rate":         "100%",
 		"regions":            v1.Regions,
 		"levels":             v1.Levels,
 		"score":              v1.Score,
-		"score_desc":         util.FormatScore(v1.Score),
+		"score_desc":         FormatScore(v1.Score),
 		"status":             freeResp.GetData().GetStatus(),
 		"status_desc":        freeResp.GetData().GetStatusDesc(),
 		"shareurl":           gg.GenPeiWanShareURL(tmpImages[0], userinfo.GetUsername(), "", v1.GodID, v1.GameID),
@@ -1560,13 +1621,13 @@ func (gg *GodGame) NearbyGods(c frame.Context) error {
 		}
 		if godPoint, err = geo.NewLatLng(strconv.FormatFloat(pwObj.Location.Lat, 'E', -1, 64),
 			strconv.FormatFloat(pwObj.Location.Lon, 'E', -1, 64)); err == nil && godPoint != nil {
-			items[tmpGodID] = fmt.Sprintf("%.1fkm", util.Round(currentPoint.CalcDistance(godPoint), 1, false))
+			items[tmpGodID] = fmt.Sprintf("%.1fkm", Round(currentPoint.CalcDistance(godPoint), 1, false))
 		}
 		// for _, bucket := range ar.Buckets {
 		// 	if gid, _ := bucket.KeyNumber.Int64(); gid == pwObj.GodID {
 		// 		if godPoint, err = geo.NewLatLng(strconv.FormatFloat(pwObj.Location.Lat, 'E', -1, 64),
 		// 			strconv.FormatFloat(pwObj.Location.Lon, 'E', -1, 64)); err == nil && godPoint != nil {
-		// 			items[tmpGodID] = fmt.Sprintf("%.1fkm", util.Round(currentPoint.CalcDistance(godPoint), 1, false))
+		// 			items[tmpGodID] = fmt.Sprintf("%.1fkm", Round(currentPoint.CalcDistance(godPoint), 1, false))
 		// 			break
 		// 		}
 		// 	}
