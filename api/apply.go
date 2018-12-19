@@ -100,6 +100,8 @@ func (gg *GodGame) GodGameApply(c frame.Context) error {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "形象照至少2张", nil)
 	} else if len(req.GetImages()) > 6 {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "形象照最多6张", nil)
+	} else if len(req.GetPowers()) > 4 {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "实力照片最多4张", nil)
 	}
 	currentUser := gg.getCurrentUser(c)
 	if currentUser.UserID == 0 {
@@ -139,6 +141,14 @@ func (gg *GodGame) GodGameApply(c frame.Context) error {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
 	apply.Tags = string(bs)
+	if len(req.Powers) > 0 {
+		bs, err = json.Marshal(req.Powers)
+		if err != nil {
+			c.Error("GodGameApply error:%s. powers:%v", err, req.Powers)
+			return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+		}
+		apply.Powers = string(bs)
+	}
 	err = gg.dao.GodGameApply(apply)
 	if err != nil {
 		c.Error("GodGameApply error:%s", err)

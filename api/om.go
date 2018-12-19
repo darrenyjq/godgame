@@ -110,7 +110,7 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 			msg2, _ := json.Marshal(map[string]interface{}{
 				"status": constants.GOD_STATUS_PASSED,
 			})
-			imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+			imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 				Subtype: 6014,
 				Message: string(msg2),
 				Apn:     "",
@@ -166,7 +166,7 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
 	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
-	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
 		Apn:     string(pushContent),
@@ -221,7 +221,7 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 	items := make([]map[string]interface{}, 0, len(godGames))
 	var item, godInfo map[string]interface{}
 	var god *model.God
-	var tmpImages, tmpTags, tmpExt interface{}
+	var tmpImages, tmpTags, tmpExt, tmpPowers interface{}
 	var godIcon *model.TmpGodIcon
 	for _, godGame := range godGames {
 		userV1, err = gg.dao.UserV1ByID(godGame.UserID)
@@ -268,9 +268,11 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 		json.Unmarshal([]byte(godGame.Images), &tmpImages)
 		json.Unmarshal([]byte(godGame.Tags), &tmpTags)
 		json.Unmarshal([]byte(godGame.Ext), &tmpExt)
+		json.Unmarshal([]byte(godGame.Powers), &tmpPowers)
 		item["god_imgs"] = tmpImages
 		item["tags"] = tmpTags
 		item["ext"] = tmpExt
+		item["powers"] = tmpPowers
 		godInfo = make(map[string]interface{})
 		godInfo = map[string]interface{}{
 			"userid":      userV1.UserID,
@@ -388,7 +390,7 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
 	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
-	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
 		Apn:     string(pushContent),
@@ -401,7 +403,7 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 		"status": constants.GOD_STATUS_BLOCKED,
 	})
 	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
-	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 6014,
 		Message: string(msg2),
 		Apn:     "",
@@ -462,7 +464,7 @@ func (gg *GodGame) UnBlockGod(c frame.Context) error {
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
 	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
-	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
 		Apn:     string(pushContent),
@@ -475,7 +477,7 @@ func (gg *GodGame) UnBlockGod(c frame.Context) error {
 		"status": constants.GOD_STATUS_PASSED,
 	})
 	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
-	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 6014,
 		Message: string(msg2),
 		Apn:     "",
@@ -530,7 +532,7 @@ func (gg *GodGame) BlockGodGame(c frame.Context) error {
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
 	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
-	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
 		Apn:     string(pushContent),
@@ -589,7 +591,7 @@ func (gg *GodGame) UnBlockGodGame(c frame.Context) error {
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
 	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
-	imapipb.SendSystemNotfiy(c, &imapipb.SendSystemNotfiyReq{
+	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
 		Apn:     string(pushContent),
@@ -643,10 +645,11 @@ func (gg *GodGame) OMOldData(c frame.Context) error {
 	}
 	godInfo := gg.dao.GetGod(req.GetGodId())
 	gameInfo := gg.dao.GetGodGame(req.GetGodId(), req.GetGameId())
-	var tmpImgs, tmpTags, tmpExt interface{}
+	var tmpImgs, tmpTags, tmpExt, tmpPowers interface{}
 	json.Unmarshal([]byte(gameInfo.Images), &tmpImgs)
 	json.Unmarshal([]byte(gameInfo.Tags), &tmpTags)
 	json.Unmarshal([]byte(gameInfo.Ext), &tmpExt)
+	json.Unmarshal([]byte(gameInfo.Powers), &tmpPowers)
 	var video string
 	if gameInfo.Video != "" {
 		video = gg.formatVideoInfo2(c, gameInfo.Video)
@@ -686,6 +689,7 @@ func (gg *GodGame) OMOldData(c frame.Context) error {
 			"highest_level_id":  gameInfo.HighestLevelID,
 			"game_screenshot":   gameInfo.GameScreenshot,
 			"god_imgs":          tmpImgs,
+			"powers":            tmpPowers,
 			"voice":             gameInfo.Voice,
 			"aac":               gameInfo.Aac,
 			"voice_duration":    gameInfo.VoiceDuration,
@@ -1280,11 +1284,12 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
 	}
 
-	var tmpImages, tmpTags []string
+	var tmpImages, tmpTags, tmpPowers []string
 	var tmpExt interface{}
 	json.Unmarshal([]byte(v1.Images), &tmpImages)
 	json.Unmarshal([]byte(v1.Tags), &tmpTags)
 	json.Unmarshal([]byte(v1.Ext), &tmpExt)
+	json.Unmarshal([]byte(v1.Powers), &tmpPowers)
 	if len(tmpImages) == 0 {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "大神形象照加载失败", nil)
 	}
@@ -1305,6 +1310,7 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 		"highest_level_desc": resp.GetData().GetLevelDesc()[v1.HighestLevelID],
 		"region_accept_desc": regionDesc,
 		"god_show_images":    tmpImages,
+		"powers":             tmpPowers,
 		"voice":              v1.Voice,
 		"voice_duration":     v1.VoiceDuration,
 		"aac":                v1.Aac,

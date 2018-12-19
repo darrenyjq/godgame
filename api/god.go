@@ -26,6 +26,8 @@ import (
 	user_pb "laoyuegou.pb/user/pb"
 	"laoyuegou.pb/vip/pb"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -164,16 +166,25 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		}
 	}
 
-	var tmpImages, tmpTags []string
+	var tmpImages, tmpTags, tmpPowers []string
 	var tmpExt interface{}
 	json.Unmarshal([]byte(v1.Images), &tmpImages)
 	json.Unmarshal([]byte(v1.Tags), &tmpTags)
 	json.Unmarshal([]byte(v1.Ext), &tmpExt)
+	json.Unmarshal([]byte(v1.Powers), &tmpPowers)
 	if len(tmpImages) == 0 {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "大神形象照加载失败", nil)
 	}
 	if v1.GameScreenshot != "" {
 		tmpImages = append(tmpImages, v1.GameScreenshot)
+	}
+
+	appVersion, _ := strconv.Atoi(strings.Replace(gg.getUserAppVersion(c), ".", "", -1))
+	if appVersion >= 295 {
+		// 2.9.5及以上支持webp
+		for idx, _ := range tmpImages {
+			tmpImages[idx] = tmpImages[idx] + "/w0"
+		}
 	}
 
 	data := map[string]interface{}{
@@ -189,6 +200,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		"highest_level_desc": resp.GetData().GetLevelDesc()[v1.HighestLevelID],
 		"region_accept_desc": regionDesc,
 		"god_show_images":    tmpImages,
+		"powers":             tmpPowers,
 		"voice":              v1.Voice,
 		"voice_duration":     v1.VoiceDuration,
 		"aac":                v1.Aac,
@@ -252,6 +264,11 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 	})
 	if hotComments != nil && len(hotComments.GetData()) > 0 {
 		data["comments"] = hotComments.GetData()
+	}
+	// 2.9.7增加是否关注，sub=1：已关注；TODO：调用关注服务，检查当前用户是否关注过大神
+	if currentUserID := gg.getCurrentUserID(c); currentUserID > 0 {
+
+		data["sub"] = 1
 	}
 	return c.JSON2(StatusOK_V3, "", data)
 }
@@ -1443,13 +1460,17 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		}
 	}
 
-	var tmpImages, tmpTags []string
+	var tmpImages, tmpTags, tmpPowers []string
 	var tmpExt interface{}
 	json.Unmarshal([]byte(v1.Images), &tmpImages)
 	json.Unmarshal([]byte(v1.Tags), &tmpTags)
+	json.Unmarshal([]byte(v1.Powers), &tmpPowers)
 	json.Unmarshal([]byte(v1.Ext), &tmpExt)
 	if v1.GameScreenshot != "" {
 		tmpImages = append(tmpImages, v1.GameScreenshot)
+	}
+	for idx, _ := range tmpImages {
+		tmpImages[idx] = tmpImages[idx] + "/w0"
 	}
 	data := map[string]interface{}{
 		"god_id":             v1.GodID,
@@ -1464,6 +1485,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"highest_level_desc": resp.GetData().GetLevelDesc()[v1.HighestLevelID],
 		"region_accept_desc": regionDesc,
 		"god_show_images":    tmpImages,
+		"powers":             tmpPowers,
 		"voice":              v1.Voice,
 		"voice_duration":     v1.VoiceDuration,
 		"aac":                v1.Aac,

@@ -573,7 +573,7 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 		Sound: "default",
 	}
 	apnBs, _ := json.Marshal(apn)
-	resp, err := imapipb.BatchSendSystemNotfiy(c, &imapipb.BatchSendSystemNotfiyReq{
+	resp, err := imapipb.BatchSendSystemNotify(c, &imapipb.BatchSendSystemNotifyReq{
 		Subtype: 9026,
 		Message: string(bs),
 		Apn:     string(apnBs),

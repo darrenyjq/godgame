@@ -614,6 +614,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	v1.HighestLevelID = godGame.HighestLevelID
 	v1.GameScreenshot = godGame.GameScreenshot
 	v1.Images = godGame.Images
+	v1.Powers = godGame.Powers
 	v1.Voice = godGame.Voice
 	v1.VoiceDuration = godGame.VoiceDuration
 	v1.Aac = godGame.Aac

@@ -9,7 +9,6 @@ import (
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/httpkit/lyghttp/middleware"
-	"laoyuegou.com/keyword"
 	"laoyuegou.pb/godgame/model"
 	user_pb "laoyuegou.pb/user/pb"
 	"strconv"
@@ -17,12 +16,11 @@ import (
 
 // GodGame God Game服务
 type GodGame struct {
-	dao           *core.Dao
-	cfg           config.Config
-	esClient      *elastic.Client
-	esChan        chan ESParams
-	shence        shence.SensorsAnalytics
-	keywordFilter *keyword.Filter
+	dao      *core.Dao
+	cfg      config.Config
+	esClient *elastic.Client
+	esChan   chan ESParams
+	shence   shence.SensorsAnalytics
 }
 
 // NewGodGame new God Game
@@ -53,6 +51,11 @@ func (gg *GodGame) getCurrentUserID(c frame.Context) int64 {
 func (gg *GodGame) getUserAppID(c frame.Context) string {
 	_, _, _, appid := middleware.ClientInfo(c.GetHeaderString("Client-Info", ""))
 	return appid
+}
+
+func (gg *GodGame) getUserAppVersion(c frame.Context) string {
+	_, v, _, _ := middleware.ClientInfo(c.GetHeaderString("Client-Info", ""))
+	return v
 }
 
 func (gg *GodGame) getCurrentUser(c frame.Context) model.CurrentUser {
