@@ -5,11 +5,10 @@ import (
 )
 
 type Config struct {
-	LogLevel string          `json:"loglevel"`
-	Env      string          `json:"env"`
-	Mysql    config.MysqlCfg `json:"mysqlCfg"`
-	Base     config.BaseCfg  `json:"baseCfg"`
-	Redis    config.RedisCfg `json:"redisCfg"`
+	Env   config.Environment `json:"env"`
+	Mysql config.MysqlCfg    `json:"mysqlCfg"`
+	Base  config.BaseCfg     `json:"baseCfg"`
+	Redis config.RedisCfg    `json:"redisCfg"`
 
 	MNS struct {
 		URL            string `json:"url"`

@@ -6,6 +6,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"godgame/config"
 	"iceberg/frame"
+	iconfig "iceberg/frame/config"
 	"iceberg/frame/util"
 	user_pb "laoyuegou.pb/user/pb"
 )
@@ -35,7 +36,7 @@ func NewDao(cfg config.Config) *Dao {
 	if err != nil {
 		panic(err.Error())
 	}
-	if cfg.LogLevel == "DEBUG" {
+	if cfg.Env != iconfig.ENV_PROD {
 		dao.dbw.LogMode(true)
 		dao.dbr.LogMode(true)
 	}

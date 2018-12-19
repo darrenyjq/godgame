@@ -124,10 +124,6 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 				Href:  "laoyuegou://enterfeed?result=%7b%22id%22%3a%22575045%22%2c%22item_type%22%3a%221%22%7d",
 			}
 			extContent, _ := json.Marshal(ext)
-			// gg.msgSender.SendPublicNotification(req.GetGodId(), 1024,
-			// 	imapipb.MESSAGE_CONTENT_TYPE_SINGLE_IMAGE_TEXT,
-			// 	imapipb.MESSAGE_SUBTYPE_CHAT,
-			// 	"大神接单攻略", "", string(extContent), true)
 			imapipb.SendPublicMsg(c, &imapipb.SendPublicMsgReq{
 				ContentType: imapipb.MESSAGE_CONTENT_TYPE_SINGLE_IMAGE_TEXT,
 				Subtype:     imapipb.MESSAGE_SUBTYPE_CHAT,
@@ -165,7 +161,6 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
 	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
@@ -389,7 +384,6 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
 	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
@@ -402,7 +396,6 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 	msg2, _ := json.Marshal(map[string]interface{}{
 		"status": constants.GOD_STATUS_BLOCKED,
 	})
-	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
 	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 6014,
 		Message: string(msg2),
@@ -463,7 +456,6 @@ func (gg *GodGame) UnBlockGod(c frame.Context) error {
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
 	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
@@ -476,7 +468,6 @@ func (gg *GodGame) UnBlockGod(c frame.Context) error {
 	msg2, _ := json.Marshal(map[string]interface{}{
 		"status": constants.GOD_STATUS_PASSED,
 	})
-	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 6014, string(msg2), "", "", false)
 	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 6014,
 		Message: string(msg2),
@@ -531,7 +522,6 @@ func (gg *GodGame) BlockGodGame(c frame.Context) error {
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
 	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),
@@ -590,7 +580,6 @@ func (gg *GodGame) UnBlockGodGame(c frame.Context) error {
 	}
 	msgContent, _ := json.Marshal(msg)
 	pushContent, _ := json.Marshal(push)
-	// gg.msgSender.SendSystemNotification([]int64{req.GetGodId()}, 5001, string(msgContent), string(pushContent), "", false)
 	imapipb.SendSystemNotify(c, &imapipb.SendSystemNotifyReq{
 		Subtype: 5001,
 		Message: string(msgContent),

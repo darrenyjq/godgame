@@ -8,6 +8,7 @@ import (
 	"github.com/olivere/elastic"
 	"godgame/core"
 	"iceberg/frame"
+	"iceberg/frame/config"
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
 	"laoyuegou.pb/chatroom/pb"
@@ -81,11 +82,11 @@ func (gg *GodGame) GenPeiWanShareURL(godImg, godName, gameName string, godID, ga
 	subTitle := "我在捞月狗等你..."
 
 	switch gg.cfg.Env {
-	case constants.ENV_DEV:
+	case config.ENV_DEV:
 		h5URL = fmt.Sprintf("https://playgod-test-imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
-	case constants.ENV_QA:
+	case config.ENV_QA:
 		h5URL = fmt.Sprintf("https://playgod-test-imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
-	case constants.ENV_STAGING:
+	case config.ENV_STAGING:
 		h5URL = fmt.Sprintf("https://playgod-staging-imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
 	default:
 		h5URL = fmt.Sprintf("https://imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
@@ -919,9 +920,6 @@ func (gg *GodGame) GodGamesV4(c frame.Context) error {
 					return
 				}
 				currentUserID := gg.getCurrentUserID(c)
-				// gg.msgSender.SendMessage(godID, currentUserID, imapipb.MESSAGE_CONTENT_TYPE_TEXT,
-				// 	imapipb.MESSAGE_SUBTYPE_CHAT, lyg_util.CreatePrivateMessageThread(godID, currentUserID).String(),
-				// 	god.Desc, "", string(extBytes), true, []int64{})
 				sendResp, err := imapipb.SendMessage(c, &imapipb.SendMessageReq{
 					Thread:      lyg_util.CreatePrivateMessageThread(godID, currentUserID).String(),
 					FromId:      godID,
