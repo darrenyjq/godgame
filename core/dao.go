@@ -13,10 +13,9 @@ import (
 
 // Dao core dao
 type Dao struct {
-	cpool        *redis.Pool // 缓存池
-	redisKeyword *redis.Pool
-	dbr          *gorm.DB // 读库
-	dbw          *gorm.DB // 写库
+	cpool *redis.Pool // 缓存池
+	dbr   *gorm.DB    // 读库
+	dbw   *gorm.DB    // 写库
 }
 
 // NewDao dao object

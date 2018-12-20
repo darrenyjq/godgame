@@ -23,28 +23,10 @@
         "Psw": "",
         "DBNo": 0
     },
-    "default_lang": "cn",
-    "mns": {
-        "url": "",
-        "access_id": "",
-        "access_key": "",
-        "queue_name": "",
-        "purse_queue_name": ""
-    },
     "es":{
         "host": [""],
         "pw_index": "",
         "pw_type": ""
-    },
-    "im": {
-        "addr": "",
-        "app_id": "",
-        "app_token": ""
-    },
-    "nsq": {
-        "topic": "",
-        "writers": [""],
-        "lookups": [""]
     },
     "oss": {
         "oss_accessid": "",
