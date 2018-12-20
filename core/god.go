@@ -160,6 +160,7 @@ func (dao *Dao) UnBlockGod(godID int64) error {
 func (dao *Dao) GodGameApply(apply model.GodGameApply) error {
 	old := apply
 	old.Videos = ""
+	old.Createdtime = time.Now()
 	apply.Status = constants.GOD_GAME_APPLY_STATUS_PENDING
 	apply.Createdtime = time.Now()
 	db := dao.dbw.Table("play_god_games_apply").Where("userid=? AND gameid=?", apply.UserID, apply.GameID).Assign(old).Update("status", apply.Status)
