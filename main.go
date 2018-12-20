@@ -20,10 +20,8 @@ var (
 )
 
 func main() {
-	// 设置进程的当前目录为程序所在的路径
 	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	os.Chdir(dir)
-	// 解析命令行参数
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(version.Version("godgame"))
@@ -32,7 +30,6 @@ func main() {
 	var cfg godGameCfg.Config
 	config.Parseconfig(*cfgFile, &cfg)
 	log.SetLevel(*logLevel)
-	cfg.LogLevel = *logLevel
 	s := api.NewGodGame(cfg)
 	godgamepb.RegisterGodGameServer(s, &cfg.Base)
 }
