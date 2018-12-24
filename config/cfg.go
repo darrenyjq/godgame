@@ -10,9 +10,11 @@ type Config struct {
 	Mysql config.MysqlCfg    `json:"mysqlCfg"`
 	Redis config.RedisCfg    `json:"redisCfg"`
 	ES    struct {
-		Host    []string `json:"host"`
-		PWIndex string   `json:"pw_index"`
-		PWType  string   `json:"pw_type"`
+		Host     []string `json:"host"`
+		PWIndex  string   `json:"pw_index"`
+		PWType   string   `json:"pw_type"`
+		Username string   `json:"username,omitempty"`
+		Password string   `json:"password,omitempty"`
 	} `json:"es"`
 	OSS struct {
 		OSSAccessID  string `json:"oss_accessid"`

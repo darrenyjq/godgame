@@ -30,9 +30,15 @@ func NewGodGame(cfg config.Config) *GodGame {
 	gg.dao = core.NewDao(cfg)
 	shenceConsumer, _ := shence.InitDefaultConsumer(cfg.Shence.URL, cfg.Shence.Timeout)
 	gg.shence = shence.InitSensorsAnalytics(shenceConsumer, cfg.Shence.Project, false)
-	esClient, err := elastic.NewClient(
+	esOptions := []elastic.ClientOptionFunc{
 		elastic.SetURL(cfg.ES.Host...),
-		elastic.SetMaxRetries(10))
+		elastic.SetSniff(false),
+		elastic.SetMaxRetries(10),
+	}
+	if cfg.ES.Username != "" && cfg.ES.Password != "" {
+		esOptions = append(esOptions, elastic.SetBasicAuth(cfg.ES.Username, cfg.ES.Password))
+	}
+	esClient, err := elastic.NewClient(esOptions...)
 	if err != nil {
 		icelog.Errorf("Init esClient error:%s", err)
 	} else {

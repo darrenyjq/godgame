@@ -74,7 +74,7 @@ func (gg *GodGame) GodApply(c frame.Context) error {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号不能为空", nil)
 	}
 	if req.GetValidateCode() != "" {
-		if !gg.dao.CheckApplyCode(req.GetPhone(), req.GetValidateCode()) {
+		if !gg.dao.CheckApplyCode(req.GetValidateCode(), req.GetPhone()) {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "验证码无效", nil)
 		}
 	}
