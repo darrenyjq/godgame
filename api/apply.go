@@ -11,6 +11,21 @@ import (
 	"laoyuegou.pb/lfs/pb"
 )
 
+// 获取申请大神手机验证码
+func (gg *GodGame) Code(c frame.Context) error {
+	var req godgamepb.CodeReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetPhone() == "" {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "请输入手机号", nil)
+	} else if err = gg.dao.SendApplyCode(req.GetPhone()); err != nil {
+		c.Errorf("%s", err.Error())
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "请稍后再试", nil)
+	}
+	return c.JSON2(StatusOK_V3, "", nil)
+}
+
 // 获取可以申请的游戏列表及大神游戏状态
 func (gg *GodGame) ApplyGames(c frame.Context) error {
 	currentUser := gg.getCurrentUser(c)
@@ -55,12 +70,21 @@ func (gg *GodGame) GodApply(c frame.Context) error {
 	currentUser := gg.getCurrentUser(c)
 	if currentUser.UserID == 0 {
 		return c.JSON2(ERR_CODE_FORBIDDEN, "", nil)
-	} else if gg.dao.IsGod(currentUser.UserID) {
+	} else if req.GetPhone() == "" {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号不能为空", nil)
+	}
+	if req.GetValidateCode() != "" {
+		if !gg.dao.CheckApplyCode(req.GetPhone(), req.GetValidateCode()) {
+			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "验证码无效", nil)
+		}
+	}
+	if oldGod := gg.dao.GetGodByPhone(req.GetPhone()); oldGod != nil && oldGod.UserID != currentUser.UserID {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号已被注册", nil)
+	}
+	if gg.dao.IsGod(currentUser.UserID) {
 		return c.JSON2(ERR_CODE_FORBIDDEN, "您已经是大神身份，请勿重复申请", nil)
 	} else if oldGod := gg.dao.GetGodByIDCard(req.GetIdcard()); oldGod != nil && oldGod.UserID != currentUser.UserID {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "身份证号码已被注册", nil)
-	} else if oldGod := gg.dao.GetGodByPhone(req.GetPhone()); oldGod != nil && oldGod.UserID != currentUser.UserID {
-		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号已被注册", nil)
 	}
 	gender, birthday, err := GetGenderAndBirthdayByIDCardNumber(req.GetIdcard())
 	if err != nil {

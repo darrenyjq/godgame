@@ -47,5 +47,6 @@
         "url": "https://shen.lygou.cc/sa",
         "project": "default"
     },
-    "god_lts_duration": 100
+    "god_lts_duration": 100,
+    "yunpian_apikey": ""
 }

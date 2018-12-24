@@ -12,6 +12,7 @@ import (
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
 	"laoyuegou.pb/chatroom/pb"
+	"laoyuegou.pb/follow/pb"
 	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
@@ -64,7 +65,8 @@ func (gg *GodGame) formatVideoInfo(c frame.Context, hash string) string {
 				"height":     fileInfo.GetData().GetHeight(),
 				"width":      fileInfo.GetData().GetWidth(),
 				"size":       fmt.Sprintf("%.2fM", float64(fileInfo.GetData().GetSize())/1048576),
-				"url":        fileInfo.GetData().GetM3U8(),
+				// "url":        fileInfo.GetData().GetM3U8(),
+				"url": fileInfo.GetData().GetMp4(),
 			},
 		}
 		if bs, err := json.Marshal(result); err == nil {
@@ -268,8 +270,17 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 	}
 	// 2.9.7增加是否关注，sub=1：已关注；TODO：调用关注服务，检查当前用户是否关注过大神
 	if currentUserID := gg.getCurrentUserID(c); currentUserID > 0 {
-
-		data["sub"] = 1
+		followResp, err := followpb.Relation(c, &followpb.RelationReq{
+			A: currentUserID,
+			B: req.GetGodId(),
+		})
+		if err != nil {
+			c.Warnf("%s", err.Error())
+		} else if followResp.GetErrcode() != 0 {
+			c.Warnf("%s", followResp.GetErrmsg())
+		} else if followResp.GetData() != followpb.FOLLOW_STATUS_FOLLOW_STATUS_NONE {
+			data["sub"] = 1
+		}
 	}
 	return c.JSON2(StatusOK_V3, "", data)
 }
@@ -1001,10 +1012,11 @@ func (gg *GodGame) OldData(c frame.Context) error {
 		c.Warnf("%s", err.Error())
 		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
 	}
-	var tmpImages, tmpTags, tmpExt interface{}
+	var tmpImages, tmpTags, tmpExt, tmpPowers interface{}
 	json.Unmarshal([]byte(data.Images), &tmpImages)
 	json.Unmarshal([]byte(data.Tags), &tmpTags)
 	json.Unmarshal([]byte(data.Ext), &tmpExt)
+	json.Unmarshal([]byte(data.Powers), &tmpPowers)
 	ret := map[string]interface{}{
 		"god_id":           data.UserID,
 		"game_id":          data.GameID,
@@ -1012,6 +1024,7 @@ func (gg *GodGame) OldData(c frame.Context) error {
 		"highest_level_id": data.HighestLevelID,
 		"game_screenshot":  data.GameScreenshot,
 		"god_imgs":         tmpImages,
+		"powers":           tmpPowers,
 		"voice":            data.Voice,
 		"voice_duration":   data.VoiceDuration,
 		"aac":              data.Aac,

@@ -14,9 +14,29 @@ import (
 	"laoyuegou.pb/godgame/model"
 	plcommentpb "laoyuegou.pb/plcomment/pb"
 	"laoyuegou.pb/plorder/pb"
-	purse_pb "purse/pb"
+	purse_pb "laoyuegou.pb/purse/pb"
+	"math/rand"
 	"time"
 )
+
+// 获取申请大神短信验证码
+func (dao *Dao) SendApplyCode(phone string) error {
+	redisKey := RKAuthCodeForPhone(phone)
+	c := dao.cpool.Get()
+	defer c.Close()
+	authCode := rand.Intn(900000) + 100000
+	if ret, _ := redis.String(c.Do("SET", redisKey, authCode, "NX", "EX", 120)); ret != "OK" {
+		return fmt.Errorf("请稍后再试")
+	}
+	return dao.ypClient.Send(phone, fmt.Sprintf("【捞月狗】%d您申请陪玩大神的验证码。", authCode))
+}
+
+func (dao *Dao) CheckApplyCode(code, phone string) bool {
+	c := dao.cpool.Get()
+	defer c.Close()
+	authCode, _ := redis.String(c.Do("GET", RKAuthCodeForPhone(phone)))
+	return code == authCode
+}
 
 // 获取大神修改自定义介绍的时间
 func (dao *Dao) GetGodLastModifyDescTimestamp(godID int64) int64 {

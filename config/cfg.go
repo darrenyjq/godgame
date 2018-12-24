@@ -25,5 +25,6 @@ type Config struct {
 		URL     string `json:"url"`
 		Project string `json:"project"`
 	} `json:"shence"`
-	GodLTSDuration int `json:"god_lts_duration"`
+	GodLTSDuration int    `json:"god_lts_duration"`
+	YunPianApiKey  string `json:"yunpian_apikey"`
 }
