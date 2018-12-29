@@ -2,23 +2,61 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"iceberg/frame"
 	iconfig "iceberg/frame/config"
+	"laoyuegou.com/http_api"
 	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/lfs/pb"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 )
 
 // 一键加入陪玩官方群
 func (gg *GodGame) JoinGroup(c frame.Context) error {
-	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
-		"group_id": 31214965301919744,
-		"gouhao":   2494569,
-		"title":    "sq",
-	})
+	currentUser := gg.getCurrentUser(c)
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	appID := "1"
+	appToken := "13f75ce60d1cdcbdec57e2868dcd6205"
+	apiURL := "http://10.25.0.22:8080/api-v2/internal/peiwan/join"
+	if gg.cfg.Env.Production() {
+		apiURL = "http://172.16.163.180:8300/api-v2/internal/peiwan/join"
+	} else if gg.cfg.Env.String() == "stag" {
+		apiURL = "http://172.16.164.182:8400/api-v2/internal/peiwan/join"
+	}
+	params := url.Values{
+		"appId":   []string{appID},
+		"token":   []string{appToken},
+		"user_id": []string{fmt.Sprint(currentUser.UserID)},
+	}
+	req, _ := http.NewRequest("POST", apiURL, strings.NewReader(params.Encode()))
+	req.Header.Set("Accept", "application/json;charset=utf-8;")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8;")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c.Errorf("%s", err.Error())
+		return c.JSON2(StatusOK_V3, "", nil)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 200 {
+		var response http_api.ResponseV3
+		err = json.NewDecoder(resp.Body).Decode(&response)
+		if err != nil {
+			c.Errorf("%s", err.Error())
+			return c.JSON2(StatusOK_V3, "", nil)
+		}
+		return c.JSON2(StatusOK_V3, "", response.Data)
+	}
+	return c.JSON2(StatusOK_V3, "", nil)
 }
 
 // 获取申请大神手机验证码
