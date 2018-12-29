@@ -48,5 +48,10 @@
         "project": "default"
     },
     "god_lts_duration": 100,
-    "yunpian_apikey": ""
+    "yunpian_apikey": "",
+    "nsqcfg": {
+        "topic":"",
+        "nsq_writers": [""],
+        "nsq_lookups": [""]
+    }
 }

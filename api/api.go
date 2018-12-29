@@ -6,21 +6,24 @@ import (
 	shence "github.com/sensorsdata/sa-sdk-go"
 	"godgame/config"
 	"godgame/core"
+	"godgame/handlers"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/httpkit/lyghttp/middleware"
 	"laoyuegou.pb/godgame/model"
 	user_pb "laoyuegou.pb/user/pb"
+	"os"
 	"strconv"
 )
 
 // GodGame God Game服务
 type GodGame struct {
-	dao      *core.Dao
-	cfg      config.Config
-	esClient *elastic.Client
-	esChan   chan ESParams
-	shence   shence.SensorsAnalytics
+	dao        *core.Dao
+	cfg        config.Config
+	esClient   *elastic.Client
+	esChan     chan ESParams
+	shence     shence.SensorsAnalytics
+	nsqHandler *handlers.BaseHandler
 }
 
 // NewGodGame new God Game
@@ -45,8 +48,14 @@ func NewGodGame(cfg config.Config) *GodGame {
 		gg.esClient = esClient
 	}
 	gg.esChan = make(chan ESParams, 100)
+	gg.nsqHandler = handlers.NewBaseHandler(cfg, gg.dao)
 	go gg.StartLoop()
 	return gg
+}
+
+func (gg *GodGame) Stop(s os.Signal) bool {
+	gg.nsqHandler.Stop()
+	return true
 }
 
 func (gg *GodGame) getCurrentUserID(c frame.Context) int64 {

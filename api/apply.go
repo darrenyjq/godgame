@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"iceberg/frame"
+	iconfig "iceberg/frame/config"
 	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
@@ -10,6 +11,15 @@ import (
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/lfs/pb"
 )
+
+// 一键加入陪玩官方群
+func (gg *GodGame) JoinGroup(c frame.Context) error {
+	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
+		"group_id": 31214965301919744,
+		"gouhao":   2494569,
+		"title":    "sq",
+	})
+}
 
 // 获取申请大神手机验证码
 func (gg *GodGame) Code(c frame.Context) error {
@@ -74,7 +84,7 @@ func (gg *GodGame) GodApply(c frame.Context) error {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号不能为空", nil)
 	}
 	if req.GetValidateCode() != "" {
-		if !gg.dao.CheckApplyCode(req.GetValidateCode(), req.GetPhone()) {
+		if gg.cfg.Env == iconfig.ENV_PROD && !gg.dao.CheckApplyCode(req.GetValidateCode(), req.GetPhone()) {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "验证码无效", nil)
 		}
 	}
@@ -172,6 +182,11 @@ func (gg *GodGame) GodGameApply(c frame.Context) error {
 			return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 		}
 		apply.Powers = string(bs)
+	}
+	oldData, err := gg.dao.GetOldData(currentUser.UserID, req.GetGameId())
+	if err == nil {
+		apply.Video = oldData.Video
+		apply.Videos = oldData.Videos
 	}
 	err = gg.dao.GodGameApply(apply)
 	if err != nil {
