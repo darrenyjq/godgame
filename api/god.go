@@ -385,6 +385,7 @@ func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.Curr
 	query = query.Should(elastic.NewMatchQuery("reject_order", "2").Boost(6))
 	query = query.Should(elastic.NewMatchQuery("peiwan_status", "2").Boost(5))
 	query = query.Should(elastic.NewMatchQuery("reject_order", "1").Boost(3))
+	// query = query.Should(elastic.NewMatchQuery("video", "1").Boost(10))
 	searchService = searchService.Query(query).
 		Sort("weight", false).
 		Sort("_score", false).

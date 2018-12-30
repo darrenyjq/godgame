@@ -247,5 +247,8 @@ func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGame, err
 		result.PriceID = accpetOrderSetting.PriceID
 	}
 	result.HighestLevelID = godGame.HighestLevelID
+	if godGame.Video != "" || godGame.Videos != "" {
+		result.Video = 1
+	}
 	return result, nil
 }
