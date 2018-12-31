@@ -8,14 +8,16 @@ import (
 	"iceberg/frame"
 	iconfig "iceberg/frame/config"
 	"iceberg/frame/util"
+	lyg_util "laoyuegou.com/util"
 	user_pb "laoyuegou.pb/user/pb"
 )
 
 // Dao core dao
 type Dao struct {
-	cpool *redis.Pool // 缓存池
-	dbr   *gorm.DB    // 读库
-	dbw   *gorm.DB    // 写库
+	cpool    *redis.Pool             // 缓存池
+	dbr      *gorm.DB                // 读库
+	dbw      *gorm.DB                // 写库
+	ypClient *lyg_util.YunPianClient // 云片客户端
 }
 
 // NewDao dao object
@@ -38,6 +40,11 @@ func NewDao(cfg config.Config) *Dao {
 	if cfg.Env != iconfig.ENV_PROD {
 		dao.dbw.LogMode(true)
 		dao.dbr.LogMode(true)
+	}
+	if cfg.YunPianApiKey != "" {
+		dao.ypClient = lyg_util.NewYunPianClient(cfg.YunPianApiKey)
+	} else {
+		panic("云片ApiKey为空")
 	}
 	return dao
 }

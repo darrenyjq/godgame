@@ -6,7 +6,7 @@ import (
 	"godgame/api"
 	godGameCfg "godgame/config"
 	"iceberg/frame/config"
-	log "iceberg/frame/icelog"
+	"iceberg/frame/icelog"
 	"laoyuegou.com/version"
 	"laoyuegou.pb/godgame/pb"
 	"os"
@@ -29,7 +29,7 @@ func main() {
 	}
 	var cfg godGameCfg.Config
 	config.Parseconfig(*cfgFile, &cfg)
-	log.SetLevel(*logLevel)
+	icelog.SetLevel(*logLevel)
 	s := api.NewGodGame(cfg)
 	godgamepb.RegisterGodGameServer(s, &cfg.Base)
 }

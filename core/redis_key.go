@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+// 申请大神时，手机验证码
+func RKAuthCodeForPhone(phone string) string {
+	return fmt.Sprintf("PH:{%s}:AUTH", phone)
+}
+
 // 整体时间线
 func RKFeedTimeLine() string {
 	return "Global:Timeline"

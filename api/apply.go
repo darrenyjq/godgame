@@ -2,14 +2,77 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"iceberg/frame"
+	iconfig "iceberg/frame/config"
+	"laoyuegou.com/http_api"
 	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/lfs/pb"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 )
+
+// 一键加入陪玩官方群
+func (gg *GodGame) JoinGroup(c frame.Context) error {
+	currentUser := gg.getCurrentUser(c)
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	appID := "1"
+	appToken := "13f75ce60d1cdcbdec57e2868dcd6205"
+	apiURL := "http://10.25.0.22:8080/api-v2/internal/peiwan/join"
+	if gg.cfg.Env.Production() {
+		apiURL = "http://172.16.163.180:8300/api-v2/internal/peiwan/join"
+	} else if gg.cfg.Env.String() == "stag" {
+		apiURL = "http://172.16.164.182:8400/api-v2/internal/peiwan/join"
+	}
+	params := url.Values{
+		"appId":   []string{appID},
+		"token":   []string{appToken},
+		"user_id": []string{fmt.Sprint(currentUser.UserID)},
+	}
+	req, _ := http.NewRequest("POST", apiURL, strings.NewReader(params.Encode()))
+	req.Header.Set("Accept", "application/json;charset=utf-8;")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8;")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		c.Errorf("%s", err.Error())
+		return c.JSON2(StatusOK_V3, "", nil)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 200 {
+		var response http_api.ResponseV3
+		err = json.NewDecoder(resp.Body).Decode(&response)
+		if err != nil {
+			c.Errorf("%s", err.Error())
+			return c.JSON2(StatusOK_V3, "", nil)
+		}
+		return c.JSON2(StatusOK_V3, "", response.Data)
+	}
+	return c.JSON2(StatusOK_V3, "", nil)
+}
+
+// 获取申请大神手机验证码
+func (gg *GodGame) Code(c frame.Context) error {
+	var req godgamepb.CodeReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetPhone() == "" {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "请输入手机号", nil)
+	} else if err = gg.dao.SendApplyCode(req.GetPhone()); err != nil {
+		c.Errorf("%s", err.Error())
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "请稍后再试", nil)
+	}
+	return c.JSON2(StatusOK_V3, "", nil)
+}
 
 // 获取可以申请的游戏列表及大神游戏状态
 func (gg *GodGame) ApplyGames(c frame.Context) error {
@@ -55,12 +118,21 @@ func (gg *GodGame) GodApply(c frame.Context) error {
 	currentUser := gg.getCurrentUser(c)
 	if currentUser.UserID == 0 {
 		return c.JSON2(ERR_CODE_FORBIDDEN, "", nil)
-	} else if gg.dao.IsGod(currentUser.UserID) {
+	} else if req.GetPhone() == "" {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号不能为空", nil)
+	}
+	if req.GetValidateCode() != "" {
+		if gg.cfg.Env == iconfig.ENV_PROD && !gg.dao.CheckApplyCode(req.GetValidateCode(), req.GetPhone()) {
+			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "验证码无效", nil)
+		}
+	}
+	if oldGod := gg.dao.GetGodByPhone(req.GetPhone()); oldGod != nil && oldGod.UserID != currentUser.UserID {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号已被注册", nil)
+	}
+	if gg.dao.IsGod(currentUser.UserID) {
 		return c.JSON2(ERR_CODE_FORBIDDEN, "您已经是大神身份，请勿重复申请", nil)
 	} else if oldGod := gg.dao.GetGodByIDCard(req.GetIdcard()); oldGod != nil && oldGod.UserID != currentUser.UserID {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "身份证号码已被注册", nil)
-	} else if oldGod := gg.dao.GetGodByPhone(req.GetPhone()); oldGod != nil && oldGod.UserID != currentUser.UserID {
-		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "手机号已被注册", nil)
 	}
 	gender, birthday, err := GetGenderAndBirthdayByIDCardNumber(req.GetIdcard())
 	if err != nil {
@@ -148,6 +220,11 @@ func (gg *GodGame) GodGameApply(c frame.Context) error {
 			return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 		}
 		apply.Powers = string(bs)
+	}
+	oldData, err := gg.dao.GetOldData(currentUser.UserID, req.GetGameId())
+	if err == nil {
+		apply.Video = oldData.Video
+		apply.Videos = oldData.Videos
 	}
 	err = gg.dao.GodGameApply(apply)
 	if err != nil {

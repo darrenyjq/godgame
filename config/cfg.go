@@ -4,26 +4,42 @@ import (
 	"iceberg/frame/config"
 )
 
+type oss struct {
+	OSSAccessID  string `json:"oss_accessid"`
+	OSSAccessKey string `json:"oss_accesskey"`
+}
+
+type es struct {
+	Host     []string `json:"host"`
+	PWIndex  string   `json:"pw_index"`
+	PWType   string   `json:"pw_type"`
+	Username string   `json:"username,omitempty"`
+	Password string   `json:"password,omitempty"`
+}
+
+type shence struct {
+	Timeout int    `json:"timeout"`
+	URL     string `json:"url"`
+	Project string `json:"project"`
+}
+
+type nsq struct {
+	Topic   string   `json:"nsq_topic"`
+	Writers []string `json:"nsq_writers"`
+	Lookups []string `json:"nsq_lookups"`
+}
+
 type Config struct {
-	Env   config.Environment `json:"env"`
-	Base  config.BaseCfg     `json:"baseCfg"`
-	Mysql config.MysqlCfg    `json:"mysqlCfg"`
-	Redis config.RedisCfg    `json:"redisCfg"`
-	ES    struct {
-		Host    []string `json:"host"`
-		PWIndex string   `json:"pw_index"`
-		PWType  string   `json:"pw_type"`
-	} `json:"es"`
-	OSS struct {
-		OSSAccessID  string `json:"oss_accessid"`
-		OSSAccessKey string `json:"oss_accesskey"`
-	} `json:"oss"`
-	Urls   map[string]string `json:"urls"`
-	Mix    map[string]string `json:"mix"`
-	Shence struct {
-		Timeout int    `json:"timeout"`
-		URL     string `json:"url"`
-		Project string `json:"project"`
-	} `json:"shence"`
-	GodLTSDuration int `json:"god_lts_duration"`
+	Env            config.Environment `json:"env"`
+	Base           config.BaseCfg     `json:"baseCfg"`
+	Mysql          config.MysqlCfg    `json:"mysqlCfg"`
+	Redis          config.RedisCfg    `json:"redisCfg"`
+	ES             es                 `json:"es"`
+	OSS            oss                `json:"oss"`
+	Urls           map[string]string  `json:"urls"`
+	Mix            map[string]string  `json:"mix"`
+	Shence         shence             `json:"shence"`
+	GodLTSDuration int                `json:"god_lts_duration"`
+	YunPianApiKey  string             `json:"yunpian_apikey"`
+	Nsq            nsq                `json:"nsq"`
 }
