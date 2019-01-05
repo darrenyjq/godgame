@@ -5,14 +5,12 @@ import (
 )
 
 const (
-	StatusOK_V3 = 0
-
-	ERR_CODE_DISPLAY_ERROR = 1
-	ERR_CODE_BAD_REQUEST   = http.StatusBadRequest
-	ERR_CODE_NOT_FOUND     = http.StatusNotFound
-	ERR_CODE_FORBIDDEN     = http.StatusForbidden
-	ERR_CODE_INTERNAL      = http.StatusInternalServerError
-
+	StatusOK_V3                           = 0
+	ERR_CODE_DISPLAY_ERROR                = 1
+	ERR_CODE_BAD_REQUEST                  = http.StatusBadRequest
+	ERR_CODE_NOT_FOUND                    = http.StatusNotFound
+	ERR_CODE_FORBIDDEN                    = http.StatusForbidden
+	ERR_CODE_INTERNAL                     = http.StatusInternalServerError
 	ERR_CODE_GOD_ACCEPT_SETTING_LOAD_FAIL = 5
 	ERR_CODE_EMPTY_ACCEPT_SETTING         = 10000 // 开启接单开关，但是接单设置为空，自动跳转到接单设置页面
 )

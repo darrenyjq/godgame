@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
+	"github.com/json-iterator/go"
 	"godgame/config"
 	"iceberg/frame"
 	iconfig "iceberg/frame/config"
@@ -11,6 +12,8 @@ import (
 	lyg_util "laoyuegou.com/util"
 	user_pb "laoyuegou.pb/user/pb"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Dao core dao
 type Dao struct {
@@ -100,4 +103,8 @@ func (dao *Dao) UserV1ByGouHao(gouhao int64) (UserInfoV1, error) {
 	v1.NickName = ret.GetUsername()
 	v1.Gender = int64(ret.GetGender())
 	return v1, nil
+}
+
+func (dao *Dao) GetRedisPool() *redis.Pool {
+	return dao.cpool
 }

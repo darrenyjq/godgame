@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"laoyuegou.pb/godgame/model"

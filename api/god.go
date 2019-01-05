@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/olivere/elastic"
@@ -26,12 +25,105 @@ import (
 	"laoyuegou.pb/plorder/pb"
 	sapb "laoyuegou.pb/sa/pb"
 	user_pb "laoyuegou.pb/user/pb"
-	"laoyuegou.pb/vip/pb"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
+
+func (gg *GodGame) Chat(c frame.Context) error {
+	var req godgamepb.ChatReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetGodId() == 0 {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	god := gg.dao.GetGod(req.GetGodId())
+	if god.Status != constants.GOD_STATUS_PASSED {
+		return c.JSON2(StatusOK_V3, "", nil)
+	}
+	if god.Desc != "" {
+		if req.GetT() == 0 || req.GetT() < gg.dao.GetGodLastModifyDescTimestamp(req.GetGodId()) {
+			// 发送大神自定义介绍给用户
+			if currentUserID := gg.getCurrentUserID(c); currentUserID > 0 {
+				go imapipb.SendMessage(c, &imapipb.SendMessageReq{
+					Thread:      lyg_util.CreatePrivateMessageThread(req.GetGodId(), currentUserID).String(),
+					FromId:      req.GetGodId(),
+					ToId:        currentUserID,
+					ContentType: imapipb.MESSAGE_CONTENT_TYPE_TEXT,
+					Subtype:     imapipb.MESSAGE_SUBTYPE_CHAT,
+					Message:     god.Desc,
+					Apn:         "",
+					Ttl:         1,
+					Fanout:      []int64{},
+				})
+			}
+		}
+	}
+	v1s, err := gg.dao.GetGodAllGameV1(req.GetGodId())
+	if err != nil {
+		c.Error(err.Error())
+		return c.JSON2(StatusOK_V3, "", nil)
+	}
+	sort.Sort(v1s)
+	items := make([]map[string]interface{}, 0, len(v1s))
+	var call map[string]interface{}
+	var uniprice int64
+	for _, v1 := range v1s {
+		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		}
+		if gg.isVoiceCallGame(v1.GameID) {
+			// 语聊品类
+			call = make(map[string]interface{})
+			if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+				call["price"] = fmt.Sprintf("%d狗粮/分", v1.PeiWanPrice)
+			} else {
+				cfgResp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
+					GameId: v1.GameID,
+				})
+				if err != nil || cfgResp.GetErrcode() != 0 {
+					continue
+				}
+				call["price"] = fmt.Sprintf("%d狗粮/分", cfgResp.GetData().GetPrices()[v1.PriceID])
+			}
+			continue
+		} else {
+			tmpData := make(map[string]interface{})
+			if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+				uniprice = v1.PeiWanPrice
+			} else {
+				cfgResp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+					GameId: v1.GameID,
+				})
+				if err != nil || cfgResp.GetErrcode() != 0 {
+					continue
+				}
+				uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
+			}
+			tmpData["pw_price"] = FormatPriceV1(uniprice)
+			tmpData["gl"] = FormatRMB2Gouliang(uniprice)
+			tmpData["game_id"] = v1.GameID
+			tmpData["score"] = FormatScore(v1.Score)
+			acceptResp, err := gamepb.Accept(c, &gamepb.AcceptReq{
+				GameId:   v1.GameID,
+				AcceptId: v1.HighestLevelID,
+			})
+			if err == nil && acceptResp.GetErrcode() == 0 {
+				tmpData["highest_level_desc"] = acceptResp.GetData().GetName()
+				tmpData["game_name"] = acceptResp.GetData().GetGameName()
+			}
+			tmpData["accept_num"] = FormatAcceptOrderNumber(v1.AcceptNum)
+			tmpData["status"] = constants.GOD_GAME_STATUS_PASSED
+			items = append(items, tmpData)
+		}
+	}
+	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
+		"items": items,
+		"call":  call,
+	})
+}
 
 func (gg *GodGame) formatVideoInfo2(c frame.Context, hash string) string {
 	fileInfo, err := lfspb.Info(c, &lfspb.InfoReq{
@@ -672,6 +764,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 			invalidItems = append(invalidItems, fmt.Sprintf("%d-%d", pwObj.GodID, pwObj.GameID))
 			continue
 		}
+		tmpImages = make([]string, 0, 6)
 		json.Unmarshal([]byte(god.Images), &tmpImages)
 		if len(tmpImages) == 0 {
 			continue
@@ -908,31 +1001,8 @@ func (gg *GodGame) GodGamesV4(c frame.Context) error {
 	if god.Desc != "" {
 		if t := c.GetInt64("t", 0); t == 0 || t < gg.dao.GetGodLastModifyDescTimestamp(godID) {
 			// 发送大神自定义介绍给用户
-			go func() {
-				godUserInfo, err := gg.getSimpleUser(godID)
-				if err != nil {
-					return
-				}
-				ext := map[string]interface{}{
-					"gouhao":   fmt.Sprintf("%d", godUserInfo.GetGouhao()),
-					"avatar":   godUserInfo.GetAvatarSmall(),
-					"username": godUserInfo.GetUsername(),
-				}
-				if len(godUserInfo.GetGameIds()) > 0 {
-					ext["game_ids"] = lyg_util.Int64sToStrings(godUserInfo.GetGameIds())
-				}
-				if vipResp, err := vippb.Info(c, &vippb.InfoReq{UserId: godID}); err == nil && vipResp.GetErrcode() == 0 {
-					ext["vip_frame"] = vipResp.GetData().GetVipFrame()
-					ext["vip_icon"] = vipResp.GetData().GetVipIcon()
-					ext["vip_level"] = vipResp.GetData().GetVipLevel()
-					ext["vip_status"] = vipResp.GetData().GetVipStatus()
-				}
-				extBytes, err := json.Marshal(ext)
-				if err != nil {
-					return
-				}
-				currentUserID := gg.getCurrentUserID(c)
-				sendResp, err := imapipb.SendMessage(c, &imapipb.SendMessageReq{
+			if currentUserID := gg.getCurrentUserID(c); currentUserID > 0 {
+				go imapipb.SendMessage(c, &imapipb.SendMessageReq{
 					Thread:      lyg_util.CreatePrivateMessageThread(godID, currentUserID).String(),
 					FromId:      godID,
 					ToId:        currentUserID,
@@ -940,18 +1010,16 @@ func (gg *GodGame) GodGamesV4(c frame.Context) error {
 					Subtype:     imapipb.MESSAGE_SUBTYPE_CHAT,
 					Message:     god.Desc,
 					Apn:         "",
-					Ext:         string(extBytes),
 					Ttl:         1,
 					Fanout:      []int64{},
 				})
-				c.Infof("#### send msg resp %+v, err %v", sendResp, err)
-			}()
+			}
 		}
 	}
 	v1s, err := gg.dao.GetGodAllGameV1(godID)
 	if err != nil {
 		c.Warnf("GodGames error:%s", err)
-		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
+		return c.JSON2(StatusOK_V3, "", nil)
 	}
 	sort.Sort(v1s)
 	data := make([]map[string]interface{}, 0, len(v1s))
@@ -1126,7 +1194,6 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	}
 	settings := make([]map[string]interface{}, 0, len(godGames))
 	var resp *gamepb.AcceptCfgV2Resp
-	var tmpImgs, tmpTags, tmpExt, tmpVideos interface{}
 	for _, godGame := range godGames {
 		resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
 			GameId: godGame.GameID,
@@ -1134,6 +1201,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 		if err != nil || resp == nil {
 			continue
 		}
+		var tmpImgs, tmpTags, tmpExt, tmpVideos interface{}
 		json.Unmarshal([]byte(godGame.Images), &tmpImgs)
 		json.Unmarshal([]byte(godGame.Tags), &tmpTags)
 		json.Unmarshal([]byte(godGame.Ext), &tmpExt)
@@ -1232,12 +1300,16 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		req.GrabSwitch = constants.GRAB_SWITCH_CLOSE
 		req.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 		req.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
+		req.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
 	}
 	if req.GetGrabSwitch2() != constants.GRAB_SWITCH2_OPEN {
 		req.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 	}
 	if req.GetGrabSwitch3() != constants.GRAB_SWITCH3_OPEN {
 		req.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
+	}
+	if req.GetGrabSwitch4() != constants.GRAB_SWITCH4_OPEN {
+		req.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
 	}
 	bs, err := json.Marshal(req.GetAcceptSettings())
 	if err != nil {
@@ -1250,6 +1322,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		GrabSwitch:  req.GetGrabSwitch(),
 		GrabSwitch2: req.GetGrabSwitch2(),
 		GrabSwitch3: req.GetGrabSwitch3(),
+		GrabSwitch4: req.GetGrabSwitch4(),
 		PriceID:     req.GetUnitPriceId(),
 	}
 	err = gg.dao.ModifyAcceptOrderSetting(settings)
@@ -1278,42 +1351,55 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 				"PaidanSwitchok": req.GetGrabSwitch3() == constants.GRAB_SWITCH3_OPEN,
 			}, true)
 	}()
+	if gg.isVoiceCallGame(req.GetGameId()) {
+		// 语聊品类
+		redisConn := gg.dao.GetPlayRedisPool().Get()
+		defer redisConn.Close()
+		if req.GetGrabSwitch4() == constants.GRAB_SWITCH4_OPEN {
+			// 随机模式开关打开
+			redisConn.Do("SADD", core.RKVoiceCallGods(), currentUser.UserID)
+		} else {
+			redisConn.Do("SREM", core.RKVoiceCallGods(), currentUser.UserID)
+		}
+	} else {
+		// 非语聊品类
+		redisConn := gg.dao.GetPlayRedisPool().Get()
+		defer redisConn.Close()
+		if resp.GetData().GetJsy() == game_const.GAME_SUPPORT_JSY_YES {
+			// 判断客户端版本是否支持即时约，iOS: appverion>=20702 Android: appverion>=20703
+			if (currentUser.Platform == constants.APP_OS_IOS && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_ios"]) ||
+				(currentUser.Platform == constants.APP_OS_Android && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_android"]) {
+				jsyKey := core.RKJSYGods(req.GetGameId(), godInfo.Gender)
+				jsyPaiDanKey := core.RKJSYPaiDanGods(req.GetGameId(), godInfo.Gender)
+				if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
+					redisConn.Do("ZADD", jsyKey, time.Now().Unix(), currentUser.UserID)
+				} else {
+					redisConn.Do("ZREM", jsyKey, currentUser.UserID)
+				}
+				if req.GetGrabSwitch3() == constants.GRAB_SWITCH3_OPEN {
+					redisConn.Do("ZADD", jsyPaiDanKey, time.Now().Unix(), currentUser.UserID)
+				} else {
+					redisConn.Do("ZREM", jsyPaiDanKey, currentUser.UserID)
+				}
+			}
+		}
+		if godGame.GrabStatus != constants.GRAB_STATUS_YES {
+			return c.JSON2(StatusOK_V3, "", nil)
+		}
+		for _, region := range godGame.Regions {
+			for _, level := range godGame.Levels {
+				redisConn.Do("ZREM", core.GodsRedisKey3(req.GetGameId(), region, level), currentUser.UserID)
+			}
+		}
+		if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
+			for _, tmpRegion := range req.GetAcceptSettings().GetRegionId() {
+				for _, tmpLevel := range req.GetAcceptSettings().GetLevelId() {
+					redisConn.Do("ZADD", core.GodsRedisKey3(req.GetGameId(), tmpRegion, tmpLevel), godGame.HighestLevelID, currentUser.UserID)
+				}
+			}
+		}
+	}
 
-	redisConn := gg.dao.GetPlayRedisPool().Get()
-	defer redisConn.Close()
-	if resp.GetData().GetJsy() == game_const.GAME_SUPPORT_JSY_YES {
-		// 判断客户端版本是否支持即时约，iOS: appverion>=20702 Android: appverion>=20703
-		if (currentUser.Platform == constants.APP_OS_IOS && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_ios"]) ||
-			(currentUser.Platform == constants.APP_OS_Android && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_android"]) {
-			jsyKey := core.RKJSYGods(req.GetGameId(), godInfo.Gender)
-			jsyPaiDanKey := core.RKJSYPaiDanGods(req.GetGameId(), godInfo.Gender)
-			if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
-				redisConn.Do("ZADD", jsyKey, time.Now().Unix(), currentUser.UserID)
-			} else {
-				redisConn.Do("ZREM", jsyKey, currentUser.UserID)
-			}
-			if req.GetGrabSwitch3() == constants.GRAB_SWITCH3_OPEN {
-				redisConn.Do("ZADD", jsyPaiDanKey, time.Now().Unix(), currentUser.UserID)
-			} else {
-				redisConn.Do("ZREM", jsyPaiDanKey, currentUser.UserID)
-			}
-		}
-	}
-	if godGame.GrabStatus != constants.GRAB_STATUS_YES {
-		return c.JSON2(StatusOK_V3, "", nil)
-	}
-	for _, region := range godGame.Regions {
-		for _, level := range godGame.Levels {
-			redisConn.Do("ZREM", core.GodsRedisKey3(req.GetGameId(), region, level), currentUser.UserID)
-		}
-	}
-	if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
-		for _, tmpRegion := range req.GetAcceptSettings().GetRegionId() {
-			for _, tmpLevel := range req.GetAcceptSettings().GetLevelId() {
-				redisConn.Do("ZADD", core.GodsRedisKey3(req.GetGameId(), tmpRegion, tmpLevel), godGame.HighestLevelID, currentUser.UserID)
-			}
-		}
-	}
 	if godGame.Recommend == constants.RECOMMEND_YES {
 		esID := fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)
 		if req.GetGrabSwitch() == constants.GRAB_SWITCH_OPEN {
@@ -1357,6 +1443,9 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 	var dxdResp *gamepb.DxdResp
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		} else if gg.isVoiceCallGame(v1.GameID) {
+			// 语聊品类不展示在下定向单页面
 			continue
 		}
 		dxdResp, err = gamepb.Dxd(c, &gamepb.DxdReq{

@@ -3,7 +3,6 @@ package api
 // 管理Elasticsearch中的大神信息
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic"
 	"iceberg/frame"

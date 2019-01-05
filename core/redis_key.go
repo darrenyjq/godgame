@@ -4,6 +4,25 @@ import (
 	"fmt"
 )
 
+func RKFeedRooms() string {
+	return "FeedRooms"
+}
+
+// title为推荐栏标题的md5值
+func RKFeedGods(title string) string {
+	return fmt.Sprintf("FG:{%s}", title)
+}
+
+// gender 1:男 2:女 0:所有
+func RKFeedGodsByGender(gameID, gender int64) string {
+	return fmt.Sprintf("G:{%d}:FG:{%d}", gameID, gender)
+}
+
+// 语聊大神列表
+func RKVoiceCallGods() string {
+	return "VoiceGods"
+}
+
 // 申请大神时，手机验证码
 func RKAuthCodeForPhone(phone string) string {
 	return fmt.Sprintf("PH:{%s}:AUTH", phone)

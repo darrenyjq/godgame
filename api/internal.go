@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic"
 	"godgame/core"

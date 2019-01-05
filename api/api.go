@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/json-iterator/go"
 	"github.com/olivere/elastic"
 	shence "github.com/sensorsdata/sa-sdk-go"
 	"godgame/config"
@@ -10,11 +11,14 @@ import (
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/httpkit/lyghttp/middleware"
+	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/model"
 	user_pb "laoyuegou.pb/user/pb"
 	"os"
 	"strconv"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // GodGame God Game服务
 type GodGame struct {
@@ -108,4 +112,15 @@ func (gg *GodGame) getSimpleUser(userID int64) (*user_pb.UserInfo, error) {
 		return nil, fmt.Errorf("not found")
 	}
 	return resp.GetData(), nil
+}
+
+// 判断是否为语聊品类
+func (gg *GodGame) isVoiceCallGame(gameID int64) bool {
+	resp, err := gamepb.VoiceCall(frame.TODO(), &gamepb.VoiceCallReq{
+		GameId: gameID,
+	})
+	if err == nil && resp.GetErrcode() == 0 {
+		return resp.GetData()
+	}
+	return false
 }

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/olivere/elastic"
 	"godgame/core"
@@ -216,7 +215,6 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 	items := make([]map[string]interface{}, 0, len(godGames))
 	var item, godInfo map[string]interface{}
 	var god *model.God
-	var tmpImages, tmpTags, tmpExt, tmpPowers interface{}
 	var godIcon *model.TmpGodIcon
 	for _, godGame := range godGames {
 		userV1, err = gg.dao.UserV1ByID(godGame.UserID)
@@ -227,6 +225,7 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 		if god == nil {
 			continue
 		}
+		var tmpImages, tmpTags, tmpExt, tmpPowers interface{}
 		// item = make(map[string]interface{})
 		item = map[string]interface{}{
 			"god_id":           godGame.UserID,
