@@ -205,7 +205,6 @@ func (dao *Dao) UnBlockGod(godID int64) error {
 func (dao *Dao) GodGameApply(apply model.GodGameApply) error {
 	apply.Status = constants.GOD_GAME_APPLY_STATUS_PENDING
 	apply.Createdtime = time.Now()
-
 	var oldData model.GodGameApply
 	var err error
 	dao.dbw.Table("play_god_games_apply").Where("userid=? AND gameid=?", apply.UserID, apply.GameID).First(&oldData)
@@ -215,14 +214,6 @@ func (dao *Dao) GodGameApply(apply model.GodGameApply) error {
 	} else {
 		err = dao.dbw.Create(&apply).Error
 	}
-	// old := apply
-	// old.Createdtime = time.Now()
-
-	// db := dao.dbw.Table("play_god_games_apply").Where("userid=? AND gameid=?", apply.UserID, apply.GameID).Assign(old).Update("status", apply.Status)
-	// if apply.Aac == "" {
-	// 	db = db.Update("aac", "")
-	// }
-	// err := db.FirstOrCreate(&apply).Error
 	if err != nil {
 		return err
 	}

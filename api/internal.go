@@ -289,6 +289,10 @@ func (gg *GodGame) SpecialGodOrderSetting(c frame.Context) error {
 		PriceId:        godGame.PriceID,
 		PriceType:      godGame.PriceType,
 		PeiwanPrice:    godGame.PeiWanPrice,
+		GrabSwitch:     godGame.GrabSwitch,
+		GrabSwitch2:    godGame.GrabSwitch2,
+		GrabSwitch3:    godGame.GrabSwitch3,
+		GrabSwitch4:    godGame.GrabSwitch4,
 	})
 }
 
