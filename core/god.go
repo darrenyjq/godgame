@@ -18,6 +18,32 @@ import (
 	"time"
 )
 
+// 获取一键呼叫语聊大神，随机开关打开状态的
+func (dao *Dao) GetRandCallGods() ([]int64, error) {
+	c := dao.cpool.Get()
+	defer c.Close()
+	gods, err := redis.Int64s(c.Do("ZRANGEBYSCORE", RKVoiceCallGods(), 1, 1))
+	if err != nil {
+		return []int64{}, err
+	} else if len(gods) == 0 {
+		return []int64{}, nil
+	}
+	return gods, nil
+}
+
+// 获取语聊大神，接单开关打开状态的
+func (dao *Dao) GetRandCallGods2() ([]int64, error) {
+	c := dao.cpool.Get()
+	defer c.Close()
+	gods, err := redis.Int64s(c.Do("ZRANGE", RKVoiceCallGods(), 0, -1))
+	if err != nil {
+		return []int64{}, err
+	} else if len(gods) == 0 {
+		return []int64{}, nil
+	}
+	return gods, nil
+}
+
 // 获取申请大神短信验证码
 func (dao *Dao) SendApplyCode(phone string) error {
 	redisKey := RKAuthCodeForPhone(phone)
@@ -677,6 +703,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	v1.GrabSwitch = constants.GRAB_SWITCH2_CLOSE
 	v1.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 	v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
+	v1.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
 	accpetOrderSetting, err := dao.GetGodSpecialAcceptOrderSetting(godID, gameID)
 	if err == nil {
 		v1.PriceID = accpetOrderSetting.PriceID
@@ -685,6 +712,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 		v1.GrabSwitch = accpetOrderSetting.GrabSwitch
 		v1.GrabSwitch2 = accpetOrderSetting.GrabSwitch2
 		v1.GrabSwitch3 = accpetOrderSetting.GrabSwitch3
+		v1.GrabSwitch4 = accpetOrderSetting.GrabSwitch4
 	}
 	bs, _ = json.Marshal(v1)
 	c.Do("HSET", RKGodGameV1(godID), gameID, string(bs))
@@ -1050,6 +1078,7 @@ func (dao *Dao) GetGodBlockedGameV1(godID int64) (model.GodGameV1sSortedByAccept
 				v1.GrabSwitch = constants.GRAB_SWITCH_CLOSE
 				v1.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 				v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
+				v1.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
 				v1s = append(v1s, v1)
 			}
 		}
@@ -1133,5 +1162,3 @@ func (dao *Dao) GetGodSpecialBlockedGameV1(godID, gameID int64) (model.GodGameV1
 	c.Do("HSET", RKBlockedGodGameV1(godID), gameID, string(bs))
 	return v1, nil
 }
-
-// 修改视频

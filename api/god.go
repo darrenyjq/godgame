@@ -31,6 +31,78 @@ import (
 	"time"
 )
 
+func (gg *GodGame) RandCall(c frame.Context) error {
+	p := c.GetInt64("p", 1)
+	var items []map[string]interface{}
+	data := map[string]interface{}{
+		"count": 0,
+		"items": items,
+	}
+	if p != 1 {
+		return c.JSON2(StatusOK_V3, "", data)
+	}
+	gameInfo, err := gamepb.GetVoiceCall(c, nil)
+	if err != nil || gameInfo.GetErrcode() != 0 || gameInfo.GetData() == nil || gameInfo.GetData().GetPrices() == nil {
+		c.Errorf("获取语聊品类信息失败 %v %v", gameInfo, err)
+		return c.JSON2(StatusOK_V3, "", data)
+	}
+	gods, err := gg.dao.GetRandCallGods2()
+	if err != nil {
+		c.Error(err.Error())
+		return c.JSON2(StatusOK_V3, "", data)
+	} else if len(gods) == 0 {
+		return c.JSON2(StatusOK_V3, "", data)
+	}
+	gameID := gameInfo.GetData().GetGameId()
+	var userInfo *user_pb.GetUserResp
+	var lts *imapipb.GetUserLTSResp
+	var godGameV1 model.GodGameV1
+	var status int64
+	var price int64
+	items = make([]map[string]interface{}, 0, len(gods))
+	for _, godID := range gods {
+		userInfo, err = user_pb.GetUser(c, &user_pb.GetUserReq{
+			UserId: godID,
+		})
+		if err != nil || userInfo.GetErrcode() != 0 {
+			continue
+		}
+		godGameV1, err = gg.dao.GetGodSpecialGameV1(godID, gameID)
+		if err != nil {
+			c.Error(err.Error())
+			continue
+		}
+		lts, err = imapipb.GetUserLTS(c, &imapipb.GetUserLTSReq{
+			UserId: godID,
+		})
+		if err != nil || lts.GetErrcode() != 0 || lts.GetData().GetStatus() != imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_ONLINE {
+			status = constants.GOD_STATUS_OFFLINE
+		} else {
+			status = constants.GOD_STATUS_ONLINE
+		}
+		if godGameV1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+			price = godGameV1.PeiWanPrice
+		} else {
+			price = gameInfo.GetData().GetPrices()[godGameV1.PriceID]
+		}
+		items = append(items, map[string]interface{}{
+			"user_id":        userInfo.GetData().GetUserId(),
+			"username":       userInfo.GetData().GetUsername(),
+			"avatar":         userInfo.GetData().GetAvatar(),
+			"voice":          godGameV1.Voice,
+			"aac":            godGameV1.Aac,
+			"voice_duration": godGameV1.VoiceDuration,
+			"price":          fmt.Sprintf("%d", price),
+			"price_unit":     "狗粮/分",
+			"desc":           godGameV1.Desc,
+			"status":         status,
+		})
+	}
+	data["count"] = len(items)
+	data["items"] = items
+	return c.JSON2(StatusOK_V3, "", data)
+}
+
 func (gg *GodGame) Chat(c frame.Context) error {
 	var req godgamepb.ChatReq
 	var err error
@@ -529,17 +601,7 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 		if args.GameId > 0 {
 			query = query.Must(elastic.NewTermQuery("game_id", args.GameId))
 		} else {
-			gids := []interface{}{}
-			if currentUser.UserID == 0 {
-				gids = []interface{}{gamepb.GAME_ID_PUBG, gamepb.GAME_ID_LOL, gamepb.GAME_ID_WZRY}
-			} else if len(currentUser.GameIds) > 0 {
-				gids = []interface{}{gamepb.GAME_ID_SY, gamepb.GAME_ID_XNLR}
-				for _, v := range currentUser.GameIds {
-					if gid, ok := gamepb.GameDicst[v]; ok {
-						gids = append(gids, gid)
-					}
-				}
-			}
+			gids := []interface{}{gamepb.GAME_ID_PUBG, gamepb.GAME_ID_LOL, gamepb.GAME_ID_WZRY}
 			query = query.Should(elastic.NewTermsQuery("game_id", gids...).Boost(8))
 		}
 		if currentUser.UserID == 0 {
@@ -655,13 +717,6 @@ func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser mod
 			query = query.Must(elastic.NewTermQuery("game_id", args.GameId))
 		} else {
 			gids := []interface{}{gamepb.GAME_ID_SY, gamepb.GAME_ID_SJ, gamepb.GAME_ID_XNLR, gamepb.GAME_ID_DWRG}
-			if len(currentUser.GameIds) > 0 {
-				for _, v := range currentUser.GameIds {
-					if gid, ok := gamepb.GameDicst[v]; ok {
-						gids = append(gids, gid)
-					}
-				}
-			}
 			query = query.Should(elastic.NewTermsQuery("game_id", gids...).Boost(8))
 		}
 		if currentUser.UserID == 0 {
@@ -792,7 +847,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 			"voice":          god.Voice,
 			"voice_duration": god.VoiceDuration,
 			"aac":            god.Aac,
-			"imgs":           []string{fmt.Sprintf("%s/400", tmpImages[0])},
+			"imgs":           []string{fmt.Sprintf("%s/w400", tmpImages[0])},
 			"god_icon":       god.GodIcon,
 			"uniprice":       uniprice,
 			"gl":             FormatRMB2Gouliang(uniprice),
@@ -1232,6 +1287,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"grab_switch":         godGame.GrabSwitch,
 			"grab_switch2":        godGame.GrabSwitch2,
 			"grab_switch3":        godGame.GrabSwitch3,
+			"grab_switch4":        godGame.GrabSwitch4,
 			"order_cnt":           godGame.AcceptNum,
 			"order_cnt_desc":      FormatAcceptOrderNumber(godGame.AcceptNum),
 		})
@@ -1355,11 +1411,13 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		// 语聊品类
 		redisConn := gg.dao.GetPlayRedisPool().Get()
 		defer redisConn.Close()
-		if req.GetGrabSwitch4() == constants.GRAB_SWITCH4_OPEN {
+		if req.GetGrabSwitch() == constants.GRAB_SWITCH_CLOSE {
+			redisConn.Do("ZREM", core.RKVoiceCallGods(), currentUser.UserID)
+		} else if req.GetGrabSwitch4() == constants.GRAB_SWITCH4_OPEN {
 			// 随机模式开关打开
-			redisConn.Do("SADD", core.RKVoiceCallGods(), currentUser.UserID)
+			redisConn.Do("ZADD", core.RKVoiceCallGods(), 1, currentUser.UserID)
 		} else {
-			redisConn.Do("SREM", core.RKVoiceCallGods(), currentUser.UserID)
+			redisConn.Do("ZADD", core.RKVoiceCallGods(), 2, currentUser.UserID)
 		}
 	} else {
 		// 非语聊品类

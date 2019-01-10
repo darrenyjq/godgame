@@ -40,6 +40,7 @@ func (dao *Dao) GetGodAcceptOrderSettings(godID int64) ([]model.OrderAcceptSetti
 		tmpOas.GrabSwitch = tmpOrmOas.GrabSwitch
 		tmpOas.GrabSwitch2 = tmpOrmOas.GrabSwitch2
 		tmpOas.GrabSwitch3 = tmpOrmOas.GrabSwitch3
+		tmpOas.GrabSwitch4 = tmpOrmOas.GrabSwitch4
 		oas = append(oas, tmpOas)
 		if bs, err = json.Marshal(tmpOas); err == nil {
 			redisConn.Do("HSET", redisKey, tmpOas.GameID, string(bs))
@@ -75,6 +76,7 @@ func (dao *Dao) GetGodSpecialAcceptOrderSetting(godID, gameID int64) (model.Orde
 	oas.GrabSwitch = ormOas.GrabSwitch
 	oas.GrabSwitch2 = ormOas.GrabSwitch2
 	oas.GrabSwitch3 = ormOas.GrabSwitch3
+	oas.GrabSwitch4 = ormOas.GrabSwitch4
 	if bs, err := json.Marshal(oas); err == nil {
 		redisConn.Do("HSET", redisKey, gameID, string(bs))
 	}
@@ -89,6 +91,7 @@ func (dao *Dao) ModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) e
 			"grab_switch":         settings.GrabSwitch,
 			"grab_switch2":        settings.GrabSwitch2,
 			"grab_switch3":        settings.GrabSwitch3,
+			"grab_switch4":        settings.GrabSwitch4,
 			"pei_wan_uniprice_id": settings.PriceID,
 		}).
 		FirstOrCreate(&settings).Error

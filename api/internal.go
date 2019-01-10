@@ -17,6 +17,46 @@ import (
 	"time"
 )
 
+// 获取语聊大神的单价
+func (gg *GodGame) GetCallPrice(c frame.Context) error {
+	var req godgamepb.GetCallPriceReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
+	} else if req.GetGodId() == 0 {
+		return c.JSON2(ERR_CODE_INTERNAL, "invalid god_id", nil)
+	}
+	gameInfo, err := gamepb.GetVoiceCall(c, nil)
+	if err != nil || gameInfo.GetErrcode() != 0 || gameInfo.GetData() == nil {
+		return c.JSON2(ERR_CODE_INTERNAL, "invalid gameinfo", nil)
+	}
+	godGameV1, err := gg.dao.GetGodSpecialGameV1(req.GetGodId(), gameInfo.GetData().GetGameId())
+	if err != nil {
+		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
+	}
+	var resp godgamepb.GetCallPriceResp_Data
+	if godGameV1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+		resp.PriceId = 0
+		resp.PriceGl = godGameV1.PeiWanPrice
+	} else {
+		resp.PriceId = godGameV1.PriceID
+		resp.PriceGl = gameInfo.GetData().GetPrices()[godGameV1.PriceID]
+	}
+	return c.JSON2(StatusOK_V3, "", &resp)
+}
+
+// 获取一键匹配语聊大神列表
+func (gg *GodGame) GetCallGods(c frame.Context) error {
+	gods, err := gg.dao.GetRandCallGods()
+	if err != nil {
+		c.Errorf("%s", err.Error())
+		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
+	}
+	return c.JSON2(StatusOK_V3, "", &godgamepb.GetCallGodsResp_Data{
+		Gods: gods,
+	})
+}
+
 // 重新计算大神等级
 func (gg *GodGame) ReCalcGodLevel(c frame.Context) error {
 	var req godgamepb.ReCalcGodLevelReq
@@ -218,6 +258,7 @@ func (gg *GodGame) GodOrderSettings(c frame.Context) error {
 			GrabSwitch:     godGame.GrabSwitch,
 			GrabSwitch2:    godGame.GrabSwitch2,
 			GrabSwitch3:    godGame.GrabSwitch3,
+			GrabSwitch4:    godGame.GrabSwitch4,
 		})
 	}
 	return c.JSON2(StatusOK_V3, "", settings)

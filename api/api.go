@@ -97,6 +97,7 @@ func (gg *GodGame) getCurrentUser(c frame.Context) model.CurrentUser {
 	currentUser.GameIds = uinfo.GetGameIds()
 	currentUser.Invalid = uinfo.GetInvalid()
 	currentUser.AppVersion = uinfo.GetAppVersion()
+	currentUser.AppVersionNum = uinfo.GetAppVer()
 	currentUser.Platform = uinfo.GetAppForm()
 	currentUser.AppID = uinfo.GetAppId()
 	return currentUser
@@ -110,6 +111,19 @@ func (gg *GodGame) getSimpleUser(userID int64) (*user_pb.UserInfo, error) {
 		return nil, fmt.Errorf("%s", resp.GetErrmsg())
 	} else if resp.GetData() == nil {
 		return nil, fmt.Errorf("not found")
+	}
+	return resp.GetData(), nil
+}
+
+func (gg *GodGame) getSimpleUser2(userID int64) (*user_pb.SimpleInfo, error) {
+	if userID == 0 {
+		return nil, fmt.Errorf("invalid userid")
+	}
+	resp, err := user_pb.Simple2(frame.TODO(), &user_pb.Simple2Req{UserId: userID})
+	if err != nil {
+		return nil, err
+	} else if resp.GetErrcode() != 0 {
+		return nil, fmt.Errorf("%s", resp.GetErrmsg())
 	}
 	return resp.GetData(), nil
 }

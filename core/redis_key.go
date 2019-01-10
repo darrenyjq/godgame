@@ -18,7 +18,7 @@ func RKFeedGodsByGender(gameID, gender int64) string {
 	return fmt.Sprintf("G:{%d}:FG:{%d}", gameID, gender)
 }
 
-// 语聊大神列表
+// 语聊大神列表，Sorted Set，随机开关打开：score=1 随机开关关闭：score=2
 func RKVoiceCallGods() string {
 	return "VoiceGods"
 }
