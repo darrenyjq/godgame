@@ -18,6 +18,21 @@ import (
 	"time"
 )
 
+func (gg *GodGame) GetCallPrice(c frame.Context) error {
+	return nil
+}
+func (gg *GodGame) RandCall(c frame.Context) error {
+	return nil
+}
+
+func (gg *GodGame) Chat(c frame.Context) error {
+	return nil
+}
+
+func (gg *GodGame) GetCallGods(c frame.Context) error {
+	return nil
+}
+
 // 重新计算大神等级
 func (gg *GodGame) ReCalcGodLevel(c frame.Context) error {
 	var req godgamepb.ReCalcGodLevelReq
@@ -249,6 +264,10 @@ func (gg *GodGame) SpecialGodOrderSetting(c frame.Context) error {
 		PriceId:        godGame.PriceID,
 		PriceType:      godGame.PriceType,
 		PeiwanPrice:    godGame.PeiWanPrice,
+		GrabSwitch:     godGame.GrabSwitch,
+		GrabSwitch2:    godGame.GrabSwitch2,
+		GrabSwitch3:    godGame.GrabSwitch3,
+		GrabSwitch4:    godGame.GrabSwitch4,
 	})
 }
 
