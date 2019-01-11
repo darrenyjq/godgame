@@ -23,6 +23,7 @@ import (
 	plcommentpb "laoyuegou.pb/plcomment/pb"
 	order_const "laoyuegou.pb/plorder/constants"
 	"laoyuegou.pb/plorder/pb"
+	"laoyuegou.pb/pumpkin/pb"
 	sapb "laoyuegou.pb/sa/pb"
 	user_pb "laoyuegou.pb/user/pb"
 	"sort"
@@ -55,7 +56,8 @@ func (gg *GodGame) RandCall(c frame.Context) error {
 	}
 	gameID := gameInfo.GetData().GetGameId()
 	var userInfo *user_pb.GetUserResp
-	var lts *imapipb.GetUserLTSResp
+	// var lts *imapipb.GetUserLTSResp
+	var lts *pumpkinpb.UserStatusResp
 	var godGameV1 model.GodGameV1
 	var status int64
 	var price int64
@@ -72,13 +74,22 @@ func (gg *GodGame) RandCall(c frame.Context) error {
 			c.Error(err.Error())
 			continue
 		}
-		lts, err = imapipb.GetUserLTS(c, &imapipb.GetUserLTSReq{
+		// lts, err = imapipb.GetUserLTS(c, &imapipb.GetUserLTSReq{
+		// 	UserId: godID,
+		// })
+		lts, err = pumpkinpb.UserStatus(c, &pumpkinpb.UserStatusReq{
 			UserId: godID,
 		})
-		if err != nil || lts.GetErrcode() != 0 || lts.GetData().GetStatus() != imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_ONLINE {
-			status = constants.GOD_STATUS_OFFLINE
+		if err == nil && lts.GetErrcode() == 0 {
+			if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_ONLINE) {
+				status = constants.GOD_STATUS_ONLINE
+			} else if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_OFFLINE) {
+				status = constants.GOD_STATUS_OFFLINE
+			} else if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_BUSY_LINE) {
+				status = constants.GOD_STATUS_LINE_BUSY
+			}
 		} else {
-			status = constants.GOD_STATUS_ONLINE
+			status = constants.GOD_STATUS_OFFLINE
 		}
 		if godGameV1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
 			price = godGameV1.PeiWanPrice
