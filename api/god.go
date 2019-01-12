@@ -56,7 +56,6 @@ func (gg *GodGame) RandCall(c frame.Context) error {
 	}
 	gameID := gameInfo.GetData().GetGameId()
 	var userInfo *user_pb.GetUserResp
-	// var lts *imapipb.GetUserLTSResp
 	var lts *pumpkinpb.UserStatusResp
 	var godGameV1 model.GodGameV1
 	var status int64
@@ -74,9 +73,6 @@ func (gg *GodGame) RandCall(c frame.Context) error {
 			c.Error(err.Error())
 			continue
 		}
-		// lts, err = imapipb.GetUserLTS(c, &imapipb.GetUserLTSReq{
-		// 	UserId: godID,
-		// })
 		lts, err = pumpkinpb.UserStatus(c, &pumpkinpb.UserStatusReq{
 			UserId: godID,
 		})
@@ -1020,6 +1016,10 @@ func (gg *GodGame) GodGamesV3(c frame.Context) error {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
 		}
+		if gg.isVoiceCallGame(v1.GameID) {
+			// 不返回语聊品类
+			continue
+		}
 		tmpData := make(map[string]interface{})
 		if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
 			uniprice = v1.PeiWanPrice
@@ -1092,6 +1092,10 @@ func (gg *GodGame) GodGamesV4(c frame.Context) error {
 	var uniprice int64
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		}
+		if gg.isVoiceCallGame(v1.GameID) {
+			// 不返回语聊品类
 			continue
 		}
 		tmpData := make(map[string]interface{})
@@ -1427,6 +1431,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		} else if req.GetGrabSwitch4() == constants.GRAB_SWITCH4_OPEN {
 			// 随机模式开关打开
 			redisConn.Do("ZADD", core.RKVoiceCallGods(), 1, currentUser.UserID)
+			pumpkinpb.RefreshAvatars(c, nil)
 		} else {
 			redisConn.Do("ZADD", core.RKVoiceCallGods(), 2, currentUser.UserID)
 		}
