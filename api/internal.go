@@ -42,6 +42,7 @@ func (gg *GodGame) GetCallPrice(c frame.Context) error {
 		resp.PriceId = godGameV1.PriceID
 		resp.PriceGl = gameInfo.GetData().GetPrices()[godGameV1.PriceID]
 	}
+	resp.GrabSwitch = godGameV1.GrabSwitch
 	return c.JSON2(StatusOK_V3, "", &resp)
 }
 
