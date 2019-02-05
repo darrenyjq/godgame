@@ -72,6 +72,11 @@ func (gg *GodGame) getUserAppID(c frame.Context) string {
 	return appid
 }
 
+func (gg *GodGame) isIOS(c frame.Context) bool {
+	p, _, _, _ := middleware.ClientInfo(c.GetHeaderString("Client-Info", ""))
+	return p == "iOSApp"
+}
+
 func (gg *GodGame) getUserAppVersion(c frame.Context) string {
 	_, v, _, _ := middleware.ClientInfo(c.GetHeaderString("Client-Info", ""))
 	return v

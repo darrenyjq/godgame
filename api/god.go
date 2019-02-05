@@ -32,22 +32,25 @@ import (
 	"time"
 )
 
+const (
+	page_size = 100
+)
+
 func (gg *GodGame) RandCall(c frame.Context) error {
-	p := c.GetInt64("p", 1)
+	p := c.GetInt("p", 1)
 	var items []map[string]interface{}
 	data := map[string]interface{}{
 		"count": 0,
 		"items": items,
 	}
-	if p != 1 {
-		return c.JSON2(StatusOK_V3, "", data)
-	}
+	start := (p - 1) * page_size
+	stop := start + page_size - 1
 	gameInfo, err := gamepb.GetVoiceCall(c, nil)
 	if err != nil || gameInfo.GetErrcode() != 0 || gameInfo.GetData() == nil || gameInfo.GetData().GetPrices() == nil {
 		c.Errorf("获取语聊品类信息失败 %v %v", gameInfo, err)
 		return c.JSON2(StatusOK_V3, "", data)
 	}
-	gods, err := gg.dao.GetRandCallGods2()
+	gods, err := gg.dao.GetRandCallGods2(start, stop)
 	if err != nil {
 		c.Error(err.Error())
 		return c.JSON2(StatusOK_V3, "", data)
@@ -58,9 +61,10 @@ func (gg *GodGame) RandCall(c frame.Context) error {
 	var userInfo *user_pb.GetUserResp
 	var lts *pumpkinpb.UserStatusResp
 	var godGameV1 model.GodGameV1
-	var status int64
-	var price int64
-	items = make([]map[string]interface{}, 0, len(gods))
+	onlineItems := make([]map[string]interface{}, 0, len(gods)/2)
+	offlineItems := make([]map[string]interface{}, 0, len(gods)/2)
+	var tmpItem map[string]interface{}
+	appID := gg.getUserAppID(c)
 	for _, godID := range gods {
 		userInfo, err = user_pb.GetUser(c, &user_pb.GetUserReq{
 			UserId: godID,
@@ -73,40 +77,62 @@ func (gg *GodGame) RandCall(c frame.Context) error {
 			c.Error(err.Error())
 			continue
 		}
-		lts, err = pumpkinpb.UserStatus(c, &pumpkinpb.UserStatusReq{
-			UserId: godID,
-		})
-		if err == nil && lts.GetErrcode() == 0 {
-			if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_ONLINE) {
-				status = constants.GOD_STATUS_ONLINE
-			} else if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_OFFLINE) {
-				status = constants.GOD_STATUS_OFFLINE
-			} else if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_BUSY_LINE) {
-				status = constants.GOD_STATUS_LINE_BUSY
-			}
-		} else {
-			status = constants.GOD_STATUS_OFFLINE
-		}
-		if godGameV1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
-			price = godGameV1.PeiWanPrice
-		} else {
-			price = gameInfo.GetData().GetPrices()[godGameV1.PriceID]
-		}
-		items = append(items, map[string]interface{}{
+		tmpItem = make(map[string]interface{})
+		tmpItem = map[string]interface{}{
 			"user_id":        userInfo.GetData().GetUserId(),
 			"username":       userInfo.GetData().GetUsername(),
 			"avatar":         userInfo.GetData().GetAvatar(),
 			"voice":          godGameV1.Voice,
 			"aac":            godGameV1.Aac,
 			"voice_duration": godGameV1.VoiceDuration,
-			"price":          fmt.Sprintf("%d", price),
-			"price_unit":     "狗粮/分",
 			"desc":           godGameV1.Desc,
-			"status":         status,
+		}
+		if appID == user_pb.APP_ID_ANDROID_LAOYUEGOU {
+			// Android
+			if godGameV1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+				tmpItem["price"] = godGameV1.PeiWanPrice
+				tmpItem["price_unit"] = "狗粮/分钟"
+			} else {
+				tmpItem["price"] = gameInfo.GetData().GetPrices()[godGameV1.PriceID]
+				tmpItem["price_unit"] = "狗粮/分钟"
+			}
+		} else if appID == user_pb.APP_ID_IOS_TANSUO_LAOYUEGOU {
+			// iOS探索版
+			// if godGameV1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+			// 	tmpItem["price"] = godGameV1.PeiWanPrice
+			// 	tmpItem["price_unit"] = "狗粮/分钟"
+			// } else {
+			// 	tmpItem["price"] = gameInfo.GetData().GetPrices()[godGameV1.PriceID]
+			// 	tmpItem["price_unit"] = "狗粮/分钟"
+			// }
+		}
+		lts, err = pumpkinpb.UserStatus(c, &pumpkinpb.UserStatusReq{
+			UserId: godID,
 		})
+		if err == nil && lts.GetErrcode() == 0 {
+			if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_ONLINE) {
+				tmpItem["status"] = constants.GOD_STATUS_ONLINE
+				onlineItems = append(onlineItems, tmpItem)
+			} else if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_OFFLINE) {
+				tmpItem["status"] = constants.GOD_STATUS_OFFLINE
+				offlineItems = append(offlineItems, tmpItem)
+			} else if lts.GetData().GetStatus() == int32(imapipb.USER_ONLINE_STATUS_USER_ONLINE_STATUS_BUSY_LINE) {
+				tmpItem["status"] = constants.GOD_STATUS_LINE_BUSY
+				onlineItems = append(onlineItems, tmpItem)
+			}
+		} else {
+			tmpItem["status"] = constants.GOD_STATUS_OFFLINE
+			offlineItems = append(offlineItems, tmpItem)
+		}
 	}
-	data["count"] = len(items)
-	data["items"] = items
+	data["count"] = len(onlineItems) + len(offlineItems)
+	data["items"] = append(onlineItems, offlineItems...)
+	go gg.shence.Track(fmt.Sprintf("%d", gg.getCurrentUserID(c)),
+		"flip",
+		map[string]interface{}{
+			"scene": "1v1大神列表",
+			"page":  strconv.Itoa(p),
+		}, true)
 	return c.JSON2(StatusOK_V3, "", data)
 }
 
@@ -149,6 +175,7 @@ func (gg *GodGame) Chat(c frame.Context) error {
 	items := make([]map[string]interface{}, 0, len(v1s))
 	var call map[string]interface{}
 	var uniprice int64
+	appID := gg.getUserAppID(c)
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
@@ -156,18 +183,33 @@ func (gg *GodGame) Chat(c frame.Context) error {
 		if gg.isVoiceCallGame(v1.GameID) {
 			// 语聊品类
 			call = make(map[string]interface{})
-			if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
-				call["price"] = fmt.Sprintf("%d狗粮/分", v1.PeiWanPrice)
-			} else {
-				cfgResp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
-					GameId: v1.GameID,
-				})
-				if err != nil || cfgResp.GetErrcode() != 0 {
-					continue
+			if appID == user_pb.APP_ID_ANDROID_LAOYUEGOU {
+				// Android
+				if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+					call["price"] = fmt.Sprintf("%d狗粮/分钟", v1.PeiWanPrice)
+				} else {
+					cfgResp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
+						GameId: v1.GameID,
+					})
+					if err == nil && cfgResp.GetErrcode() == 0 {
+						call["price"] = fmt.Sprintf("%d狗粮/分钟", cfgResp.GetData().GetPrices()[v1.PriceID])
+					}
 				}
-				call["price"] = fmt.Sprintf("%d狗粮/分", cfgResp.GetData().GetPrices()[v1.PriceID])
+			} else if appID == user_pb.APP_ID_IOS_TANSUO_LAOYUEGOU {
+				// iOS探索版
+				// if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+				// 	call["price"] = fmt.Sprintf("%d狗粮/分钟", v1.PeiWanPrice)
+				// } else {
+				// 	cfgResp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
+				// 		GameId: v1.GameID,
+				// 	})
+				// 	if err == nil && cfgResp.GetErrcode() == 0 {
+				// 		call["price"] = fmt.Sprintf("%d狗粮/分钟", cfgResp.GetData().GetPrices()[v1.PriceID])
+				// 	}
+				// }
+			} else {
+				call["price"] = "免费"
 			}
-			continue
 		} else {
 			tmpData := make(map[string]interface{})
 			if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
@@ -273,6 +315,10 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 	var req godgamepb.GodDetailReq
 	if err := c.Bind(&req); err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	if gg.isVoiceCallGame(req.GetGameId()) {
+		// 语聊品类不展示
+		return c.JSON2(StatusOK_V3, "", nil)
 	}
 	gameStateResp, err := gamepb.State(c, &gamepb.StateReq{
 		GameId: req.GetGameId(),
@@ -411,6 +457,11 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 			}
 			data["videos"] = tmpVideos
 		}
+	}
+	if gg.getUserAppID(c) == "1009" {
+		// 探索版审核时，不展示视频
+		data["video"] = ""
+		data["videos"] = []string{}
 	}
 	orderRateResp, _ := sapb.GodAcceptOrderPer(c, &sapb.GodAcceptOrderPerReq{
 		GodId:     v1.GodID,
@@ -892,6 +943,10 @@ func (gg *GodGame) GodList(c frame.Context) error {
 		req.Limit = 20
 	}
 	if req.GetGameId() > 0 {
+		if gg.isVoiceCallGame(req.GetGameId()) {
+			// 语聊品类不展示
+			return c.JSON2(StatusOK_V3, "", nil)
+		}
 		if gid, ok := gamepb.GameDicst[req.GetGameId()]; ok {
 			req.GameId = gid
 		}
@@ -920,6 +975,10 @@ func (gg *GodGame) GodList2(c frame.Context) error {
 		return c.JSON2(StatusOK_V3, "", nil)
 	} else if req.GetLimit() > 20 || req.GetLimit() == 0 {
 		req.Limit = 20
+	}
+	if gg.isVoiceCallGame(req.GetGameId()) {
+		// 语聊品类不展示
+		return c.JSON2(StatusOK_V3, "", nil)
 	}
 	currentUser := gg.getCurrentUser(c)
 	var pwObjs []model.ESGodGame
@@ -1428,13 +1487,21 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		defer redisConn.Close()
 		if req.GetGrabSwitch() == constants.GRAB_SWITCH_CLOSE {
 			redisConn.Do("ZREM", core.RKVoiceCallGods(), currentUser.UserID)
-		} else if req.GetGrabSwitch4() == constants.GRAB_SWITCH4_OPEN {
-			// 随机模式开关打开
-			redisConn.Do("ZADD", core.RKVoiceCallGods(), 1, currentUser.UserID)
-			pumpkinpb.RefreshAvatars(c, nil)
 		} else {
-			redisConn.Do("ZADD", core.RKVoiceCallGods(), 2, currentUser.UserID)
+			if req.GetGrabSwitch4() == constants.GRAB_SWITCH4_OPEN {
+				// 随机模式开关打开
+				redisConn.Do("ZADD", core.RKVoiceCallGods(), 1, currentUser.UserID)
+				pumpkinpb.RefreshAvatars(c, nil)
+			} else {
+				redisConn.Do("ZADD", core.RKVoiceCallGods(), 2, currentUser.UserID)
+			}
 		}
+		go gg.shence.Track(fmt.Sprintf("%d", currentUser.UserID),
+			"volteMatchingSwitch",
+			map[string]interface{}{
+				"newAppName": currentUser.AppID,
+				"Switchok":   req.GetGrabSwitch4() == constants.GRAB_SWITCH4_OPEN,
+			}, true)
 	} else {
 		// 非语聊品类
 		redisConn := gg.dao.GetPlayRedisPool().Get()
@@ -1515,6 +1582,7 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 	games := make([]map[string]interface{}, 0, len(v1s))
 	var game map[string]interface{}
 	var dxdResp *gamepb.DxdResp
+	isIOS := gg.isIOS(c)
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
@@ -1529,14 +1597,35 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 		if err != nil || dxdResp.GetErrcode() != 0 {
 			continue
 		}
-
 		game = make(map[string]interface{})
 		game["game_id"] = v1.GameID
 		game["highest_level_score"] = dxdResp.GetData().GetHighestLevelScore()
-		game["regions"] = v1.Regions
-		game["region1"] = dxdResp.GetData().GetRegion1()
 		game["service_type"] = dxdResp.GetData().GetServiceId()
 		game["service_name"] = dxdResp.GetData().GetServiceName()
+		if v1.GameID == 15 && isIOS {
+			// iOS下定向单，王者荣耀不展示Android大区
+			tmpRegions := make([]*gamepb.Region2, 0, 2)
+			tmpRegionIDs := make([]int64, 0, 2)
+			if len(dxdResp.GetData().GetRegion1()) > 0 {
+				for _, region2 := range dxdResp.GetData().GetRegion1()[0].GetRegion2() {
+					if strings.Index(region2.GetName(), "安卓") != -1 {
+						continue
+					}
+					tmpRegionIDs = append(tmpRegionIDs, region2.GetId())
+					tmpRegions = append(tmpRegions, region2)
+				}
+				if len(tmpRegions) == 0 {
+					continue
+				}
+				dxdResp.GetData().GetRegion1()[0].Region2 = tmpRegions
+				game["regions"] = tmpRegionIDs
+				game["region1"] = dxdResp.GetData().GetRegion1()
+			}
+		} else {
+			game["regions"] = v1.Regions
+			game["region1"] = dxdResp.GetData().GetRegion1()
+		}
+
 		games = append(games, game)
 	}
 	if len(games) == 0 {
@@ -1613,6 +1702,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 	var freeStatus int64
 	var freeStatusDesc string
 	var roomID int64
+	var template int32
 
 	freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
 		GodId: v1.GodID,
@@ -1631,6 +1721,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 				freeStatus = order_const.PW_STATUS_ON_SEAT
 				freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_ON_SEAT]
 				roomID = seatResp.GetData().GetRoomId()
+				template = seatResp.GetData().GetTemplate()
 			}
 		}
 	}
@@ -1680,6 +1771,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"status":             freeStatus,
 		"status_desc":        freeStatusDesc,
 		"room_id":            roomID,
+		"template":           template,
 		"shareurl":           gg.GenPeiWanShareURL(tmpImages[0], userinfo.GetUsername(), "", v1.GodID, v1.GameID),
 	}
 	if v1.Video != "" {
@@ -1696,6 +1788,11 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 			}
 			data["videos"] = tmpVideos
 		}
+	}
+	if gg.getUserAppID(c) == "1009" {
+		// 探索版审核时，不展示视频
+		data["video"] = ""
+		data["videos"] = []string{}
 	}
 	orderRateResp, _ := sapb.GodAcceptOrderPer(c, &sapb.GodAcceptOrderPerReq{
 		GodId:     v1.GodID,

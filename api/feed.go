@@ -51,7 +51,7 @@ func (gg *GodGame) Feeds(c frame.Context) error {
 	games, err := gamepb.List(c, &gamepb.GamesReq{})
 	if err == nil && games.GetErrcode() == 0 {
 		for _, game := range games.GetData() {
-			if game.GetVoiceCall() {
+			if gg.isVoiceCallGame(game.GameId) {
 				// 不返回语聊品类
 				continue
 			}

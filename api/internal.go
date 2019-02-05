@@ -321,6 +321,7 @@ func (gg *GodGame) GetGodLeader(c frame.Context) error {
 }
 
 // 强制刷新被推荐到首页的，状态为已通过的大神的所有品类数据
+// 兔叽，捞月狗iOS2.9.9版本没有陪玩，需要把大神从所有的大神池删除
 func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 	var req godgamepb.RefreshGodAllGameReq
 	if err := c.Bind(&req); err != nil {
@@ -341,14 +342,25 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 	if err != nil || userInfo.GetErrcode() != 0 {
 		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
 	}
+	redisConn := gg.dao.GetPlayRedisPool().Get()
+	defer redisConn.Close()
+	if req.GetAppid() == "1006" || (req.GetAppid() == "1001" && req.GetAppVersion() == "2.9.8") {
+		for _, v1 := range v1s {
+			redisConn.Do("ZREM", core.RKJSYGods(v1.GameID, godInfo.Gender), req.GetGodId())
+			redisConn.Do("ZREM", core.RKJSYPaiDanGods(v1.GameID, godInfo.Gender), req.GetGodId())
+			for _, region := range v1.Regions {
+				for _, level := range v1.Levels {
+					redisConn.Do("ZREM", core.GodsRedisKey3(v1.GameID, region, level), req.GetGodId())
+				}
+			}
+		}
+		return c.JSON2(StatusOK_V3, "", nil)
+	}
 	geoInfo, geoErr := userpb.Location(c, &userpb.LocationReq{
 		UserId: req.GetGodId(),
 	})
-
 	var esGodGame model.ESGodGame
 	var resp *gamepb.AcceptCfgV2Resp
-	redisConn := gg.dao.GetPlayRedisPool().Get()
-	defer redisConn.Close()
 	for _, v1 := range v1s {
 		if v1.Recommend == constants.RECOMMEND_YES {
 			// 被推荐到首页的大神，刷新首页的最后在线时间
@@ -362,25 +374,37 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 				gg.ESAddGodGame(esGodGame)
 			}
 		}
-		if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN ||
-			v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
-			// 刷新大神所在即时约/派单大神池的最后登陆时间
-			resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
-				GameId: v1.GameID,
-			})
-			if err != nil || resp.GetErrcode() != 0 || resp.GetData().GetJsy() != game_const.GAME_SUPPORT_JSY_YES {
-				continue
+		if gg.isVoiceCallGame(v1.GameID) {
+			// 语聊品类
+			if v1.GrabSwitch == constants.GRAB_SWITCH_CLOSE {
+				redisConn.Do("ZREM", core.RKVoiceCallGods(), v1.GodID)
+			} else if v1.GrabSwitch4 == constants.GRAB_SWITCH4_OPEN {
+				// 随机模式开关打开
+				redisConn.Do("ZADD", core.RKVoiceCallGods(), 1, v1.GodID)
+			} else {
+				redisConn.Do("ZADD", core.RKVoiceCallGods(), 2, v1.GodID)
 			}
-			if userInfo.GetData().GetAppForm() == constants.APP_OS_IOS && userInfo.GetData().GetAppVersion() < gg.cfg.Mix["jsy_appver_ios"] {
-				continue
-			} else if userInfo.GetData().GetAppForm() == constants.APP_OS_Android && userInfo.GetData().GetAppVersion() < gg.cfg.Mix["jsy_appver_android"] {
-				continue
-			}
-			if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN {
-				redisConn.Do("ZADD", core.RKJSYGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
-			}
-			if v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
-				redisConn.Do("ZADD", core.RKJSYPaiDanGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
+		} else {
+			if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN ||
+				v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
+				// 刷新大神所在即时约/派单大神池的最后登陆时间
+				resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+					GameId: v1.GameID,
+				})
+				if err != nil || resp.GetErrcode() != 0 || resp.GetData().GetJsy() != game_const.GAME_SUPPORT_JSY_YES {
+					continue
+				}
+				if userInfo.GetData().GetAppForm() == constants.APP_OS_IOS && userInfo.GetData().GetAppVersion() < gg.cfg.Mix["jsy_appver_ios"] {
+					continue
+				} else if userInfo.GetData().GetAppForm() == constants.APP_OS_Android && userInfo.GetData().GetAppVersion() < gg.cfg.Mix["jsy_appver_android"] {
+					continue
+				}
+				if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN {
+					redisConn.Do("ZADD", core.RKJSYGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
+				}
+				if v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
+					redisConn.Do("ZADD", core.RKJSYPaiDanGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
+				}
 			}
 		}
 	}
@@ -578,6 +602,8 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "参数错误[2]", nil)
 	} else if req.GetSeq() == "" {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "参数错误[3]", nil)
+	} else if req.GetRoomTemplate() == 0 {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "参数错误[4]", nil)
 	}
 	gameInfo, err := gamepb.Record(c, &gamepb.RecordReq{GameId: req.GetGameId()})
 	if err != nil {
@@ -606,6 +632,7 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 		"desc":       req.GetDesc(),
 		"pd_id":      req.GetSeq(),
 		"room_title": req.GetRoomTitle(),
+		"template":   req.GetRoomTemplate(),
 	}
 	bs, err := json.Marshal(msg)
 	if err != nil {
@@ -683,4 +710,30 @@ func (gg *GodGame) GetGodGameInfo(c frame.Context) error {
 		GameName: acceptResp.GetData().GetGameName(),
 	}
 	return c.JSON2(StatusOK_V3, "", resp)
+}
+
+func (gg *GodGame) InternalGodGame(c frame.Context) error {
+	var req godgamepb.InternalGodGameReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	godInfo := gg.dao.GetGod(req.GetGodId())
+	if godInfo.Status != constants.GOD_STATUS_PASSED {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	v1, err := gg.dao.GetGodSpecialGameV1(req.GetGodId(), req.GetGameId())
+	if err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if v1.Status != constants.GOD_GAME_STATUS_PASSED {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	return c.JSON2(StatusOK_V3, "", &godgamepb.InternalGodGameResp_Data{
+		GodStatus:  godInfo.Status,
+		GodGender:  godInfo.Gender,
+		GameStatus: v1.Status,
+		GrabSwitch: v1.GrabSwitch,
+	})
 }

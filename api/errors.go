@@ -26,6 +26,6 @@ const (
 	errLoadGameMsg              = "加载游戏数据失败"
 	errUpdateGameMsg            = "更新游戏配置信息失败"
 	errLoadClassMsg             = "加载陪玩分类列表失败"
-	errGodAcceptSettingLoadFail = "大神未设置接单"
+	errGodAcceptSettingLoadFail = "大神暂时不在线哦"
 	errEmptyAcceptSettingMsg    = "请设置接单设置"
 )

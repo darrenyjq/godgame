@@ -32,10 +32,10 @@ func (dao *Dao) GetRandCallGods() ([]int64, error) {
 }
 
 // 获取语聊大神，接单开关打开状态的
-func (dao *Dao) GetRandCallGods2() ([]int64, error) {
+func (dao *Dao) GetRandCallGods2(start, stop int) ([]int64, error) {
 	c := dao.cpool.Get()
 	defer c.Close()
-	gods, err := redis.Int64s(c.Do("ZRANGE", RKVoiceCallGods(), 0, -1))
+	gods, err := redis.Int64s(c.Do("ZRANGE", RKVoiceCallGods(), start, stop))
 	if err != nil {
 		return []int64{}, err
 	} else if len(gods) == 0 {
