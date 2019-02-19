@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"iceberg/frame"
 	iconfig "iceberg/frame/config"
 	"laoyuegou.com/http_api"
@@ -13,6 +12,7 @@ import (
 	"laoyuegou.pb/lfs/pb"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,37 +25,44 @@ func (gg *GodGame) JoinGroup(c frame.Context) error {
 	}
 	appID := "1"
 	appToken := "13f75ce60d1cdcbdec57e2868dcd6205"
-	apiURL := "http://10.25.0.22:8080/api-v2/internal/peiwan/join"
+	var apiURL string
 	if gg.cfg.Env.Production() {
 		apiURL = "http://172.16.163.180:8300/api-v2/internal/peiwan/join"
 	} else if gg.cfg.Env.String() == "stag" {
 		apiURL = "http://172.16.164.182:8400/api-v2/internal/peiwan/join"
+	} else if gg.cfg.Env.QA() {
+		apiURL = "http://10.25.0.22:8400/api-v2/internal/peiwan/join"
+	} else {
+		return c.RetInternalError("内部错误")
 	}
 	params := url.Values{
 		"appId":   []string{appID},
 		"token":   []string{appToken},
-		"user_id": []string{fmt.Sprint(currentUser.UserID)},
+		"user_id": []string{strconv.FormatInt(currentUser.UserID, 10)},
 	}
 	req, _ := http.NewRequest("POST", apiURL, strings.NewReader(params.Encode()))
 	req.Header.Set("Accept", "application/json;charset=utf-8;")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8;")
 
 	resp, err := client.Do(req)
-	if err != nil {
-		c.Errorf("%s", err.Error())
-		return c.JSON2(StatusOK_V3, "", nil)
+	if resp != nil {
+		defer resp.Body.Close()
 	}
-	defer resp.Body.Close()
+	if err != nil {
+		return c.RetDisplayError("加入失败[1]")
+	}
 	if resp.StatusCode == 200 {
 		var response http_api.ResponseV3
 		err = json.NewDecoder(resp.Body).Decode(&response)
 		if err != nil {
-			c.Errorf("%s", err.Error())
-			return c.JSON2(StatusOK_V3, "", nil)
+			return c.RetDisplayError("加入失败[2]")
 		}
-		return c.JSON2(StatusOK_V3, "", response.Data)
+		if response.ErrCode == 0 {
+			return c.RetSuccess("", response.Data)
+		}
+		return c.RetDisplayError(response.ErrMsg)
 	}
-	return c.JSON2(StatusOK_V3, "", nil)
+	return c.RetDisplayError("加入失败[3]")
 }
 
 // 获取申请大神手机验证码

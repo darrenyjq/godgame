@@ -25,10 +25,33 @@ func (gg *GodGame) Feeds(c frame.Context) error {
 	var resp godgamepb.FeedsResp_IndexFeedRespData
 	resp.P = -1
 	resp.Feeds = make([]*godgamepb.FeedsResp_IndexFeedRespData_FeedObj, 0, 25)
+	bannar, err := gamepb.Bannar(c, &gamepb.BannarReq{
+		Locate: 0,
+	})
+	if err == nil && bannar.GetErrcode() == 0 && len(bannar.GetData()) > 0 {
+		tmp := make([]map[string]interface{}, 0, len(bannar.GetData()))
+		for _, bn := range bannar.GetData() {
+			tmp = append(tmp, map[string]interface{}{
+				"id":    bn.GetId(),
+				"title": bn.GetTitle(),
+				"img":   bn.GetPic(),
+				"jump":  bn.GetJUrl(),
+			})
+		}
+		if bs, err := json.Marshal(tmp); err == nil {
+			resp.Feeds = append(resp.Feeds, &godgamepb.FeedsResp_IndexFeedRespData_FeedObj{
+				Ti:   "",
+				Ty:   constants.FEED_TYPE_BANNER,
+				Body: string(bs),
+			})
+		}
+	}
 	feeds, err := gg.dao.GetTimeLine()
 	if err == nil && len(feeds) > 0 {
 		for _, feed := range feeds {
-			if feed.GetTy() == constants.FEED_TYPE_ROOM {
+			if feed.GetTy() == constants.FEED_TYPE_BANNER {
+				continue
+			} else if feed.GetTy() == constants.FEED_TYPE_ROOM {
 				if rooms, err := gg.getFeedRooms(c); err == nil {
 					feed.Body = rooms
 				} else {

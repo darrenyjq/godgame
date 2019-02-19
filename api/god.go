@@ -207,6 +207,7 @@ func (gg *GodGame) Chat(c frame.Context) error {
 				// 		call["price"] = fmt.Sprintf("%d狗粮/分钟", cfgResp.GetData().GetPrices()[v1.PriceID])
 				// 	}
 				// }
+				call["price"] = "免费"
 			} else {
 				call["price"] = "免费"
 			}
@@ -1507,21 +1508,17 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		redisConn := gg.dao.GetPlayRedisPool().Get()
 		defer redisConn.Close()
 		if resp.GetData().GetJsy() == game_const.GAME_SUPPORT_JSY_YES {
-			// 判断客户端版本是否支持即时约，iOS: appverion>=20702 Android: appverion>=20703
-			if (currentUser.Platform == constants.APP_OS_IOS && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_ios"]) ||
-				(currentUser.Platform == constants.APP_OS_Android && currentUser.AppVersion >= gg.cfg.Mix["jsy_appver_android"]) {
-				jsyKey := core.RKJSYGods(req.GetGameId(), godInfo.Gender)
-				jsyPaiDanKey := core.RKJSYPaiDanGods(req.GetGameId(), godInfo.Gender)
-				if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
-					redisConn.Do("ZADD", jsyKey, time.Now().Unix(), currentUser.UserID)
-				} else {
-					redisConn.Do("ZREM", jsyKey, currentUser.UserID)
-				}
-				if req.GetGrabSwitch3() == constants.GRAB_SWITCH3_OPEN {
-					redisConn.Do("ZADD", jsyPaiDanKey, time.Now().Unix(), currentUser.UserID)
-				} else {
-					redisConn.Do("ZREM", jsyPaiDanKey, currentUser.UserID)
-				}
+			jsyKey := core.RKJSYGods(req.GetGameId(), godInfo.Gender)
+			jsyPaiDanKey := core.RKJSYPaiDanGods(req.GetGameId(), godInfo.Gender)
+			if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
+				redisConn.Do("ZADD", jsyKey, time.Now().Unix(), currentUser.UserID)
+			} else {
+				redisConn.Do("ZREM", jsyKey, currentUser.UserID)
+			}
+			if req.GetGrabSwitch3() == constants.GRAB_SWITCH3_OPEN {
+				redisConn.Do("ZADD", jsyPaiDanKey, time.Now().Unix(), currentUser.UserID)
+			} else {
+				redisConn.Do("ZREM", jsyPaiDanKey, currentUser.UserID)
 			}
 		}
 		if godGame.GrabStatus != constants.GRAB_STATUS_YES {

@@ -639,8 +639,7 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 		c.Errorf("%s", err.Error())
 		return c.JSON2(ERR_CODE_INTERNAL, "内部错误[3]", nil)
 	}
-	apn := imapipb.Apn{
-		Title: "",
+	apn := imapipb.PushNotification{
 		Desc:  title,
 		Sound: "default",
 	}
