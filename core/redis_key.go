@@ -58,14 +58,8 @@ func RKGodGameInfo(godID, gameID int64) string {
 	return fmt.Sprintf("God:{%d}:Game:{%d}", godID, gameID)
 }
 
-// 大神的陪玩品类信息V1缓存 Hash
-func RKGodGameV1(godID int64) string {
-	return fmt.Sprintf("GGV1:{%d}", godID)
-}
-
-// 大神被冻结的陪玩品类信息V1缓存 Hash
-func RKBlockedGodGameV1(godID int64) string {
-	return fmt.Sprintf("BGGV1:{%d}", godID)
+func RKOneGodGameV1(godID, gameID int64) string {
+	return fmt.Sprintf("GGV1:{%d}:{%d}", godID, gameID)
 }
 
 // 大神品类申请缓存

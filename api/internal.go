@@ -12,10 +12,57 @@ import (
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/imapi/pb"
+	sapb "laoyuegou.pb/sa/pb"
 	"laoyuegou.pb/user/pb"
 	"sort"
 	"time"
 )
+
+func (gg *GodGame) Vcard(c frame.Context) error {
+	var req godgamepb.VcardReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	god := gg.dao.GetGod(req.GetGodId())
+	if god.Status != constants.GOD_STATUS_PASSED {
+		return c.RetSuccess("非大神用户", nil)
+	}
+	v1s, err := gg.dao.GetGodAllGameV1(req.GetGodId())
+	if err != nil {
+		c.Error(err.Error())
+		return c.RetSuccess("大神信息获取异常", nil)
+	}
+	sort.Sort(v1s)
+	items := make([]*godgamepb.VcardResp_Data, 0, len(v1s))
+	var item *godgamepb.VcardResp_Data
+	for _, v1 := range v1s {
+		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		}
+		item = new(godgamepb.VcardResp_Data)
+		item.GameId = v1.GameID
+		item.OrderCnt = v1.AcceptNum
+		item.OrderCntDesc = FormatAcceptOrderNumber(v1.AcceptNum)
+		if req.GetMore() {
+			item.Score = FormatScore(v1.Score)
+			orderRateResp, _ := sapb.GodAcceptOrderPer(c, &sapb.GodAcceptOrderPerReq{
+				GodId:     v1.GodID,
+				BeforeDay: 7,
+			})
+			if orderRateResp != nil && orderRateResp.GetData() > 0 {
+				if orderRateResp.GetData() < 60 {
+					item.OrderRate = "60%"
+				} else if orderRateResp.GetData() >= 60 {
+					item.OrderRate = fmt.Sprintf("%d%%", orderRateResp.GetData())
+				}
+			}
+			item.Desc = v1.Desc
+		}
+		items = append(items, item)
+	}
+	return c.RetSuccess("success", items)
+}
 
 // 获取语聊大神的单价
 func (gg *GodGame) GetCallPrice(c frame.Context) error {
@@ -735,4 +782,38 @@ func (gg *GodGame) InternalGodGame(c frame.Context) error {
 		GameStatus: v1.Status,
 		GrabSwitch: v1.GrabSwitch,
 	})
+}
+
+func (gg *GodGame) InternalApplyGames(c frame.Context) error {
+	var req godgamepb.InternalApplyGamesReq
+	if err := c.Bind(&req); err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	listResp, err := gamepb.ListV2(c, &gamepb.ListV2Req{})
+	if err != nil || listResp.GetErrcode() != 0 {
+		return c.RetInternalError("")
+	}
+	map1 := gg.dao.GetGodGameStatus(req.GetGodId())
+	data := make([]*godgamepb.InternalApplyGamesResp_Data, 0, len(listResp.GetData()))
+	var ok bool
+	var status int64
+	for _, game := range listResp.GetData() {
+		if status, ok = map1[game.GetGameId()]; !ok {
+			data = append(data, &godgamepb.InternalApplyGamesResp_Data{
+				GameId:     game.GetGameId(),
+				GameName:   game.GetGameName(),
+				GameAvatar: game.GetGameAvatar(),
+				Status:     constants.GOD_GAME_STATUS_UNAUTHED,
+			})
+		} else {
+			data = append(data, &godgamepb.InternalApplyGamesResp_Data{
+				GameId:     game.GetGameId(),
+				GameName:   game.GetGameName(),
+				GameAvatar: game.GetGameAvatar(),
+				Status:     status,
+			})
+		}
+
+	}
+	return c.RetSuccess("", data)
 }

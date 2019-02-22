@@ -177,7 +177,7 @@ func (dao *Dao) BlockGod(godID int64) error {
 		c := dao.cpool.Get()
 		defer c.Close()
 		c.Do("SET", RKGodInfo(godID), string(bs))
-		c.Do("DEL", RKGodGameV1(godID), RKBlockedGodGameV1(godID), GodAcceptOrderSettingKey(godID))
+		c.Do("DEL", GodAcceptOrderSettingKey(godID))
 	}
 	return err
 }
@@ -481,7 +481,7 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 			bs, _ = json.Marshal(god)
 			c.Do("SET", RKGodInfo(godID), string(bs))
 		} else {
-			c.Do("DEL", RKGodGameV1(godID))
+			c.Do("DEL", RKOneGodGameV1(godID, gameID))
 		}
 		c.Do("DEL", RKGodGameApply(godID, gameID), RKGodGameInfo(godID, gameID))
 	} else if status == constants.GOD_GAME_APPLY_STATUS_REFUSED {
@@ -514,7 +514,7 @@ func (dao *Dao) BlockGodGame(godID, gameID int64) error {
 	// 冻结后，自动游戏的接单开关设为关闭，解冻不恢复开关状态，需要让大神自己手动开启
 	dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", godID, gameID).Updates(map[string]interface{}{"grab_switch": constants.GRAB_SWITCH_CLOSE, "grab_switch2": constants.GRAB_SWITCH2_CLOSE, "grab_switch3": constants.GRAB_SWITCH3_CLOSE})
 	c := dao.cpool.Get()
-	c.Do("DEL", RKGodGameInfo(godID, gameID), RKGodGameV1(godID), RKBlockedGodGameV1(godID), GodAcceptOrderSettingKey(godID))
+	c.Do("DEL", RKGodGameInfo(godID, gameID), GodAcceptOrderSettingKey(godID))
 	c.Close()
 	return err
 }
@@ -528,7 +528,7 @@ func (dao *Dao) UnBlockGodGame(godID, gameID int64) error {
 	}
 	err = dao.dbw.Model(&godGame).Update("status", constants.GOD_GAME_STATUS_PASSED).Error
 	c := dao.cpool.Get()
-	c.Do("DEL", RKGodGameInfo(godID, gameID), RKGodGameV1(godID), RKBlockedGodGameV1(godID))
+	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID))
 	c.Close()
 	return err
 }
@@ -588,25 +588,15 @@ func (dao *Dao) GetOldData(godID, gameID int64) (model.GodGameApply, error) {
 func (dao *Dao) GetGodAllGameV1(godID int64) (model.GodGameV1sSortedByAcceptNum, error) {
 	var err error
 	var v1s model.GodGameV1sSortedByAcceptNum
-	c := dao.cpool.Get()
-	v1sBytes, _ := redis.Bytes(c.Do("HVALS", RKGodGameV1(godID)))
-	c.Close()
-	if len(v1sBytes) == 0 {
-		v1s = make(model.GodGameV1sSortedByAcceptNum, 0, 5)
-		var games []model.GodGame
-		err = dao.dbr.Table("play_god_games").Select("gameid").Where("userid=? AND status=?", godID, constants.GOD_GAME_STATUS_PASSED).Find(&games).Error
-		if err != nil {
-			return v1s, err
-		}
-		for _, game := range games {
-			if v1, err := dao.GetGodSpecialGameV1(godID, game.GameID); err == nil {
-				v1s = append(v1s, v1)
-			}
-		}
-	} else {
-		err = json.Unmarshal(v1sBytes, &v1s)
-		if err != nil {
-			return v1s, err
+	v1s = make(model.GodGameV1sSortedByAcceptNum, 0, 10)
+	var games []model.GodGame
+	err = dao.dbr.Table("play_god_games").Select("gameid").Where("userid=? AND status=?", godID, constants.GOD_GAME_STATUS_PASSED).Find(&games).Error
+	if err != nil {
+		return v1s, err
+	}
+	for _, game := range games {
+		if v1, err := dao.GetGodSpecialGameV1(godID, game.GameID); err == nil {
+			v1s = append(v1s, v1)
 		}
 	}
 	return v1s, nil
@@ -646,13 +636,14 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 			godIconUrl, _ = redis.String(c.Do("HGET", RKGodIcons(), tmpGodIcon.ID))
 		}
 	}
-	bs, _ = redis.Bytes(c.Do("HGET", RKGodGameV1(godID), gameID))
-	err = json.Unmarshal(bs, &v1)
-	if err == nil {
-		v1.AcceptNum = acceptNum
-		v1.GodIcon = godIconUrl
-		return v1, nil
+	if bs, err := redis.Bytes(c.Do("GET", RKOneGodGameV1(godID, gameID))); err == nil {
+		if err = json.Unmarshal(bs, &v1); err == nil {
+			v1.AcceptNum = acceptNum
+			v1.GodIcon = godIconUrl
+			return v1, nil
+		}
 	}
+
 	err = dao.dbr.Table("play_god_games").Where("userid=? AND gameid=? AND status=?", godID, gameID, constants.GOD_GAME_STATUS_PASSED).First(&godGame).Error
 	if err != nil {
 		return v1, err
@@ -705,9 +696,10 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 		v1.GrabSwitch3 = accpetOrderSetting.GrabSwitch3
 		v1.GrabSwitch4 = accpetOrderSetting.GrabSwitch4
 	}
-	bs, _ = json.Marshal(v1)
-	c.Do("HSET", RKGodGameV1(godID), gameID, string(bs))
 	v1.GodIcon = godIconUrl
+	if bs, err := json.Marshal(v1); err == nil {
+		c.Do("SET", RKOneGodGameV1(godID, gameID), string(bs), "EX", 86400)
+	}
 	return v1, nil
 }
 
@@ -883,7 +875,7 @@ func (dao *Dao) ModifyGodGameInfo(godGame model.GodGame) error {
 	}
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("DEL", RKGodGameInfo(godGame.UserID, godGame.GameID), RKGodGameV1(godGame.UserID))
+	c.Do("DEL", RKGodGameInfo(godGame.UserID, godGame.GameID), RKOneGodGameV1(godGame.UserID, godGame.GameID))
 	return nil
 }
 
@@ -1054,29 +1046,19 @@ func (dao *Dao) GetGodGameApplyStatus(godID, gameID int64) int64 {
 func (dao *Dao) GetGodBlockedGameV1(godID int64) (model.GodGameV1sSortedByAcceptNum, error) {
 	var err error
 	var v1s model.GodGameV1sSortedByAcceptNum
-	c := dao.cpool.Get()
-	v1sBytes, _ := redis.Bytes(c.Do("HVALS", RKBlockedGodGameV1(godID)))
-	c.Close()
-	if len(v1sBytes) == 0 {
-		v1s = make(model.GodGameV1sSortedByAcceptNum, 0, 5)
-		var games []model.GodGame
-		err = dao.dbr.Table("play_god_games").Select("gameid").Where("userid=? AND status=?", godID, constants.GOD_GAME_STATUS_BLOCKED).Find(&games).Error
-		if err != nil {
-			return v1s, err
-		}
-		for _, game := range games {
-			if v1, err := dao.GetGodSpecialBlockedGameV1(godID, game.GameID); err == nil {
-				v1.GrabSwitch = constants.GRAB_SWITCH_CLOSE
-				v1.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
-				v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
-				v1.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
-				v1s = append(v1s, v1)
-			}
-		}
-	} else {
-		err = json.Unmarshal(v1sBytes, &v1s)
-		if err != nil {
-			return v1s, err
+	v1s = make(model.GodGameV1sSortedByAcceptNum, 0, 5)
+	var games []model.GodGame
+	err = dao.dbr.Table("play_god_games").Select("gameid").Where("userid=? AND status=?", godID, constants.GOD_GAME_STATUS_BLOCKED).Find(&games).Error
+	if err != nil {
+		return v1s, err
+	}
+	for _, game := range games {
+		if v1, err := dao.GetGodSpecialBlockedGameV1(godID, game.GameID); err == nil {
+			v1.GrabSwitch = constants.GRAB_SWITCH_CLOSE
+			v1.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
+			v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
+			v1.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
+			v1s = append(v1s, v1)
 		}
 	}
 	return v1s, nil
@@ -1086,18 +1068,12 @@ func (dao *Dao) GetGodSpecialBlockedGameV1(godID, gameID int64) (model.GodGameV1
 	var v1 model.GodGameV1
 	var godGame model.GodGame
 	var err error
-	var bs []byte
-	c := dao.cpool.Get()
-	defer c.Close()
-	bs, _ = redis.Bytes(c.Do("HGET", RKBlockedGodGameV1(godID), gameID))
-	err = json.Unmarshal(bs, &v1)
-	if err == nil {
-		return v1, nil
-	}
 	err = dao.dbr.Table("play_god_games").Where("userid=? AND gameid=? AND status=?", godID, gameID, constants.GOD_GAME_STATUS_BLOCKED).First(&godGame).Error
 	if err != nil {
 		return v1, err
 	}
+	c := dao.cpool.Get()
+	defer c.Close()
 	v1.GodID = godID
 	v1.GameID = gameID
 	v1.Level = godGame.GodLevel
@@ -1149,7 +1125,5 @@ func (dao *Dao) GetGodSpecialBlockedGameV1(godID, gameID int64) (model.GodGameV1
 		v1.Levels = accpetOrderSetting.Levels
 		v1.GrabSwitch = accpetOrderSetting.GrabSwitch
 	}
-	bs, _ = json.Marshal(v1)
-	c.Do("HSET", RKBlockedGodGameV1(godID), gameID, string(bs))
 	return v1, nil
 }

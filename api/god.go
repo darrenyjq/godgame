@@ -1421,7 +1421,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		for _, tmpLevel := range req.GetAcceptSettings().GetLevelId() {
 			score, ok := resp.GetData().GetLevels()[tmpLevel]
 			if !ok {
-				return c.JSON2(ERR_CODE_DISPLAY_ERROR, "无效的段位", nil)
+				// return c.JSON2(ERR_CODE_DISPLAY_ERROR, "无效的段位", nil)
 			} else if score > highestLevelScore {
 				return c.JSON2(ERR_CODE_DISPLAY_ERROR, "目标段位高于当前最高段位", nil)
 			}

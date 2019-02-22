@@ -54,7 +54,6 @@ func (dao *Dao) ReCalcGodLevel(godID, gameID int64) error {
 		} else {
 			level = 1
 		}
-		icelog.Infof("#### ReCalcGodLevel god %d game %d, oldLevel %d, newLevel %d, goodCommentRate %.4f, totalOrderCnt %d", godID, gameID, v1.Level, level, goodCommentRate, totalOrderCnt)
 	}
 	if level != v1.Level {
 		v1.Level = level
@@ -63,10 +62,8 @@ func (dao *Dao) ReCalcGodLevel(godID, gameID int64) error {
 			icelog.Errorf("ReCalcGodLevel %d-%d error %s", godID, gameID, err)
 		}
 	}
-	bs, _ := json.Marshal(v1)
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("HSET", RKGodGameV1(godID), gameID, string(bs))
-	c.Do("DEL", RKGodGameInfo(godID, gameID))
+	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID))
 	return nil
 }
