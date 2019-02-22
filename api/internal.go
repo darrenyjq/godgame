@@ -407,7 +407,6 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 		UserId: req.GetGodId(),
 	})
 	var esGodGame model.ESGodGame
-	var resp *gamepb.AcceptCfgV2Resp
 	for _, v1 := range v1s {
 		if v1.Recommend == constants.RECOMMEND_YES {
 			// 被推荐到首页的大神，刷新首页的最后在线时间
@@ -432,26 +431,11 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 				redisConn.Do("ZADD", core.RKVoiceCallGods(), 2, v1.GodID)
 			}
 		} else {
-			if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN ||
-				v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
-				// 刷新大神所在即时约/派单大神池的最后登陆时间
-				resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
-					GameId: v1.GameID,
-				})
-				if err != nil || resp.GetErrcode() != 0 || resp.GetData().GetJsy() != game_const.GAME_SUPPORT_JSY_YES {
-					continue
-				}
-				if userInfo.GetData().GetAppForm() == constants.APP_OS_IOS && userInfo.GetData().GetAppVersion() < gg.cfg.Mix["jsy_appver_ios"] {
-					continue
-				} else if userInfo.GetData().GetAppForm() == constants.APP_OS_Android && userInfo.GetData().GetAppVersion() < gg.cfg.Mix["jsy_appver_android"] {
-					continue
-				}
-				if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN {
-					redisConn.Do("ZADD", core.RKJSYGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
-				}
-				if v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
-					redisConn.Do("ZADD", core.RKJSYPaiDanGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
-				}
+			if v1.GrabSwitch2 == constants.GRAB_SWITCH2_OPEN {
+				redisConn.Do("ZADD", core.RKJSYGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
+			}
+			if v1.GrabSwitch3 == constants.GRAB_SWITCH3_OPEN {
+				redisConn.Do("ZADD", core.RKJSYPaiDanGods(v1.GameID, godInfo.Gender), time.Now().Unix(), req.GetGodId())
 			}
 		}
 	}
