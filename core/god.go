@@ -15,6 +15,7 @@ import (
 	"laoyuegou.pb/plorder/pb"
 	purse_pb "laoyuegou.pb/purse/pb"
 	"math/rand"
+	"regexp"
 	"time"
 )
 
@@ -53,7 +54,11 @@ func (dao *Dao) SendApplyCode(phone string) error {
 	if ret, _ := redis.String(c.Do("SET", redisKey, authCode, "NX", "EX", 120)); ret != "OK" {
 		return fmt.Errorf("请稍后再试")
 	}
-	return dao.ypClient.Send(phone, fmt.Sprintf("【捞月狗】%d您申请陪玩大神的验证码。", authCode))
+	txt := fmt.Sprintf("【捞月狗】%d您申请陪玩大神的验证码。", authCode)
+	if !regexp.MustCompile("^(\\+86|\\+852|\\+853|\\+886)?\\d{1,11}").MatchString(phone) {
+		txt = fmt.Sprintf("【laoyuegou】%dYou apply for the verification code of the game master.", authCode)
+	}
+	return dao.ypClient.Send(phone, txt)
 }
 
 func (dao *Dao) CheckApplyCode(code, phone string) bool {
