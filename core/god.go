@@ -493,7 +493,7 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 		err = dao.dbw.Table("play_god_games_apply").Where("userid=? AND gameid=?", godID, gameID).Update("status", constants.GOD_GAME_APPLY_STATUS_REFUSED).Error
 		c := dao.cpool.Get()
 		defer c.Close()
-		c.Do("DEL", RKGodGameApply(godID, gameID), RKGodGameInfo(godID, gameID))
+		c.Do("DEL", RKGodGameApply(godID, gameID), RKOneGodGameV1(godID, gameID), RKGodGameInfo(godID, gameID))
 	} else {
 		return isGod, fmt.Errorf("无效的审核状态%d", status)
 	}

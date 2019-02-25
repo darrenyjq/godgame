@@ -861,6 +861,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 	var god model.GodGameV1
 	var resp *gamepb.AcceptCfgV2Resp
 	var uniprice int64
+	var roomID int64
 	invalidItems := make([]string, 0, 4)
 	for _, pwObj := range pwObjs {
 		userinfo, err = gg.getSimpleUser(pwObj.GodID)
@@ -912,6 +913,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 			"gl":             FormatRMB2Gouliang(uniprice),
 			"order_cnt":      god.AcceptNum,
 			"order_cnt_desc": FormatAcceptOrderNumber(god.AcceptNum),
+			"room_id":        roomID,
 		})
 	}
 	if len(invalidItems) > 0 {

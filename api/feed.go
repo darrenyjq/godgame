@@ -12,6 +12,7 @@ import (
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/plorder/pb"
+	"laoyuegou.pb/user/pb"
 	"sort"
 )
 
@@ -25,25 +26,28 @@ func (gg *GodGame) Feeds(c frame.Context) error {
 	var resp godgamepb.FeedsResp_IndexFeedRespData
 	resp.P = -1
 	resp.Feeds = make([]*godgamepb.FeedsResp_IndexFeedRespData_FeedObj, 0, 25)
-	bannar, err := gamepb.Bannar(c, &gamepb.BannarReq{
-		Locate: 0,
-	})
-	if err == nil && bannar.GetErrcode() == 0 && len(bannar.GetData()) > 0 {
-		tmp := make([]map[string]interface{}, 0, len(bannar.GetData()))
-		for _, bn := range bannar.GetData() {
-			tmp = append(tmp, map[string]interface{}{
-				"id":    bn.GetId(),
-				"title": bn.GetTitle(),
-				"img":   bn.GetPic(),
-				"jump":  bn.GetJUrl(),
-			})
-		}
-		if bs, err := json.Marshal(tmp); err == nil {
-			resp.Feeds = append(resp.Feeds, &godgamepb.FeedsResp_IndexFeedRespData_FeedObj{
-				Ti:   "",
-				Ty:   constants.FEED_TYPE_BANNER,
-				Body: string(bs),
-			})
+	appID := gg.getUserAppID(c)
+	if appID != userpb.APP_ID_IOS_TANSUO_LAOYUEGOU {
+		bannar, err := gamepb.Bannar(c, &gamepb.BannarReq{
+			Locate: 0,
+		})
+		if err == nil && bannar.GetErrcode() == 0 && len(bannar.GetData()) > 0 {
+			tmp := make([]map[string]interface{}, 0, len(bannar.GetData()))
+			for _, bn := range bannar.GetData() {
+				tmp = append(tmp, map[string]interface{}{
+					"id":    bn.GetId(),
+					"title": bn.GetTitle(),
+					"img":   bn.GetPic(),
+					"jump":  bn.GetJUrl(),
+				})
+			}
+			if bs, err := json.Marshal(tmp); err == nil {
+				resp.Feeds = append(resp.Feeds, &godgamepb.FeedsResp_IndexFeedRespData_FeedObj{
+					Ti:   "",
+					Ty:   constants.FEED_TYPE_BANNER,
+					Body: string(bs),
+				})
+			}
 		}
 	}
 	feeds, err := gg.dao.GetTimeLine()
