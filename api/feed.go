@@ -11,6 +11,8 @@ import (
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
+	"laoyuegou.pb/live/pb"
+	plorder_const "laoyuegou.pb/plorder/constants"
 	"laoyuegou.pb/plorder/pb"
 	"laoyuegou.pb/user/pb"
 	"sort"
@@ -137,12 +139,24 @@ func (gg *GodGame) getFeedRecommendGods(title, body string, ctx frame.Context) (
 				continue
 			}
 			god.GodIcon = v1.GodIcon
-		}
-		fResp, err := plorderpb.Free(ctx, &plorderpb.FreeReq{
-			GodId: god.GodID,
-		})
-		if err == nil && fResp.GetErrcode() == 0 {
-			god.Free = fResp.GetData().GetStatus()
+			liveResp, err := livepb.GetGodLiveId(ctx, &livepb.GetGodLiveIdReq{
+				GodId:  v1.GodID,
+				GameId: v1.GameID,
+			})
+			god.Free = plorder_const.PW_STATUS_FREE
+			god.RoomID = 0
+			if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
+				// 优先返回直播
+				god.Free = plorder_const.PW_STATUS_LIVE
+				god.RoomID = liveResp.GetData().GetRoomId()
+			} else {
+				fResp, err := plorderpb.Free(ctx, &plorderpb.FreeReq{
+					GodId: god.GodID,
+				})
+				if err == nil && fResp.GetErrcode() == 0 {
+					god.Free = fResp.GetData().GetStatus()
+				}
+			}
 		}
 		gods2 = append(gods2, god)
 	}

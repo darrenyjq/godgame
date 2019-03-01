@@ -20,6 +20,7 @@ import (
 	"laoyuegou.pb/imapi/pb"
 	"laoyuegou.pb/keyword/pb"
 	"laoyuegou.pb/lfs/pb"
+	"laoyuegou.pb/live/pb"
 	plcommentpb "laoyuegou.pb/plcomment/pb"
 	order_const "laoyuegou.pb/plorder/constants"
 	"laoyuegou.pb/plorder/pb"
@@ -362,30 +363,34 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		regionDesc = regionDesc[:len(regionDesc)-1]
 	}
 
-	var freeStatus int64
-	var freeStatusDesc string
 	var roomID int64
-
-	freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
-		GodId: v1.GodID,
+	freeStatus := order_const.PW_STATUS_FREE
+	liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
+		GodId:  v1.GodID,
+		GameId: v1.GameID,
 	})
-	if err != nil || freeResp.GetErrcode() != 0 {
-		freeStatus = order_const.PW_STATUS_FREE
-		freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_FREE]
+	if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
+		// 优先返回直播
+		freeStatus = order_const.PW_STATUS_LIVE
+		roomID = liveResp.GetData().GetRoomId()
 	} else {
-		freeStatus = freeResp.GetData().GetStatus()
-		freeStatusDesc = freeResp.GetData().GetStatusDesc()
-		if freeStatus == order_const.PW_STATUS_FREE {
-			seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
-				UserId: v1.GodID,
-			})
-			if err == nil && seatResp.GetData() != nil {
-				freeStatus = order_const.PW_STATUS_ON_SEAT
-				freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_ON_SEAT]
-				roomID = seatResp.GetData().GetRoomId()
+		freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
+			GodId: v1.GodID,
+		})
+		if err == nil && freeResp.GetErrcode() == 0 {
+			freeStatus = freeResp.GetData().GetStatus()
+			if freeStatus == order_const.PW_STATUS_FREE {
+				seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
+					UserId: v1.GodID,
+				})
+				if err == nil && seatResp.GetData() != nil {
+					freeStatus = order_const.PW_STATUS_ON_SEAT
+					roomID = seatResp.GetData().GetRoomId()
+				}
 			}
 		}
 	}
+	freeStatusDesc := order_const.PW_STATS_DESC[freeStatus]
 
 	var tmpImages, tmpTags, tmpPowers []string
 	var tmpExt interface{}
@@ -863,6 +868,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 	var uniprice int64
 	var roomID int64
 	invalidItems := make([]string, 0, 4)
+	ctx := frame.TODO()
 	for _, pwObj := range pwObjs {
 		userinfo, err = gg.getSimpleUser(pwObj.GodID)
 		if err != nil || userinfo == nil || userinfo.GetInvalid() != user_pb.USER_INVALID_NO {
@@ -884,7 +890,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 		if len(tmpImages) == 0 {
 			continue
 		}
-		resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+		resp, err = gamepb.AcceptCfgV2(ctx, &gamepb.AcceptCfgV2Req{
 			GameId: pwObj.GameID,
 		})
 		if err != nil || resp.GetErrcode() != 0 {
@@ -894,6 +900,15 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 			uniprice = god.PeiWanPrice
 		} else {
 			uniprice = resp.GetData().GetPrices()[god.PriceID]
+		}
+		liveResp, err := livepb.GetGodLiveId(ctx, &livepb.GetGodLiveIdReq{
+			GodId:  pwObj.GodID,
+			GameId: pwObj.GameID,
+		})
+		if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
+			// 优先返回直播
+			pwObj.PeiWanStatus = order_const.PW_STATUS_LIVE
+			roomID = liveResp.GetData().GetRoomId()
 		}
 
 		gods = append(gods, map[string]interface{}{
