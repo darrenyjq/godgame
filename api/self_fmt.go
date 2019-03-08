@@ -33,6 +33,13 @@ func FormatAcceptOrderNumber(num int64) string {
 	return fmt.Sprintf("%.1f万", float64(num)/10000)
 }
 
+func FormatAcceptOrderNumber3(num int64) string {
+	if num < 10000 {
+		return fmt.Sprintf("%d次", num)
+	}
+	return fmt.Sprintf("%.1f万次", float64(num)/10000)
+}
+
 // 分转元, e.g. 100 > 1.00
 func FormatPriceV1(points int64) string {
 	return fmt.Sprintf("%.2f", float64(points)/100)

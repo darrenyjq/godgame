@@ -238,6 +238,7 @@ func (gg *GodGame) Chat(c frame.Context) error {
 				tmpData["game_name"] = acceptResp.GetData().GetGameName()
 			}
 			tmpData["accept_num"] = FormatAcceptOrderNumber(v1.AcceptNum)
+			tmpData["desc"] = FormatAcceptOrderNumber3(v1.AcceptNum)
 			tmpData["status"] = constants.GOD_GAME_STATUS_PASSED
 			items = append(items, tmpData)
 		}
@@ -438,7 +439,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		"uniprice":       uniprice,
 		"gl":             FormatRMB2Gouliang(uniprice),
 		"order_cnt":      v1.AcceptNum,
-		"order_cnt_desc": FormatAcceptOrderNumber(v1.AcceptNum),
+		"order_cnt_desc": FormatAcceptOrderNumber3(v1.AcceptNum),
 		"order_rate":     "100%",
 		"regions":        v1.Regions,
 		"levels":         v1.Levels,
@@ -464,7 +465,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 			data["videos"] = tmpVideos
 		}
 	}
-	if gg.getUserAppID(c) == "1009" {
+	if gg.getUserAppID(c) == "1009" && gg.cfg.Env.Production() {
 		// 探索版审核时，不展示视频
 		data["video"] = ""
 		data["videos"] = []string{}
@@ -1296,8 +1297,20 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	if godInfo.ID == 0 {
 		return c.JSON2(ERR_CODE_FORBIDDEN, "", nil)
 	}
-
 	data := make(map[string]interface{})
+	live := make(map[string]interface{})
+	live["status"] = 2
+	liveResp, err := livepb.LiveOwnerInfo(c, &livepb.LiveOwnerInfoReq{
+		Userid: currentUserID,
+	})
+	if err == nil && liveResp.GetErrcode() == 0 {
+		if liveResp.GetData().GetIsOwner() {
+			live["status"] = 1
+			live["mags"] = fmt.Sprintf("%d/%d人", liveResp.GetData().GetCurManager(), liveResp.GetData().GetTotalManager())
+			live["mutes"] = fmt.Sprintf("%d/%d人", liveResp.GetData().GetCurForbider(), liveResp.GetData().GetTotalForbider())
+		}
+	}
+	data["live"] = live
 	orderResp, err := plorderpb.Count(frame.TODO(), &plorderpb.CountReq{
 		GodId: currentUserID,
 	})
@@ -1776,7 +1789,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"uniprice":           uniprice,
 		"gl":                 FormatRMB2Gouliang(uniprice),
 		"order_cnt":          v1.AcceptNum,
-		"order_cnt_desc":     FormatAcceptOrderNumber(v1.AcceptNum),
+		"order_cnt_desc":     FormatAcceptOrderNumber3(v1.AcceptNum),
 		"order_rate":         "100%",
 		"regions":            v1.Regions,
 		"levels":             v1.Levels,
@@ -1803,7 +1816,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 			data["videos"] = tmpVideos
 		}
 	}
-	if gg.getUserAppID(c) == "1009" {
+	if gg.getUserAppID(c) == "1009" && gg.cfg.Env.Production() {
 		// 探索版审核时，不展示视频
 		data["video"] = ""
 		data["videos"] = []string{}
