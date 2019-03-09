@@ -44,6 +44,7 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 		item.GameId = v1.GameID
 		item.OrderCnt = v1.AcceptNum
 		item.OrderCntDesc = FormatAcceptOrderNumber(v1.AcceptNum)
+		item.OrderCntDesc2 = FormatAcceptOrderNumber3(v1.AcceptNum)
 		if req.GetMore() {
 			item.Score = FormatScore(v1.Score)
 			orderRateResp, _ := sapb.GodAcceptOrderPer(c, &sapb.GodAcceptOrderPerReq{
