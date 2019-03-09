@@ -1300,6 +1300,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	data := make(map[string]interface{})
 	live := make(map[string]interface{})
 	live["status"] = 2
+	live["url"] = "http://www.laoyuegou.com/home"
 	liveResp, err := livepb.LiveOwnerInfo(c, &livepb.LiveOwnerInfoReq{
 		Userid: currentUserID,
 	})
@@ -1308,6 +1309,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			live["status"] = 1
 			live["mags"] = fmt.Sprintf("%d/%d人", liveResp.GetData().GetCurManager(), liveResp.GetData().GetTotalManager())
 			live["mutes"] = fmt.Sprintf("%d/%d人", liveResp.GetData().GetCurForbider(), liveResp.GetData().GetTotalForbider())
+			live["room_id"] = liveResp.GetData().GetRoomId()
 		}
 	}
 	data["live"] = live
