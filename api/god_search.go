@@ -240,7 +240,7 @@ func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGame, err
 		result.Weight = 0
 	}
 	result.PassedTime = godGame.Passedtime
-	if godGame.PeiwanPriceType == order_const.PW_PRICE_TYPE_BY_OM {
+	if godGame.PeiwanPriceType == constants.PW_PRICE_TYPE_BY_OM {
 		result.Price = godGame.PeiwanPrice
 	} else {
 		result.PriceID = accpetOrderSetting.PriceID
