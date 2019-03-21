@@ -14,7 +14,6 @@ import (
 	"laoyuegou.pb/live/pb"
 	plorder_const "laoyuegou.pb/plorder/constants"
 	"laoyuegou.pb/plorder/pb"
-	"laoyuegou.pb/user/pb"
 	"sort"
 )
 
