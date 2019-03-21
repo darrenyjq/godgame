@@ -227,6 +227,7 @@ func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGame, err
 	if err != nil || sortResp.GetErrcode() != 0 {
 		return result, err
 	}
+	result.LFO = time.Unix(sortResp.GetData().GetLfo(), 0)
 	result.GodID = godID
 	result.GameID = gameID
 	result.Gender = godInfo.Gender

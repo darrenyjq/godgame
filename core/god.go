@@ -100,6 +100,12 @@ func (dao *Dao) GetGod(userID int64) model.God {
 	return god
 }
 
+func (dao *Dao) DropGodCache(userID int64) {
+	c := dao.cpool.Get()
+	defer c.Close()
+	c.Do("DEL", RKGodInfo(userID))
+}
+
 func (dao *Dao) GetGodApply(userID int64) model.GodApply {
 	var godApply model.GodApply
 	dao.dbr.Where("userid=?", userID).First(&godApply)
@@ -1030,18 +1036,16 @@ func (dao *Dao) IsRecommendedGod(godID int64) bool {
 // 获取GodGameApply的状态
 func (dao *Dao) GetGodGameApplyStatus(godID, gameID int64) int64 {
 	var godGameApply model.GodGameApply
-	redisKey := RKGodGameApply(godID, gameID)
-	c := dao.cpool.Get()
-	defer c.Close()
-	bs, _ := redis.Bytes(c.Do("GET", redisKey))
-	err := json.Unmarshal(bs, &godGameApply)
+	// redisKey := RKGodGameApply(godID, gameID)
+	// c := dao.cpool.Get()
+	// defer c.Close()
+	// bs, _ := redis.Bytes(c.Do("GET", redisKey))
+	// err := json.Unmarshal(bs, &godGameApply)
+	// if err == nil {
+	// 	return godGameApply.Status
+	// }
+	err := dao.dbr.Table("play_god_games_apply").Where("userid=? AND gameid=?", godID, gameID).First(&godGameApply).Error
 	if err == nil {
-		return godGameApply.Status
-	}
-	err = dao.dbr.Table("play_god_games_apply").Where("userid=? AND gameid=?", godID, gameID).First(&godGameApply).Error
-	if err == nil {
-		bs, _ = json.Marshal(godGameApply)
-		c.Do("SET", redisKey, string(bs), "EX", 604800)
 		return godGameApply.Status
 	}
 	return -1

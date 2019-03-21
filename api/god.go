@@ -239,7 +239,17 @@ func (gg *GodGame) Chat(c frame.Context) error {
 			}
 			tmpData["accept_num"] = FormatAcceptOrderNumber(v1.AcceptNum)
 			tmpData["desc"] = FormatAcceptOrderNumber3(v1.AcceptNum)
-			tmpData["status"] = constants.GOD_GAME_STATUS_PASSED
+			liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
+				GodId:  v1.GodID,
+				GameId: v1.GameID,
+			})
+			if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
+				// 优先返回直播
+				tmpData["status"] = order_const.PW_STATUS_LIVE
+				tmpData["room_id"] = liveResp.GetData().GetRoomId()
+			} else {
+				tmpData["status"] = order_const.PW_STATUS_FREE
+			}
 			items = append(items, tmpData)
 		}
 	}
@@ -910,6 +920,9 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 			// 优先返回直播
 			pwObj.PeiWanStatus = order_const.PW_STATUS_LIVE
 			roomID = liveResp.GetData().GetRoomId()
+		} else {
+			roomID = 0
+			pwObj.PeiWanStatus = order_const.PW_STATUS_FREE
 		}
 
 		gods = append(gods, map[string]interface{}{
@@ -1733,29 +1746,40 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 	var roomID int64
 	var template int32
 
-	freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
-		GodId: v1.GodID,
+	liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
+		GodId:  v1.GodID,
+		GameId: v1.GameID,
 	})
-	if err != nil || freeResp.GetErrcode() != 0 {
-		freeStatus = order_const.PW_STATUS_FREE
-		freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_FREE]
+	if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
+		// 优先返回直播
+		freeStatus = order_const.PW_STATUS_LIVE
+		freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_LIVE]
+		roomID = liveResp.GetData().GetRoomId()
 	} else {
-		freeStatus = freeResp.GetData().GetStatus()
-		freeStatusDesc = freeResp.GetData().GetStatusDesc()
-		if freeStatus == order_const.PW_STATUS_FREE {
-			seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
-				UserId: v1.GodID,
-			})
-			if err == nil && seatResp.GetData() != nil {
-				freeStatus = order_const.PW_STATUS_ON_SEAT
-				freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_ON_SEAT]
-				roomID = seatResp.GetData().GetRoomId()
-				template = seatResp.GetData().GetTemplate()
+		freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
+			GodId: v1.GodID,
+		})
+		if err != nil || freeResp.GetErrcode() != 0 {
+			freeStatus = order_const.PW_STATUS_FREE
+			freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_FREE]
+		} else {
+			freeStatus = freeResp.GetData().GetStatus()
+			freeStatusDesc = freeResp.GetData().GetStatusDesc()
+			if freeStatus == order_const.PW_STATUS_FREE {
+				seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
+					UserId: v1.GodID,
+				})
+				if err == nil && seatResp.GetData() != nil {
+					freeStatus = order_const.PW_STATUS_ON_SEAT
+					freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_ON_SEAT]
+					roomID = seatResp.GetData().GetRoomId()
+					template = seatResp.GetData().GetTemplate()
+				}
 			}
 		}
 	}
-
 	var tmpImages, tmpTags, tmpPowers []string
+	var tmpImg string
 	var tmpExt interface{}
 	json.Unmarshal([]byte(v1.Images), &tmpImages)
 	json.Unmarshal([]byte(v1.Tags), &tmpTags)
@@ -1766,6 +1790,9 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 	}
 	for idx, _ := range tmpImages {
 		tmpImages[idx] = tmpImages[idx] + "/w0"
+	}
+	if len(tmpImages) > 0 {
+		tmpImg = tmpImages[0]
 	}
 	data := map[string]interface{}{
 		"god_id":             v1.GodID,
@@ -1801,7 +1828,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"status_desc":        freeStatusDesc,
 		"room_id":            roomID,
 		"template":           template,
-		"shareurl":           gg.GenPeiWanShareURL(tmpImages[0], userinfo.GetUsername(), "", v1.GodID, v1.GameID),
+		"shareurl":           gg.GenPeiWanShareURL(tmpImg, userinfo.GetUsername(), "", v1.GodID, v1.GameID),
 	}
 	if v1.Video != "" {
 		tmpStr := gg.formatVideoInfo(c, v1.Video)

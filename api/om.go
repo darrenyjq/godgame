@@ -1629,3 +1629,13 @@ func (gg *GodGame) NearbyGods(c frame.Context) error {
 	}
 	return c.JSON2(StatusOK_V3, "", items)
 }
+
+func (gg *GodGame) DropGodCache(c frame.Context) error {
+	var req godgamepb.DropGodCacheReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	gg.dao.DropGodCache(req.GetGodId())
+	return c.RetSuccess("", nil)
+}
