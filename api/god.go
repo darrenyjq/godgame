@@ -625,6 +625,10 @@ func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.Curr
 	query = query.Should(elastic.NewMatchQuery("peiwan_status", "2").Boost(5))
 	query = query.Should(elastic.NewMatchQuery("reject_order", "1").Boost(3))
 	// query = query.Should(elastic.NewMatchQuery("video", "1").Boost(10))
+	src, _ := query.Source()
+	bs, _ := json.Marshal(src)
+	icelog.Infof("## query:%s", string(bs))
+
 	searchService = searchService.Query(query).
 		Sort("weight", false).
 		Sort("_score", false).
@@ -1008,17 +1012,34 @@ func (gg *GodGame) GodList2(c frame.Context) error {
 	} else if req.GetLimit() > 20 || req.GetLimit() == 0 {
 		req.Limit = 20
 	}
-	if gg.isVoiceCallGame(req.GetGameId()) {
-		// 语聊品类不展示
-		return c.JSON2(StatusOK_V3, "", nil)
-	}
 	currentUser := gg.getCurrentUser(c)
+	var gender int64
+	if req.GetGender() == constants.GENDER_UNKNOW {
+		if currentUser.Gender == constants.GENDER_FEMALE {
+			gender = constants.GENDER_MALE
+		} else {
+			gender = constants.GENDER_FEMALE
+		}
+	} else {
+		gender = req.GetGender()
+	}
+	if req.GetOffset() == 0 {
+		result, hits := gg.dao.GetGodListCache(req.GetGameId(), gender)
+		if len(result) > 0 {
+			return c.RetSuccess("", map[string]interface{}{
+				"gods":  result,
+				"total": hits,
+			})
+		}
+	}
 	var pwObjs []model.ESGodGame
 	var hits int64
 	var gods []map[string]interface{}
 	pwObjs, hits = gg.queryGods2(req, currentUser)
 	gods = gg.getGodItems2(c, pwObjs)
-
+	if req.GetOffset() == 0 {
+		gg.dao.SaveGodListCache(req.GetGameId(), gender, hits, gods)
+	}
 	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
 		"gods":  gods,
 		"total": hits,
