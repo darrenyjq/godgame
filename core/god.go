@@ -19,6 +19,37 @@ import (
 	"time"
 )
 
+func (dao *Dao) GetGodListCache(gameID, gender int64) ([]map[string]interface{}, int64) {
+	key := fmt.Sprintf("G:{%d}:{%d}:GodList", gameID, gender)
+	totalHitKey := fmt.Sprintf("G:{%d}:{%d}:GodListHit", gameID, gender)
+	var result []map[string]interface{}
+	var hits int64
+	c := dao.cpool.Get()
+	defer c.Close()
+	if exists, _ := redis.Bool(c.Do("EXISTS", key)); exists {
+		if bs, err := redis.Bytes(c.Do("GET", key)); err == nil {
+			if err = json.Unmarshal(bs, &result); err == nil {
+				hits, _ = redis.Int64(c.Do("GET", totalHitKey))
+				return result, hits
+			}
+		}
+	}
+	return result, hits
+}
+
+func (dao *Dao) SaveGodListCache(gameID, gender, hits int64, result []map[string]interface{}) {
+	key := fmt.Sprintf("G:{%d}:{%d}:GodList", gameID, gender)
+	totalHitKey := fmt.Sprintf("G:{%d}:{%d}:GodListHit", gameID, gender)
+	bs, err := json.Marshal(result)
+	if err != nil {
+		return
+	}
+	c := dao.cpool.Get()
+	defer c.Close()
+	c.Do("SET", key, string(bs), "EX", 10)
+	c.Do("SET", totalHitKey, hits, "EX", 10)
+}
+
 // 获取一键呼叫语聊大神，随机开关打开状态的
 func (dao *Dao) GetRandCallGods() ([]int64, error) {
 	c := dao.cpool.Get()
