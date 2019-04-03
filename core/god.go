@@ -445,7 +445,6 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 			}
 			// 创建钱包账户
 			purseResp, err := purse_pb.Create(frame.TODO(), &purse_pb.CreateReq{
-				AccountDesc:  "钱包",
 				Mid:          godID,
 				Phone:        god.Phone,
 				Name:         god.RealName,
