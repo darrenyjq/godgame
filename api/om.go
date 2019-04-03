@@ -1287,6 +1287,8 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 
 	data := map[string]interface{}{
 		"god_id":             v1.GodID,
+		"grab_switch":        v1.GrabSwitch,
+		"god_icon":           v1.GodIcon,
 		"god_name":           userinfo.GetUsername(),
 		"god_avatar":         userinfo.GetAvatarSmall(),
 		"sex":                godInfo.Gender,
