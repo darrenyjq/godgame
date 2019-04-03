@@ -445,7 +445,10 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 			}
 			// 创建钱包账户
 			purseResp, err := purse_pb.Create(frame.TODO(), &purse_pb.CreateReq{
-				Mid: godID,
+				Mid:          godID,
+				Phone:        god.Phone,
+				Name:         god.RealName,
+				IdentityCard: god.IDcard,
 			})
 			if err != nil || purseResp.GetErrcode() != 0 {
 				return isGod, fmt.Errorf("钱包账户创建失败")
