@@ -45,6 +45,16 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 		item.OrderCnt = v1.AcceptNum
 		item.OrderCntDesc = FormatAcceptOrderNumber(v1.AcceptNum)
 		item.OrderCntDesc2 = FormatAcceptOrderNumber3(v1.AcceptNum)
+		if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+			item.Price = FormatPriceV1(v1.PeiWanPrice)
+		} else {
+			cfgResp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+				GameId: v1.GameID,
+			})
+			if err == nil || cfgResp.GetErrcode() == 0 {
+				item.Price = FormatPriceV1(cfgResp.GetData().GetPrices()[v1.PriceID])
+			}
+		}
 		if req.GetMore() {
 			item.Score = FormatScore(v1.Score)
 			orderRateResp, _ := sapb.GodAcceptOrderPer(c, &sapb.GodAcceptOrderPerReq{
