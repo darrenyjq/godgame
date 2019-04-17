@@ -245,11 +245,12 @@ func (gg *GodGame) Chat(c frame.Context) error {
 			})
 			if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
 				// 优先返回直播
-				tmpData["status"] = order_const.PW_STATUS_LIVE
+				tmpData["pw_status"] = order_const.PW_STATUS_LIVE
 				tmpData["room_id"] = liveResp.GetData().GetRoomId()
 			} else {
-				tmpData["status"] = order_const.PW_STATUS_FREE
+				tmpData["pw_status"] = order_const.PW_STATUS_FREE
 			}
+			tmpData["status"] = v1.Status
 			items = append(items, tmpData)
 		}
 	}
@@ -377,8 +378,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 	var roomID int64
 	freeStatus := order_const.PW_STATUS_FREE
 	liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
-		GodId:  v1.GodID,
-		GameId: v1.GameID,
+		GodId: v1.GodID,
 	})
 	if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
 		// 优先返回直播
@@ -1899,4 +1899,24 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		data["comments"] = hotComments.GetData()
 	}
 	return data, nil
+}
+
+func (gg *GodGame) OldInfo(c frame.Context) error {
+	currentUserID := gg.getCurrentUserID(c)
+	god := gg.dao.GetGod(currentUserID)
+	if god.UserID != currentUserID {
+		return c.JSON2(ERR_CODE_NOT_FOUND, "", nil)
+	}
+	data := map[string]interface{}{
+		"god_id":      god.UserID,
+		"realname":    god.RealName,
+		"sex":         god.Gender,
+		"phone":       god.Phone,
+		"idcard_type": god.IDcardtype,
+		"idcard":      god.IDcard,
+		"idcard_url":  GenIDCardURL(god.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
+		"createdtime": FormatDatetime(god.Createdtime),
+		"updatedtime": FormatDatetime(god.Updatedtime),
+	}
+	return c.RetSuccess("success", data)
 }
