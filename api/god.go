@@ -510,14 +510,14 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 	// 2.9.7增加是否关注，sub=1：已关注；TODO：调用关注服务，检查当前用户是否关注过大神
 	if currentUserID := gg.getCurrentUserID(c); currentUserID > 0 {
 		followResp, err := followpb.Relation(c, &followpb.RelationReq{
-			A: currentUserID,
-			B: req.GetGodId(),
+			CurrentUid: currentUserID,
+			TargetUid:  req.GetGodId(),
 		})
 		if err != nil {
 			c.Warnf("%s", err.Error())
 		} else if followResp.GetErrcode() != 0 {
 			c.Warnf("%s", followResp.GetErrmsg())
-		} else if followResp.GetData() != followpb.FOLLOW_STATUS_FOLLOW_STATUS_NONE {
+		} else if followResp.GetData() == followpb.FOLLOW_STATUS_FOLLOW_STATUS_SINGLE || followResp.GetData() == followpb.FOLLOW_STATUS_FOLLOW_STATUS_BOTH {
 			data["sub"] = 1
 		}
 	}
