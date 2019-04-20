@@ -377,29 +377,30 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 
 	var roomID int64
 	freeStatus := order_const.PW_STATUS_FREE
-	liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
+	freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
 		GodId: v1.GodID,
 	})
-	if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
-		// 优先返回直播
-		freeStatus = order_const.PW_STATUS_LIVE
-		roomID = liveResp.GetData().GetRoomId()
-	} else {
-		freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
+	if err == nil && freeResp.GetErrcode() == 0 {
+		freeStatus = freeResp.GetData().GetStatus()
+	}
+	if req.GetS() != 1 {
+		liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
 			GodId: v1.GodID,
 		})
-		if err == nil && freeResp.GetErrcode() == 0 {
-			freeStatus = freeResp.GetData().GetStatus()
-			if freeStatus == order_const.PW_STATUS_FREE {
-				seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
-					UserId: v1.GodID,
-				})
-				if err == nil && seatResp.GetData() != nil {
-					freeStatus = order_const.PW_STATUS_ON_SEAT
-					roomID = seatResp.GetData().GetRoomId()
-				}
+		if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
+			// 优先返回直播
+			freeStatus = order_const.PW_STATUS_LIVE
+			roomID = liveResp.GetData().GetRoomId()
+		} else {
+			seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
+				UserId: v1.GodID,
+			})
+			if err == nil && seatResp.GetData() != nil {
+				freeStatus = order_const.PW_STATUS_ON_SEAT
+				roomID = seatResp.GetData().GetRoomId()
 			}
 		}
+
 	}
 	freeStatusDesc := order_const.PW_STATS_DESC[freeStatus]
 
