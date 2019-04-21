@@ -245,11 +245,12 @@ func (gg *GodGame) Chat(c frame.Context) error {
 			})
 			if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
 				// 优先返回直播
-				tmpData["status"] = order_const.PW_STATUS_LIVE
+				tmpData["pw_status"] = order_const.PW_STATUS_LIVE
 				tmpData["room_id"] = liveResp.GetData().GetRoomId()
 			} else {
-				tmpData["status"] = order_const.PW_STATUS_FREE
+				tmpData["pw_status"] = order_const.PW_STATUS_FREE
 			}
+			tmpData["status"] = v1.Status
 			items = append(items, tmpData)
 		}
 	}
@@ -376,30 +377,30 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 
 	var roomID int64
 	freeStatus := order_const.PW_STATUS_FREE
-	liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
-		GodId:  v1.GodID,
-		GameId: v1.GameID,
+	freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
+		GodId: v1.GodID,
 	})
-	if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
-		// 优先返回直播
-		freeStatus = order_const.PW_STATUS_LIVE
-		roomID = liveResp.GetData().GetRoomId()
-	} else {
-		freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
+	if err == nil && freeResp.GetErrcode() == 0 {
+		freeStatus = freeResp.GetData().GetStatus()
+	}
+	if req.GetS() != 1 {
+		liveResp, err := livepb.GetGodLiveId(c, &livepb.GetGodLiveIdReq{
 			GodId: v1.GodID,
 		})
-		if err == nil && freeResp.GetErrcode() == 0 {
-			freeStatus = freeResp.GetData().GetStatus()
-			if freeStatus == order_const.PW_STATUS_FREE {
-				seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
-					UserId: v1.GodID,
-				})
-				if err == nil && seatResp.GetData() != nil {
-					freeStatus = order_const.PW_STATUS_ON_SEAT
-					roomID = seatResp.GetData().GetRoomId()
-				}
+		if err == nil && liveResp.GetData() != nil && liveResp.GetData().GetRoomId() > 0 {
+			// 优先返回直播
+			freeStatus = order_const.PW_STATUS_LIVE
+			roomID = liveResp.GetData().GetRoomId()
+		} else {
+			seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
+				UserId: v1.GodID,
+			})
+			if err == nil && seatResp.GetData() != nil {
+				freeStatus = order_const.PW_STATUS_ON_SEAT
+				roomID = seatResp.GetData().GetRoomId()
 			}
 		}
+
 	}
 	freeStatusDesc := order_const.PW_STATS_DESC[freeStatus]
 
@@ -510,14 +511,14 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 	// 2.9.7增加是否关注，sub=1：已关注；TODO：调用关注服务，检查当前用户是否关注过大神
 	if currentUserID := gg.getCurrentUserID(c); currentUserID > 0 {
 		followResp, err := followpb.Relation(c, &followpb.RelationReq{
-			A: currentUserID,
-			B: req.GetGodId(),
+			CurrentUid: currentUserID,
+			TargetUid:  req.GetGodId(),
 		})
 		if err != nil {
 			c.Warnf("%s", err.Error())
 		} else if followResp.GetErrcode() != 0 {
 			c.Warnf("%s", followResp.GetErrmsg())
-		} else if followResp.GetData() != followpb.FOLLOW_STATUS_FOLLOW_STATUS_NONE {
+		} else if followResp.GetData() == followpb.FOLLOW_STATUS_FOLLOW_STATUS_SINGLE || followResp.GetData() == followpb.FOLLOW_STATUS_FOLLOW_STATUS_BOTH {
 			data["sub"] = 1
 		}
 	}
@@ -1899,4 +1900,24 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		data["comments"] = hotComments.GetData()
 	}
 	return data, nil
+}
+
+func (gg *GodGame) OldInfo(c frame.Context) error {
+	currentUserID := gg.getCurrentUserID(c)
+	god := gg.dao.GetGod(currentUserID)
+	if god.UserID != currentUserID {
+		return c.JSON2(ERR_CODE_NOT_FOUND, "", nil)
+	}
+	data := map[string]interface{}{
+		"god_id":      god.UserID,
+		"realname":    god.RealName,
+		"sex":         god.Gender,
+		"phone":       god.Phone,
+		"idcard_type": god.IDcardtype,
+		"idcard":      god.IDcard,
+		"idcard_url":  GenIDCardURL(god.IDcardurl, gg.cfg.OSS.OSSAccessID, gg.cfg.OSS.OSSAccessKey),
+		"createdtime": FormatDatetime(god.Createdtime),
+		"updatedtime": FormatDatetime(god.Updatedtime),
+	}
+	return c.RetSuccess("success", data)
 }
