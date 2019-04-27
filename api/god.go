@@ -309,7 +309,7 @@ func (gg *GodGame) GenPeiWanShareURL(godImg, godName, gameName string, godID, ga
 	var h5URL string
 	title := fmt.Sprintf("'%s'在等你一起玩 %s~ #捞月狗#", godName, gameName)
 	subTitle := "我在捞月狗等你..."
-
+	godImg = strings.Replace(godImg, "/w0", "", -1)
 	switch gg.cfg.Env {
 	case config.ENV_DEV:
 		h5URL = fmt.Sprintf("https://playgod-test-imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
