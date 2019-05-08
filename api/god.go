@@ -7,7 +7,6 @@ import (
 	"github.com/olivere/elastic"
 	"godgame/core"
 	"iceberg/frame"
-	"iceberg/frame/config"
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
 	"laoyuegou.pb/chatroom/pb"
@@ -305,23 +304,21 @@ func (gg *GodGame) formatVideoInfo(c frame.Context, hash string) string {
 	return ""
 }
 
-func (gg *GodGame) GenPeiWanShareURL(godImg, godName, gameName string, godID, gameID int64) string {
+func (gg *GodGame) GenPeiWanShareURL(godAvatar, godName, gameName, desc string, godID, gameID int64) string {
 	var h5URL string
-	title := fmt.Sprintf("'%s'在等你一起玩 %s~ #捞月狗#", godName, gameName)
-	subTitle := "我在捞月狗等你..."
-	godImg = strings.Replace(godImg, "/w0", "", -1)
-	switch gg.cfg.Env {
-	case config.ENV_DEV:
-		h5URL = fmt.Sprintf("https://playgod-test-imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
-	case config.ENV_QA:
-		h5URL = fmt.Sprintf("https://playgod-test-imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
-	case config.ENV_STAGING:
-		h5URL = fmt.Sprintf("https://playgod-staging-imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
-	default:
-		h5URL = fmt.Sprintf("https://imgx.lygou.cc/fan/dist/newactivity/#/playgod/%d/%d", gameID, godID)
+	title := fmt.Sprintf("#%s# %s", gameName, godName)
+	subTitle := desc
+
+	if gg.cfg.Env.Production() {
+		h5URL = fmt.Sprintf("https://imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
+	} else {
+		h5URL = fmt.Sprintf("https://guest-test-imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
+	}
+	if subTitle == "" {
+		subTitle = h5URL
 	}
 	rawString := fmt.Sprintf("laoyuegou://share?title=%s&&share_url=%s&&share_content=%s&&imageurl=%s&&platform=0&&imageurl_sina=%s&&type=60000001&&god_id=%d&&game_id=%d",
-		title, h5URL, subTitle, godImg, godImg, godID, gameID)
+		title, h5URL, subTitle, godAvatar, godAvatar, godID, gameID)
 	return rawString
 }
 
@@ -334,13 +331,15 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		// 语聊品类不展示
 		return c.JSON2(StatusOK_V3, "", nil)
 	}
-	gameStateResp, err := gamepb.State(c, &gamepb.StateReq{
+	gameStateResp, err := gamepb.Record(c, &gamepb.RecordReq{
 		GameId: req.GetGameId(),
 	})
 	if err == nil && gameStateResp.GetErrcode() == 0 {
 		if gameStateResp.GetData().GetState() == game_const.GAME_STATE_NO {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "品类已下架", nil)
 		}
+	} else {
+		return c.JSON2(ERR_CODE_DISPLAY_ERROR, "品类已下架", nil)
 	}
 	godInfo := gg.dao.GetGod(req.GetGodId())
 	if godInfo.Status != constants.GOD_STATUS_PASSED {
@@ -459,7 +458,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 		"status":         freeStatus,
 		"status_desc":    freeStatusDesc,
 		"room_id":        roomID,
-		"shareurl":       gg.GenPeiWanShareURL(tmpImages[0], userinfo.GetUsername(), "", v1.GodID, v1.GameID),
+		"shareurl":       gg.GenPeiWanShareURL(userinfo.GetAvatarBig(), userinfo.GetUsername(), gameStateResp.GetData().GetGameName(), v1.Desc, v1.GodID, v1.GameID),
 	}
 	if v1.Video != "" {
 		tmpStr := gg.formatVideoInfo(c, v1.Video)
@@ -1742,6 +1741,12 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 	if err != nil {
 		return nil, err
 	}
+	gameRecord, err := gamepb.Record(c, &gamepb.RecordReq{
+		GameId: gameID,
+	})
+	if err != nil || gameRecord.GetErrcode() != 0 {
+		return nil, fmt.Errorf("game %d record not found", gameID)
+	}
 	resp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
 		GameId: gameID,
 	})
@@ -1801,7 +1806,6 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		}
 	}
 	var tmpImages, tmpTags, tmpPowers []string
-	var tmpImg string
 	var tmpExt interface{}
 	json.Unmarshal([]byte(v1.Images), &tmpImages)
 	json.Unmarshal([]byte(v1.Tags), &tmpTags)
@@ -1812,9 +1816,6 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 	}
 	for idx, _ := range tmpImages {
 		tmpImages[idx] = tmpImages[idx] + "/w0"
-	}
-	if len(tmpImages) > 0 {
-		tmpImg = tmpImages[0]
 	}
 	data := map[string]interface{}{
 		"god_id":             v1.GodID,
@@ -1850,7 +1851,7 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		"status_desc":        freeStatusDesc,
 		"room_id":            roomID,
 		"template":           template,
-		"shareurl":           gg.GenPeiWanShareURL(tmpImg, userinfo.GetUsername(), "", v1.GodID, v1.GameID),
+		"shareurl":           gg.GenPeiWanShareURL(userinfo.GetAvatarBig(), userinfo.GetUsername(), gameRecord.GetData().GetGameName(), v1.Desc, v1.GodID, v1.GameID),
 	}
 	if v1.Video != "" {
 		tmpStr := gg.formatVideoInfo(c, v1.Video)

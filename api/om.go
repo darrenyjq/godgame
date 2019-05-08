@@ -1318,7 +1318,7 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 		"score_desc":         FormatScore(v1.Score),
 		"status":             freeResp.GetData().GetStatus(),
 		"status_desc":        freeResp.GetData().GetStatusDesc(),
-		"shareurl":           gg.GenPeiWanShareURL(tmpImages[0], userinfo.GetUsername(), "", v1.GodID, v1.GameID),
+		"shareurl":           gg.GenPeiWanShareURL(userinfo.GetAvatarBig(), userinfo.GetUsername(), "", v1.Desc, v1.GodID, v1.GameID),
 	}
 	if v1.Video != "" {
 		data["video"] = gg.formatVideoInfo2(c, v1.Video)
