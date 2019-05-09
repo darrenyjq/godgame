@@ -173,44 +173,13 @@ func (gg *GodGame) Chat(c frame.Context) error {
 	}
 	sort.Sort(v1s)
 	items := make([]map[string]interface{}, 0, len(v1s))
-	var call map[string]interface{}
 	var uniprice int64
-	appID := gg.getUserAppID(c)
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
 		}
 		if gg.isVoiceCallGame(v1.GameID) {
-			// 语聊品类
-			call = make(map[string]interface{})
-			if appID == user_pb.APP_ID_ANDROID_LAOYUEGOU {
-				// Android
-				if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
-					call["price"] = fmt.Sprintf("%d狗粮/分钟", v1.PeiWanPrice)
-				} else {
-					cfgResp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
-						GameId: v1.GameID,
-					})
-					if err == nil && cfgResp.GetErrcode() == 0 {
-						call["price"] = fmt.Sprintf("%d狗粮/分钟", cfgResp.GetData().GetPrices()[v1.PriceID])
-					}
-				}
-			} else if appID == user_pb.APP_ID_IOS_TANSUO_LAOYUEGOU {
-				// iOS探索版
-				// if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
-				// 	call["price"] = fmt.Sprintf("%d狗粮/分钟", v1.PeiWanPrice)
-				// } else {
-				// 	cfgResp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
-				// 		GameId: v1.GameID,
-				// 	})
-				// 	if err == nil && cfgResp.GetErrcode() == 0 {
-				// 		call["price"] = fmt.Sprintf("%d狗粮/分钟", cfgResp.GetData().GetPrices()[v1.PriceID])
-				// 	}
-				// }
-				call["price"] = "免费"
-			} else {
-				call["price"] = "免费"
-			}
+			// 语聊品类不展示
 		} else {
 			tmpData := make(map[string]interface{})
 			if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
@@ -255,7 +224,7 @@ func (gg *GodGame) Chat(c frame.Context) error {
 	}
 	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
 		"items": items,
-		"call":  call,
+		// "call":  call,
 	})
 }
 
@@ -311,8 +280,10 @@ func (gg *GodGame) GenPeiWanShareURL(godAvatar, godName, gameName, desc string, 
 
 	if gg.cfg.Env.Production() {
 		h5URL = fmt.Sprintf("https://imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
-	} else {
+	} else if gg.cfg.Env.QA() {
 		h5URL = fmt.Sprintf("https://guest-test-imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
+	} else if gg.cfg.Env.Stag() {
+		h5URL = fmt.Sprintf("https://guest-staging-imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
 	}
 	if subTitle == "" {
 		subTitle = h5URL
