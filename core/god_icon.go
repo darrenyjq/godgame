@@ -70,7 +70,11 @@ func (dao *Dao) SetGodIcon(godID, iconID, begin, end int64) error {
 	c := dao.cpool.Get()
 	defer c.Close()
 	if url, _ := redis.String(c.Do("HGET", RKGodIcons(), iconID)); url == "" {
-		return fmt.Errorf("无效的标签ID")
+		var godIcon model.GodIcon
+		if err := dao.dbr.Where("id=? AND status=2", iconID).First(&godIcon).Error; err != nil {
+			return fmt.Errorf("无效的标签ID")
+		}
+		c.Do("HSET", RKGodIcons, iconID, godIcon.Url)
 	}
 	tmpGodIcon := model.TmpGodIcon{
 		ID:    iconID,

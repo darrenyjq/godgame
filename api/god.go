@@ -1616,7 +1616,7 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 	games := make([]map[string]interface{}, 0, len(v1s))
 	var game map[string]interface{}
 	var dxdResp *gamepb.DxdResp
-	isIOS := gg.isIOS(c)
+	// isIOS := gg.isIOS(c)
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
@@ -1636,29 +1636,29 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 		game["highest_level_score"] = dxdResp.GetData().GetHighestLevelScore()
 		game["service_type"] = dxdResp.GetData().GetServiceId()
 		game["service_name"] = dxdResp.GetData().GetServiceName()
-		if v1.GameID == 15 && isIOS {
-			// iOS下定向单，王者荣耀不展示Android大区
-			tmpRegions := make([]*gamepb.Region2, 0, 2)
-			tmpRegionIDs := make([]int64, 0, 2)
-			if len(dxdResp.GetData().GetRegion1()) > 0 {
-				for _, region2 := range dxdResp.GetData().GetRegion1()[0].GetRegion2() {
-					if strings.Index(region2.GetName(), "安卓") != -1 {
-						continue
-					}
-					tmpRegionIDs = append(tmpRegionIDs, region2.GetId())
-					tmpRegions = append(tmpRegions, region2)
-				}
-				if len(tmpRegions) == 0 {
-					continue
-				}
-				dxdResp.GetData().GetRegion1()[0].Region2 = tmpRegions
-				game["regions"] = tmpRegionIDs
-				game["region1"] = dxdResp.GetData().GetRegion1()
-			}
-		} else {
-			game["regions"] = v1.Regions
-			game["region1"] = dxdResp.GetData().GetRegion1()
-		}
+		// if v1.GameID == 15 && isIOS {
+		// 	// iOS下定向单，王者荣耀不展示Android大区
+		// 	tmpRegions := make([]*gamepb.Region2, 0, 2)
+		// 	tmpRegionIDs := make([]int64, 0, 2)
+		// 	if len(dxdResp.GetData().GetRegion1()) > 0 {
+		// 		for _, region2 := range dxdResp.GetData().GetRegion1()[0].GetRegion2() {
+		// 			if strings.Index(region2.GetName(), "安卓") != -1 {
+		// 				continue
+		// 			}
+		// 			tmpRegionIDs = append(tmpRegionIDs, region2.GetId())
+		// 			tmpRegions = append(tmpRegions, region2)
+		// 		}
+		// 		if len(tmpRegions) == 0 {
+		// 			continue
+		// 		}
+		// 		dxdResp.GetData().GetRegion1()[0].Region2 = tmpRegions
+		// 		game["regions"] = tmpRegionIDs
+		// 		game["region1"] = dxdResp.GetData().GetRegion1()
+		// 	}
+		// } else {
+		game["regions"] = v1.Regions
+		game["region1"] = dxdResp.GetData().GetRegion1()
+		// }
 
 		games = append(games, game)
 	}
