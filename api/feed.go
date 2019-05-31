@@ -82,7 +82,6 @@ func (gg *GodGame) Feeds(c frame.Context) error {
 			}
 			gods, err := gg.getFeedGods(game.GetGameId(), currentUser)
 			if err != nil {
-				c.Error(err.Error())
 				continue
 			} else {
 				gods.Ti = game.GetGameName()
