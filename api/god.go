@@ -598,7 +598,7 @@ func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.Curr
 	// query = query.Should(elastic.NewMatchQuery("video", "1").Boost(10))
 	src, _ := query.Source()
 	bs, _ := json.Marshal(src)
-	icelog.Infof("## query:%s", string(bs))
+	icelog.Debugf("## query:%s", string(bs))
 
 	searchService = searchService.Query(query).
 		Sort("weight", false).
@@ -933,8 +933,6 @@ func (gg *GodGame) getGodItems2(c frame.Context, pwObjs []model.ESGodGame) []map
 	for _, pwObj := range pwObjs {
 		if tmpGod, err = gg.buildGodDetail(c, pwObj.GodID, pwObj.GameID); err == nil {
 			gods = append(gods, tmpGod)
-		} else {
-			c.Errorf("%s", err)
 		}
 	}
 	return gods
