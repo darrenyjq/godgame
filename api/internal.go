@@ -6,7 +6,6 @@ import (
 	"godgame/core"
 	"iceberg/frame"
 	"laoyuegou.com/util"
-	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
@@ -647,25 +646,19 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 	} else if req.GetRoomTemplate() == 0 {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "参数错误[4]", nil)
 	}
-	gameInfo, err := gamepb.Record(c, &gamepb.RecordReq{GameId: req.GetGameId()})
-	if err != nil {
-		c.Warnf("%s", err.Error())
-		return c.JSON2(ERR_CODE_INTERNAL, "内部错误[1]", nil)
-	} else if gameInfo.GetErrcode() != 0 {
-		c.Warnf("%s", gameInfo.GetErrmsg())
-		return c.JSON2(ERR_CODE_INTERNAL, "内部错误[2]", nil)
-	} else if gameInfo.GetData().GetState() != game_const.GAME_STATE_OK {
-		return c.JSON2(ERR_CODE_FORBIDDEN, "游戏已下架", nil)
-	}
 	gods := gg.dao.GetJSYPaiDanGods(req.GetGameId(), req.GetGender())
 	if len(gods) == 0 {
 		return c.JSON2(StatusOK_V3, "暂无空闲大神", 0)
+	}
+	var gameName string
+	if gameInfo, err := gamepb.Record(c, &gamepb.RecordReq{GameId: req.GetGameId()}); err == nil && gameInfo.GetErrcode() == 0 {
+		gameName = gameInfo.GetData().GetGameName()
 	}
 	gender := constants.GENDER_DESC[req.GetGender()]
 	if gender == "" {
 		gender = "不限"
 	}
-	title := "收到新的" + gameInfo.GetData().GetGameName() + "派单"
+	title := "收到新的" + gameName + "派单"
 	msg := map[string]interface{}{
 		"room_id":    req.GetRoomId(),
 		"game_id":    req.GetGameId(),
