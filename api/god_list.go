@@ -16,8 +16,6 @@ import (
 
 func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 	var keyByGender string
-	keyByNew := core.RKGodListByNew(game_id)
-	keyByOrderCnt := core.RKGodListByOrderCnt(game_id)
 	var pwObj model.ESGodGame
 	now := time.Now()
 	searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndex)
@@ -52,11 +50,10 @@ func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 				break
 			}
 		} else {
+			redisConn.Do("DEL", keyByGender)
 			for _, item := range resp.Hits.Hits {
 				if err = json.Unmarshal(*item.Source, &pwObj); err == nil {
 					redisConn.Do("ZADD", keyByGender, item.Score, pwObj.GodID)
-					redisConn.Do("ZADD", keyByNew, pwObj.PassedTime.Unix(), pwObj.GodID)
-					redisConn.Do("ZADD", keyByOrderCnt, pwObj.SevenDaysHours, pwObj.GodID)
 				}
 			}
 		}
