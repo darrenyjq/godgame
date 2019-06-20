@@ -43,6 +43,7 @@ func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 		Sort("lts", false).
 		Sort("seven_days_hours", false).
 		Size(100)
+	redisConn.Do("DEL", keyByGender)
 	for {
 		resp, err := searchService.Do(ctx)
 		if err != nil {
@@ -50,7 +51,6 @@ func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 				break
 			}
 		} else {
-			redisConn.Do("DEL", keyByGender)
 			for _, item := range resp.Hits.Hits {
 				if err = json.Unmarshal(*item.Source, &pwObj); err == nil {
 					redisConn.Do("ZADD", keyByGender, item.Score, pwObj.GodID)

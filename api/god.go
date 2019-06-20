@@ -987,8 +987,9 @@ func (gg *GodGame) GodList2(c frame.Context) error {
 		gender = constants.GENDER_MALE
 	} else {
 		gender = constants.GENDER_FEMALE
+		currentUser.Gender = constants.GENDER_MALE
 	}
-	godInfos, totalCnt := gg.dao.GetGodListsByGender(req.GetGameId(), gender, req.GetOffset(), req.GetLimit(), c)
+	godInfos, totalCnt := gg.dao.GetGodListsByGender(req.GetGameId(), currentUser.Gender, req.GetOffset(), req.GetLimit(), c)
 	if totalCnt > 0 {
 		return c.RetSuccess("success", map[string]interface{}{
 			"total": totalCnt,
