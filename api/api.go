@@ -28,6 +28,7 @@ type GodGame struct {
 	esChan     chan ESParams
 	shence     shence.SensorsAnalytics
 	nsqHandler *handlers.BaseHandler
+	exitChan   chan struct{}
 }
 
 // NewGodGame new God Game
@@ -53,12 +54,15 @@ func NewGodGame(cfg config.Config) *GodGame {
 	}
 	gg.esChan = make(chan ESParams, 100)
 	gg.nsqHandler = handlers.NewBaseHandler(cfg, gg.dao)
+	gg.exitChan = make(chan struct{})
 	go gg.StartLoop()
+	go gg.fill_god_list()
 	return gg
 }
 
 func (gg *GodGame) Stop(s os.Signal) bool {
 	gg.nsqHandler.Stop()
+	close(gg.exitChan)
 	return true
 }
 

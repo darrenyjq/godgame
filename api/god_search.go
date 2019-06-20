@@ -39,9 +39,8 @@ func (gg *GodGame) StartLoop() {
 		select {
 		case params, ok := <-gg.esChan:
 			if !ok {
-				icelog.Errorf("%s", ok)
+				goto exit
 			}
-
 			switch params.Action {
 			case ES_ACTION_UPDATE:
 				gg.ESUpdateGodGame(params.IDs[0], params.Data)
@@ -54,8 +53,12 @@ func (gg *GodGame) StartLoop() {
 			case ES_ACTION_ADD:
 				gg.ESAddGodGameInternal(params.ESGodGame)
 			}
+		case <-gg.exitChan:
+			goto exit
 		}
 	}
+exit:
+	icelog.Info("exiting loop...")
 }
 
 // 修改Elasticsearch里面的大神陪玩信息

@@ -17,6 +17,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Dao core dao
 type Dao struct {
+	cfg      config.Config
 	cpool    *redis.Pool             // 缓存池
 	dbr      *gorm.DB                // 读库
 	dbw      *gorm.DB                // 写库
@@ -26,6 +27,7 @@ type Dao struct {
 // NewDao dao object
 func NewDao(cfg config.Config) *Dao {
 	dao := new(Dao)
+	dao.cfg = cfg
 	dao.cpool = util.NewRedisPool(&cfg.Redis)
 	dsnr := fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.Mysql.User, cfg.Mysql.Psw, cfg.Mysql.Host.Read, cfg.Mysql.Port, cfg.Mysql.DbName)

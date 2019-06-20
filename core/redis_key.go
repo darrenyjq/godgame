@@ -4,6 +4,26 @@ import (
 	"fmt"
 )
 
+// RKFillGodListLock 填充大神列表锁
+func RKFillGodListLock() string {
+	return "FillGodListLock"
+}
+
+//.RKGodListByGender 大神列表按性别划分
+func RKGodListByGender(gameID, gender int64) string {
+	return fmt.Sprintf("GL:{%d}:G:{%d}", gameID, gender)
+}
+
+// RKGodListByNew 大神列表按新鲜度划分
+func RKGodListByNew(gameID int64) string {
+	return fmt.Sprintf("GLN:{%d}", gameID)
+}
+
+// RKGodListByOrderCnt 大神列表按接单数划分
+func RKGodListByOrderCnt(gameID int64) string {
+	return fmt.Sprintf("GLO:{%d}", gameID)
+}
+
 func RKFeedRooms() string {
 	return "FeedRooms"
 }

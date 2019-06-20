@@ -29,6 +29,9 @@ func main() {
 	}
 	var cfg godGameCfg.Config
 	config.Parseconfig(*cfgFile, &cfg)
+	if cfg.FillGodListInterval == 0 {
+		cfg.FillGodListInterval = 60
+	}
 	icelog.SetLevel(*logLevel)
 	s := api.NewGodGame(cfg)
 	godgamepb.RegisterGodGameServer(s, &cfg.Base)

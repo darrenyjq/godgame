@@ -2,6 +2,7 @@ package config
 
 import (
 	"iceberg/frame/config"
+	"time"
 )
 
 type oss struct {
@@ -30,16 +31,17 @@ type nsq struct {
 }
 
 type Config struct {
-	Env            config.Environment `json:"env"`
-	Base           config.BaseCfg     `json:"baseCfg"`
-	Mysql          config.MysqlCfg    `json:"mysqlCfg"`
-	Redis          config.RedisCfg    `json:"redisCfg"`
-	ES             es                 `json:"es"`
-	OSS            oss                `json:"oss"`
-	Urls           map[string]string  `json:"urls"`
-	Mix            map[string]string  `json:"mix"`
-	Shence         shence             `json:"shence"`
-	GodLTSDuration int                `json:"god_lts_duration"`
-	YunPianApiKey  string             `json:"yunpian_apikey"`
-	Nsq            nsq                `json:"nsq"`
+	Env                 config.Environment `json:"env"`
+	Base                config.BaseCfg     `json:"baseCfg"`
+	Mysql               config.MysqlCfg    `json:"mysqlCfg"`
+	Redis               config.RedisCfg    `json:"redisCfg"`
+	ES                  es                 `json:"es"`
+	OSS                 oss                `json:"oss"`
+	Urls                map[string]string  `json:"urls"`
+	Mix                 map[string]string  `json:"mix"`
+	Shence              shence             `json:"shence"`
+	GodLTSDuration      int                `json:"god_lts_duration"`
+	YunPianApiKey       string             `json:"yunpian_apikey"`
+	Nsq                 nsq                `json:"nsq"`
+	FillGodListInterval time.Duration      `json:"fill_god_list_interval"`
 }
