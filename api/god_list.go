@@ -71,7 +71,7 @@ func (gg *GodGame) fill_god_list() {
 			goto exit
 		}
 		icelog.Info("begin fill_god_list")
-		if lock, _ := redis.String(redisConn.Do("SET", redisKey, "1", "NX", "EX", 600)); lock != "OK" {
+		if lock, _ := redis.String(redisConn.Do("SET", redisKey, "1", "NX", "EX", int(gg.cfg.FillGodListInterval))); lock != "OK" {
 			icelog.Info("fill_god_list lock failed")
 			continue
 		}
@@ -83,6 +83,7 @@ func (gg *GodGame) fill_god_list() {
 			gg.fetch_god_ids(gid, constants.GENDER_MALE, redisConn)
 			gg.fetch_god_ids(gid, constants.GENDER_FEMALE, redisConn)
 		}
+		redisConn.Do("DEL", redisKey)
 		icelog.Info("finish fill_god_list")
 	}
 exit:
