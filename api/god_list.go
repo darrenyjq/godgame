@@ -52,7 +52,7 @@ func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 		} else {
 			for _, item := range resp.Hits.Hits {
 				if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
-					redisConn.Do("ZADD", keyByGender, item.Score, seq[0])
+					redisConn.Do("ZADD", keyByGender, *item.Score, seq[0])
 				}
 			}
 		}
