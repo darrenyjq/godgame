@@ -982,14 +982,15 @@ func (gg *GodGame) GodList2(c frame.Context) error {
 		req.Limit = 20
 	}
 	currentUser := gg.getCurrentUser(c)
-	var gender int64
-	if currentUser.Gender == constants.GENDER_FEMALE {
-		gender = constants.GENDER_MALE
-	} else {
-		gender = constants.GENDER_FEMALE
-		currentUser.Gender = constants.GENDER_MALE
+	gender := req.GetGender()
+	if gender != constants.GENDER_FEMALE && gender != constants.GENDER_MALE {
+		if currentUser.Gender == constants.GENDER_FEMALE {
+			gender = constants.GENDER_MALE
+		} else {
+			gender = constants.GENDER_FEMALE
+		}
 	}
-	godInfos, totalCnt := gg.dao.GetGodListsByGender(req.GetGameId(), currentUser.Gender, req.GetOffset(), req.GetLimit(), c)
+	godInfos, totalCnt := gg.dao.GetGodListsByGender(req.GetGameId(), gender, req.GetOffset(), req.GetLimit(), c)
 	if totalCnt > 0 {
 		return c.RetSuccess("success", map[string]interface{}{
 			"total": totalCnt,
