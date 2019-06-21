@@ -10,13 +10,12 @@ import (
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
-	"laoyuegou.pb/godgame/model"
+	"strings"
 	"time"
 )
 
 func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 	var keyByGender string
-	var pwObj model.ESGodGame
 	now := time.Now()
 	searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndex)
 	query := elastic.NewBoolQuery().
@@ -52,8 +51,8 @@ func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 			}
 		} else {
 			for _, item := range resp.Hits.Hits {
-				if err = json.Unmarshal(*item.Source, &pwObj); err == nil {
-					redisConn.Do("ZADD", keyByGender, item.Score, pwObj.GodID)
+				if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
+					redisConn.Do("ZADD", keyByGender, item.Score, seq[0])
 				}
 			}
 		}
