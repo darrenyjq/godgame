@@ -11,7 +11,7 @@ import (
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"laoyuegou.pb/imapi/pb"
-	sapb "laoyuegou.pb/sa/pb"
+	"laoyuegou.pb/plorder/pb"
 	"laoyuegou.pb/user/pb"
 	"sort"
 	"time"
@@ -47,7 +47,7 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 		if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
 			item.Price = FormatPriceV1(v1.PeiWanPrice)
 		} else {
-			cfgResp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+			cfgResp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
 				GameId: v1.GameID,
 			})
 			if err == nil || cfgResp.GetErrcode() == 0 {
@@ -56,16 +56,11 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 		}
 		if req.GetMore() {
 			item.Score = FormatScore(v1.Score)
-			orderRateResp, _ := sapb.GodAcceptOrderPer(c, &sapb.GodAcceptOrderPerReq{
-				GodId:     v1.GodID,
-				BeforeDay: 7,
-			})
-			if orderRateResp != nil && orderRateResp.GetData() > 0 {
-				if orderRateResp.GetData() < 60 {
-					item.OrderRate = "60%"
-				} else if orderRateResp.GetData() >= 60 {
-					item.OrderRate = fmt.Sprintf("%d%%", orderRateResp.GetData())
-				}
+			if orderPercent, err := plorderpb.OrderFinishPercent(c, &plorderpb.OrderFinishPercentReq{
+				GodId: v1.GodID,
+				Days:  7,
+			}); err == nil && orderPercent.GetErrcode() == 0 {
+				item.OrderRate = orderPercent.GetData()
 			}
 			item.Desc = v1.Desc
 		}

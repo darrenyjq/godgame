@@ -18,7 +18,6 @@ import (
 	"laoyuegou.pb/plcomment/pb"
 	"laoyuegou.pb/plorder/pb"
 	purse_pb "laoyuegou.pb/purse/pb"
-	sapb "laoyuegou.pb/sa/pb"
 	"laoyuegou.pb/union/pb"
 	"laoyuegou.pb/user/pb"
 	"strconv"
@@ -1197,7 +1196,7 @@ func (gg *GodGame) Batch(c frame.Context) error {
 		if err != nil || len(tmpImgs) == 0 {
 			continue
 		}
-		freeResp, err = plorderpb.Free(frame.TODO(), &plorderpb.FreeReq{
+		freeResp, err = plorderpb.Free(c, &plorderpb.FreeReq{
 			GodId: godID,
 		})
 		if err != nil || freeResp.GetErrcode() != 0 {
@@ -1220,7 +1219,7 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
-	gameStateResp, err := gamepb.State(frame.TODO(), &gamepb.StateReq{
+	gameStateResp, err := gamepb.State(c, &gamepb.StateReq{
 		GameId: req.GetGameId(),
 	})
 	if err == nil && gameStateResp.GetErrcode() == 0 {
@@ -1244,7 +1243,7 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
-	resp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+	resp, err := gamepb.AcceptCfgV2(c, &gamepb.AcceptCfgV2Req{
 		GameId: req.GetGameId(),
 	})
 	if err != nil || resp.GetErrcode() != 0 {
@@ -1265,7 +1264,7 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 		regionDesc = regionDesc[:len(regionDesc)-1]
 	}
 
-	freeResp, err := plorderpb.Free(frame.TODO(), &plorderpb.FreeReq{
+	freeResp, err := plorderpb.Free(c, &plorderpb.FreeReq{
 		GodId: v1.GodID,
 	})
 	if err != nil || freeResp.GetErrcode() != 0 {
@@ -1333,32 +1332,20 @@ func (gg *GodGame) GodDetail2(c frame.Context) error {
 			data["videos"] = tmpVideos
 		}
 	}
-	orderRateResp, _ := sapb.GodAcceptOrderPer(frame.TODO(), &sapb.GodAcceptOrderPerReq{
-		GodId:     v1.GodID,
-		BeforeDay: 7,
-	})
-	if orderRateResp != nil && orderRateResp.GetData() > 0 {
-		if orderRateResp.GetData() < 60 {
-			data["order_rate"] = "60%"
-		} else if orderRateResp.GetData() >= 60 {
-			data["order_rate"] = fmt.Sprintf("%d%%", orderRateResp.GetData())
-		}
+	if orderPercent, err := plorderpb.OrderFinishPercent(c, &plorderpb.OrderFinishPercentReq{
+		GodId: v1.GodID,
+		Days:  7,
+	}); err == nil && orderPercent.GetErrcode() == 0 {
+		data["order_rate"] = orderPercent.GetData()
 	}
 
-	commentData, _ := plcommentpb.GetGodGameComment(frame.TODO(), &plcommentpb.GetGodGameCommentReq{
-		GodId:  req.GetGodId(),
-		GameId: req.GetGameId(),
-	})
-	if commentData != nil && commentData.GetData() != nil {
-		data["comments_cnt"] = commentData.GetData().GetCommentCnt()
+	if commentData, err := plcommentpb.GodPageComment(c, &plcommentpb.GodPageCommentReq{
+		GodId:  v1.GodID,
+		GameId: v1.GameID,
+	}); err == nil && commentData.GetErrcode() == 0 {
+		data["comments_cnt"] = commentData.GetData().GetCommentCount()
 		data["tags"] = commentData.GetData().GetTags()
-	}
-	hotComments, _ := plcommentpb.GetHotComments(frame.TODO(), &plcommentpb.GetHotCommentsReq{
-		GodId:  req.GetGodId(),
-		GameId: req.GetGameId(),
-	})
-	if hotComments != nil && len(hotComments.GetData()) > 0 {
-		data["comments"] = hotComments.GetData()
+		data["comments"] = commentData.GetData().GetHotComments()
 	}
 	return c.JSON2(StatusOK_V3, "", data)
 }
