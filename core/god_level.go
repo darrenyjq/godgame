@@ -64,6 +64,6 @@ func (dao *Dao) ReCalcGodLevel(godID, gameID int64) error {
 	}
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID))
+	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID), RKSimpleGodGamesKey(godID))
 	return nil
 }

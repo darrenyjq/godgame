@@ -137,3 +137,8 @@ func RKGodLeaderInfo(leaderID int64) string {
 func RKLastModifyInfoDate(godID int64) string {
 	return fmt.Sprintf("LMD:{%d}", godID)
 }
+
+// RKSimpleGodGamesKey 大神当前正在接单的品类简介，主要是给Feed使用
+func RKSimpleGodGamesKey(godID int64) string {
+	return fmt.Sprintf("SGG:{%d}", godID)
+}

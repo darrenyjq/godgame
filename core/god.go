@@ -11,11 +11,13 @@ import (
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
+	"laoyuegou.pb/godgame/pb"
 	plcommentpb "laoyuegou.pb/plcomment/pb"
 	"laoyuegou.pb/plorder/pb"
 	purse_pb "laoyuegou.pb/purse/pb"
 	"math/rand"
 	"regexp"
+	"sort"
 	"time"
 )
 
@@ -519,14 +521,14 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 			bs, _ = json.Marshal(god)
 			c.Do("SET", RKGodInfo(godID), string(bs))
 		} else {
-			c.Do("DEL", RKOneGodGameV1(godID, gameID))
+			c.Do("DEL", RKOneGodGameV1(godID, gameID), RKSimpleGodGamesKey(godID))
 		}
 		c.Do("DEL", RKGodGameApply(godID, gameID), RKGodGameInfo(godID, gameID))
 	} else if status == constants.GOD_GAME_APPLY_STATUS_REFUSED {
 		err = dao.dbw.Table("play_god_games_apply").Where("userid=? AND gameid=?", godID, gameID).Update("status", constants.GOD_GAME_APPLY_STATUS_REFUSED).Error
 		c := dao.cpool.Get()
 		defer c.Close()
-		c.Do("DEL", RKGodGameApply(godID, gameID), RKOneGodGameV1(godID, gameID), RKGodGameInfo(godID, gameID))
+		c.Do("DEL", RKGodGameApply(godID, gameID), RKOneGodGameV1(godID, gameID), RKGodGameInfo(godID, gameID), RKSimpleGodGamesKey(godID))
 	} else {
 		return isGod, fmt.Errorf("无效的审核状态%d", status)
 	}
@@ -566,7 +568,7 @@ func (dao *Dao) UnBlockGodGame(godID, gameID int64) error {
 	}
 	err = dao.dbw.Model(&godGame).Update("status", constants.GOD_GAME_STATUS_PASSED).Error
 	c := dao.cpool.Get()
-	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID))
+	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID), RKSimpleGodGamesKey(godID))
 	c.Close()
 	return err
 }
@@ -913,7 +915,7 @@ func (dao *Dao) ModifyGodGameInfo(godGame model.GodGame) error {
 	}
 	c := dao.cpool.Get()
 	defer c.Close()
-	c.Do("DEL", RKGodGameInfo(godGame.UserID, godGame.GameID), RKOneGodGameV1(godGame.UserID, godGame.GameID))
+	c.Do("DEL", RKGodGameInfo(godGame.UserID, godGame.GameID), RKOneGodGameV1(godGame.UserID, godGame.GameID), RKSimpleGodGamesKey(godGame.UserID))
 	return nil
 }
 
@@ -1162,4 +1164,50 @@ func (dao *Dao) GetGodSpecialBlockedGameV1(godID, gameID int64) (model.GodGameV1
 		v1.GrabSwitch = accpetOrderSetting.GrabSwitch
 	}
 	return v1, nil
+}
+
+func (dao *Dao) SimpleGodGames(godID int64) []*godgamepb.SimpleGodGamesResp_Item {
+	var result []*godgamepb.SimpleGodGamesResp_Item
+	redisKey := RKSimpleGodGamesKey(godID)
+	c := dao.cpool.Get()
+	defer c.Close()
+	bs, _ := redis.Bytes(c.Do("GET", redisKey))
+	if len(bs) > 0 {
+		err := json.Unmarshal(bs, &result)
+		if err == nil {
+			return result
+		}
+	}
+	v1s, err := dao.GetGodAllGameV1(godID)
+	if err != nil {
+		return result
+	}
+	var uniprice int64
+	sort.Sort(v1s)
+	result = make([]*godgamepb.SimpleGodGamesResp_Item, 0, len(v1s))
+	for _, v1 := range v1s {
+		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		}
+		if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+			uniprice = v1.PeiWanPrice
+		} else {
+			cfgResp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+				GameId: v1.GameID,
+			})
+			if err != nil || cfgResp.GetErrcode() != 0 {
+				continue
+			}
+			uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
+		}
+		result = append(result, &godgamepb.SimpleGodGamesResp_Item{
+			GameId: v1.GameID,
+			Price:  uniprice,
+		})
+	}
+	if len(result) > 0 {
+		bs, _ = json.Marshal(result)
+		c.Do("SET", redisKey, bs, "EX", 7200)
+	}
+	return result
 }
