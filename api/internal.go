@@ -800,3 +800,42 @@ func (gg *GodGame) InternalApplyGames(c frame.Context) error {
 	}
 	return c.RetSuccess("", data)
 }
+
+func (gg *GodGame) SimpleGodGames(c frame.Context) error {
+	var req godgamepb.SimpleGodGamesReq
+	if err := c.Bind(&req); err != nil || req.GetGodId() <= 0 {
+		return c.RetBadRequestError("")
+	}
+	god := gg.dao.GetGod(req.GetGodId())
+	if god.Status != constants.GOD_STATUS_PASSED {
+		return c.RetNotFoundError("")
+	}
+	v1s, err := gg.dao.GetGodAllGameV1(req.GetGodId())
+	if err != nil {
+		return c.RetNotFoundError(err.Error())
+	}
+	var uniprice int64
+	sort.Sort(v1s)
+	items := make([]*godgamepb.SimpleGodGamesResp_Item, 0, len(v1s))
+	for _, v1 := range v1s {
+		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		}
+		if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+			uniprice = v1.PeiWanPrice
+		} else {
+			cfgResp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+				GameId: v1.GameID,
+			})
+			if err != nil || cfgResp.GetErrcode() != 0 {
+				continue
+			}
+			uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
+		}
+		items = append(items, &godgamepb.SimpleGodGamesResp_Item{
+			GameId: v1.GameID,
+			Price:  uniprice,
+		})
+	}
+	return c.RetSuccess("success", items)
+}
