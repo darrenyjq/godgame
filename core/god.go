@@ -115,6 +115,32 @@ func (dao *Dao) IsGod(userID int64) bool {
 	return god.UserID > 0
 }
 
+// IsGod2 判断是否为已通过的大神，数据可能有延迟，用于Feed流判断是否为大神准确度要求不高的场景使用
+func (dao *Dao) IsGod2(userID int64) bool {
+	key := RKGodInfo(userID)
+	var god model.God
+	var err error
+	c := dao.cpool.Get()
+	defer c.Close()
+	bs, _ := redis.Bytes(c.Do("GET", key))
+	if len(bs) == 1 {
+		return false
+	} else if len(bs) > 1 {
+		err = json.Unmarshal(bs, &god)
+		if err == nil && god.Status == constants.GOD_STATUS_PASSED {
+			return true
+		}
+	}
+	err = dao.dbr.Where("userid=?", userID).First(&god).Error
+	if err != nil {
+		c.Do("SET", key, "0", "EX", 1800)
+		return false
+	}
+	bs, _ = json.Marshal(god)
+	c.Do("SET", RKGodInfo(userID), string(bs))
+	return god.Status == constants.GOD_STATUS_PASSED
+}
+
 func (dao *Dao) GetGod(userID int64) model.God {
 	var god model.God
 	c := dao.cpool.Get()
@@ -1166,15 +1192,27 @@ func (dao *Dao) GetGodSpecialBlockedGameV1(godID, gameID int64) (model.GodGameV1
 	return v1, nil
 }
 
-func (dao *Dao) SimpleGodGames(godID int64) []*godgamepb.SimpleGodGamesResp_Item {
-	var result []*godgamepb.SimpleGodGamesResp_Item
+func (dao *Dao) SimpleGodGames(godID int64, hidePirce bool) *godgamepb.SimpleGodGamesResp_Data {
+	result := new(godgamepb.SimpleGodGamesResp_Data)
+	var items []*godgamepb.SimpleGodGamesResp_Item
+	if !dao.IsGod2(godID) {
+		result.IsGod = false
+		return result
+	}
+	result.IsGod = true
 	redisKey := RKSimpleGodGamesKey(godID)
 	c := dao.cpool.Get()
 	defer c.Close()
 	bs, _ := redis.Bytes(c.Do("GET", redisKey))
 	if len(bs) > 0 {
-		err := json.Unmarshal(bs, &result)
+		err := json.Unmarshal(bs, &items)
 		if err == nil {
+			if hidePirce {
+				for idx, _ := range items {
+					items[idx].Price = 0
+				}
+			}
+			result.Items = items
 			return result
 		}
 	}
@@ -1184,7 +1222,7 @@ func (dao *Dao) SimpleGodGames(godID int64) []*godgamepb.SimpleGodGamesResp_Item
 	}
 	var uniprice int64
 	sort.Sort(v1s)
-	result = make([]*godgamepb.SimpleGodGamesResp_Item, 0, len(v1s))
+	items = make([]*godgamepb.SimpleGodGamesResp_Item, 0, len(v1s))
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
@@ -1200,14 +1238,44 @@ func (dao *Dao) SimpleGodGames(godID int64) []*godgamepb.SimpleGodGamesResp_Item
 			}
 			uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
 		}
-		result = append(result, &godgamepb.SimpleGodGamesResp_Item{
+		items = append(items, &godgamepb.SimpleGodGamesResp_Item{
 			GameId: v1.GameID,
 			Price:  uniprice,
 		})
 	}
-	if len(result) > 0 {
-		bs, _ = json.Marshal(result)
+	if len(items) > 0 {
+		bs, _ = json.Marshal(items)
 		c.Do("SET", redisKey, bs, "EX", 7200)
 	}
+	if hidePirce {
+		for idx, _ := range items {
+			items[idx].Price = 0
+		}
+	}
+	result.Items = items
 	return result
+}
+
+// SimpleGodGameIds 返回大神正在接单的品类ID列表，按品类ID升序
+func (dao *Dao) SimpleGodGameIds(godID int64) []int64 {
+	var gameIds []int64
+	if !dao.IsGod2(godID) {
+		return gameIds
+	}
+	v1s, err := dao.GetGodAllGameV1(godID)
+	if err != nil {
+		return gameIds
+	}
+	for _, v1 := range v1s {
+		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		}
+		gameIds = append(gameIds, v1.GameID)
+	}
+	if len(gameIds) > 1 {
+		sort.Slice(gameIds, func(i, j int) bool {
+			return gameIds[i] < gameIds[j]
+		})
+	}
+	return gameIds
 }

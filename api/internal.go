@@ -806,42 +806,18 @@ func (gg *GodGame) SimpleGodGames(c frame.Context) error {
 	if err := c.Bind(&req); err != nil || req.GetGodId() <= 0 {
 		return c.RetBadRequestError("")
 	}
-	// god := gg.dao.GetGod(req.GetGodId())
-	// if god.Status != constants.GOD_STATUS_PASSED {
-	// 	return c.RetNotFoundError("")
-	// }
-	// v1s, err := gg.dao.GetGodAllGameV1(req.GetGodId())
-	// if err != nil {
-	// 	return c.RetNotFoundError(err.Error())
-	// }
-	// var uniprice int64
-	// sort.Sort(v1s)
-	// items := make([]*godgamepb.SimpleGodGamesResp_Item, 0, len(v1s))
-	// for _, v1 := range v1s {
-	// 	if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
-	// 		continue
-	// 	}
-	// 	if v1.PriceType == constants.PW_PRICE_TYPE_BY_OM {
-	// 		uniprice = v1.PeiWanPrice
-	// 	} else {
-	// 		cfgResp, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
-	// 			GameId: v1.GameID,
-	// 		})
-	// 		if err != nil || cfgResp.GetErrcode() != 0 {
-	// 			continue
-	// 		}
-	// 		uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
-	// 	}
-	// 	items = append(items, &godgamepb.SimpleGodGamesResp_Item{
-	// 		GameId: v1.GameID,
-	// 		Price:  uniprice,
-	// 	})
-	// }
+	return c.RetSuccess("success", gg.dao.SimpleGodGames(req.GetGodId(), req.GetHidePrice()))
+}
 
-	items := gg.dao.SimpleGodGames(req.GetGodId())
-	if len(items) == 0 {
-		return c.RetNotFoundError("")
+// SimpleGodGameIds 返回大神正在接单的品类ID列表，按品类ID升序
+func (gg *GodGame) SimpleGodGameIds(c frame.Context) error {
+	var req godgamepb.SimpleGodGameIdsReq
+	if err := c.Bind(&req); err != nil || req.GetGodId() <= 0 {
+		return c.RetBadRequestError("")
 	}
-
-	return c.RetSuccess("success", items)
+	godInfo := gg.dao.GetGod(req.GetGodId())
+	return c.RetSuccess("success", &godgamepb.SimpleGodGameIdsResp_Data{
+		Gender:  godInfo.Gender,
+		GameIds: gg.dao.SimpleGodGameIds(req.GetGodId()),
+	})
 }
