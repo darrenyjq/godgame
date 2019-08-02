@@ -150,8 +150,10 @@ func (gg *GodGame) ESAddGodGameInternal(godGame model.ESGodGame) error {
 			BodyJson(godGameRedefine).
 			Do(context.Background())
 		if result != nil {
-			icelog.Errorf("ESAddGodGameRedefine %+v error %s", godGame, result)
+			icelog.Info("添加ESRedefine数据失败 %+v error %s", godGame, result)
 		}
+	}else {
+		icelog.Info("添加ESRedefine数据失败", godGame, godGameRedefine,res)
 	}
 
 	if err != nil {
@@ -184,9 +186,7 @@ func (gg *GodGame) ESUpdateGodGameByQuery(query, data map[string]interface{}) er
 	}
 
 	_, err = builderRedefine.Do(context.Background())
-	if err != nil {
-		icelog.Errorf("ESUpdateGodGameByQueryRedefine %+v, %+v error %s", query, data, err)
-	}
+	icelog.Info("更新ESRedefine部分字段结果 %+v, %+v error %s", query, data, err)
 
 	_, err = builder.Do(context.Background())
 	if err != nil {
@@ -213,7 +213,7 @@ func (gg *GodGame) ESBatchDeleteByID(esIDs []string) error {
 		return fmt.Errorf("NumberOfActions[%d] != esIDs[%d]", bulkRequest.NumberOfActions(), len(esIDs))
 	}
 	_, res := bulkRequestRedefine.Do(context.Background())
-	icelog.Errorf("批量删除结果：",res,esIDs)
+	icelog.Info("批量删除结果：",res,esIDs)
 
 	_, err := bulkRequest.Do(context.Background())
 	return err
@@ -223,9 +223,10 @@ func (gg *GodGame) ESUpdateGodGame(id string, data map[string]interface{}) error
 	_, err := gg.esClient.Update().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType).
 		Id(id).Doc(data).Do(context.Background())
 
+
 	_, res := gg.esClient.Update().Index(gg.cfg.ES.PWIndexRedefine).Type(gg.cfg.ES.PWType).
 		Id(id).Doc(data).Do(context.Background())
-	icelog.Errorf("修改ES数据结果 ：", err,res,id)
+	icelog.Info("修改ES数据结果 ：", err,res,data,id)
 
 	if err != nil {
 		return err
@@ -242,7 +243,7 @@ func (gg *GodGame) ESDeleteGodGame(id string) error {
 		Id(id).
 		Do(context.Background())
 
-	icelog.Errorf("删除结果：", err,res,id)
+	icelog.Info("删除结果：", err,res,id)
 
 	if err != nil {
 		return err
