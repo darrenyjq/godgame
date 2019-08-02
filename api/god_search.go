@@ -32,6 +32,7 @@ type ESParams struct {
 	Query     map[string]interface{}
 	Data      map[string]interface{}
 	ESGodGame model.ESGodGame
+	ESGodGameRedefine model.ESGodGameRedefine
 }
 
 func (gg *GodGame) StartLoop() {
@@ -141,6 +142,18 @@ func (gg *GodGame) ESAddGodGameInternal(godGame model.ESGodGame) error {
 		Id(fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)).
 		BodyJson(godGame).
 		Do(context.Background())
+
+	godGameRedefine, res := gg.BuildESGodGameDataRedefine(godGame.GodID, godGame.GameID)
+	if res == nil {
+		_, result := gg.esClient.Index().Index(gg.cfg.ES.PWIndexRedefine).Type(gg.cfg.ES.PWType).
+			Id(fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)).
+			BodyJson(godGameRedefine).
+			Do(context.Background())
+		if result != nil {
+			icelog.Errorf("ESAddGodGameRedefine %+v error %s", godGame, result)
+		}
+	}
+
 	if err != nil {
 		icelog.Errorf("ESAddGodGameInternal %+v error %s", godGame, err)
 		return err
@@ -150,19 +163,31 @@ func (gg *GodGame) ESAddGodGameInternal(godGame model.ESGodGame) error {
 
 func (gg *GodGame) ESUpdateGodGameByQuery(query, data map[string]interface{}) error {
 	var err error
-	builder := gg.esClient.UpdateByQuery().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType)
 	var valueType string
+	builder := gg.esClient.UpdateByQuery().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType)
+	builderRedefine := gg.esClient.UpdateByQuery().Index(gg.cfg.ES.PWIndexRedefine).Type(gg.cfg.ES.PWType)
+
 	for k, v := range data {
 		valueType = reflect.TypeOf(v).String()
 		if valueType == "int" || valueType == "int64" {
 			builder = builder.Script(elastic.NewScriptInline(fmt.Sprintf("ctx._source.%s=%v", k, v)))
+			builderRedefine = builderRedefine.Script(elastic.NewScriptInline(fmt.Sprintf("ctx._source.%s=%v", k, v)))
+
 		} else {
 			builder = builder.Script(elastic.NewScriptInline(fmt.Sprintf("ctx._source.%s='%v'", k, v)))
+			builderRedefine = builderRedefine.Script(elastic.NewScriptInline(fmt.Sprintf("ctx._source.%s='%v'", k, v)))
 		}
 	}
 	for k, v := range query {
 		builder = builder.Query(elastic.NewTermQuery(k, v))
+		builderRedefine = builderRedefine.Query(elastic.NewTermQuery(k, v))
 	}
+
+	_, err = builderRedefine.Do(context.Background())
+	if err != nil {
+		icelog.Errorf("ESUpdateGodGameByQueryRedefine %+v, %+v error %s", query, data, err)
+	}
+
 	_, err = builder.Do(context.Background())
 	if err != nil {
 		icelog.Errorf("ESUpdateGodGameByQuery %+v, %+v error %s", query, data, err)
@@ -176,13 +201,20 @@ func (gg *GodGame) ESBatchDeleteByID(esIDs []string) error {
 		return nil
 	}
 	bulkRequest := gg.esClient.Bulk()
+	bulkRequestRedefine := gg.esClient.Bulk()
 	for _, esID := range esIDs {
 		bulkRequest.Add(elastic.NewBulkDeleteRequest().Index(gg.cfg.ES.PWIndex).
+			Type(gg.cfg.ES.PWType).Id(esID))
+
+		bulkRequestRedefine.Add(elastic.NewBulkDeleteRequest().Index(gg.cfg.ES.PWIndexRedefine).
 			Type(gg.cfg.ES.PWType).Id(esID))
 	}
 	if bulkRequest.NumberOfActions() != len(esIDs) {
 		return fmt.Errorf("NumberOfActions[%d] != esIDs[%d]", bulkRequest.NumberOfActions(), len(esIDs))
 	}
+	_, res := bulkRequestRedefine.Do(context.Background())
+	icelog.Errorf("批量删除结果：",res,esIDs)
+
 	_, err := bulkRequest.Do(context.Background())
 	return err
 }
@@ -190,6 +222,11 @@ func (gg *GodGame) ESBatchDeleteByID(esIDs []string) error {
 func (gg *GodGame) ESUpdateGodGame(id string, data map[string]interface{}) error {
 	_, err := gg.esClient.Update().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType).
 		Id(id).Doc(data).Do(context.Background())
+
+	_, res := gg.esClient.Update().Index(gg.cfg.ES.PWIndexRedefine).Type(gg.cfg.ES.PWType).
+		Id(id).Doc(data).Do(context.Background())
+	icelog.Errorf("修改ES数据结果 ：", err,res,id)
+
 	if err != nil {
 		return err
 	}
@@ -200,6 +237,13 @@ func (gg *GodGame) ESDeleteGodGame(id string) error {
 	_, err := gg.esClient.Delete().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType).
 		Id(id).
 		Do(context.Background())
+
+	_, res := gg.esClient.Delete().Index(gg.cfg.ES.PWIndexRedefine).Type(gg.cfg.ES.PWType).
+		Id(id).
+		Do(context.Background())
+
+	icelog.Errorf("删除结果：", err,res,id)
+
 	if err != nil {
 		return err
 	}
@@ -254,4 +298,80 @@ func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGame, err
 		result.Video = 1
 	}
 	return result, nil
+}
+
+//重构ES数据 godgame
+func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodGameRedefine , error) {
+	var result model.ESGodGameRedefine
+
+	if (godID == 0 || gameID == 0) {
+		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
+	}
+
+	if data, err := gg.BuildESGodGameData(godID, gameID); err == nil {
+		result.GodID = data.GodID
+		result.GameID = data.GameID
+		result.Gender = data.Gender
+		result.PeiWanStatus = data.PeiWanStatus
+		result.LTS = time.Now()
+		result.LFO = data.LFO
+		result.OrderCnt = data.OrderCnt
+		result.SevenDaysCnt = data.SevenDaysCnt
+		result.SevenDaysHours = data.SevenDaysHours
+		result.RejectOrder = data.RejectOrder
+		result.Weight = data.Weight
+		result.PassedTime = data.PassedTime
+		result.PriceID = data.PriceID
+		result.Price = data.Price
+		result.HighestLevelID = data.HighestLevelID
+		result.Location = data.Location
+		result.City = data.City
+		result.District = data.District
+		result.Video = data.Video
+	}
+
+	godGame := gg.dao.GetGodGame(godID, gameID)
+	result.GodLevel = godGame.GodLevel
+	result.HotScore = "1"
+
+	////获取关注数
+	//count := int64(1) * 5
+	//var H = godGame.GodLevel * 10 + count
+	//
+	////最近完成订单时间
+	//var T = result.LFO
+	//
+	//
+
+	result.IsVoice = 0;
+
+	// 语聊品类不展示
+	if gg.isVoiceCallGame(gameID) {
+		result.IsVoice = 1;
+	}
+
+	icelog.Info("大神品类更新: ", result)
+	return result, nil
+}
+
+////获取热门公式中 T 值
+//func getTime(time){
+//
+//}
+
+func (gg * GodGame) updateESGodGameRedefine() (model.ESGodGameRedefine){
+	var result model.ESGodGameRedefine
+
+	return result
+}
+
+func (gg *GodGame) Test(c frame.Context) error {
+	var req godgamepb.TestReq
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	GodID := req.GetId()
+	data ,_ := gg.BuildESGodGameDataRedefine(GodID,4)
+	return c.JSON2(StatusOK_V3, "", data)
 }
