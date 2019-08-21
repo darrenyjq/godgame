@@ -27,11 +27,11 @@ const (
 )
 
 type ESParams struct {
-	Action    byte
-	IDs       []string
-	Query     map[string]interface{}
-	Data      map[string]interface{}
-	ESGodGame model.ESGodGame
+	Action            byte
+	IDs               []string
+	Query             map[string]interface{}
+	Data              map[string]interface{}
+	ESGodGame         model.ESGodGame
 	ESGodGameRedefine model.ESGodGameRedefine
 }
 
@@ -152,8 +152,8 @@ func (gg *GodGame) ESAddGodGameInternal(godGame model.ESGodGame) error {
 		if result != nil {
 			icelog.Info("添加ESRedefine数据失败 %+v error %s", godGame, result)
 		}
-	}else {
-		icelog.Info("添加ESRedefine数据失败", godGame, godGameRedefine,res)
+	} else {
+		icelog.Info("添加ESRedefine数据失败", godGame, godGameRedefine, res)
 	}
 
 	if err != nil {
@@ -213,7 +213,7 @@ func (gg *GodGame) ESBatchDeleteByID(esIDs []string) error {
 		return fmt.Errorf("NumberOfActions[%d] != esIDs[%d]", bulkRequest.NumberOfActions(), len(esIDs))
 	}
 	_, res := bulkRequestRedefine.Do(context.Background())
-	icelog.Info("批量删除结果：",res,esIDs)
+	icelog.Info("批量删除结果：", res, esIDs)
 
 	_, err := bulkRequest.Do(context.Background())
 	return err
@@ -223,10 +223,9 @@ func (gg *GodGame) ESUpdateGodGame(id string, data map[string]interface{}) error
 	_, err := gg.esClient.Update().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType).
 		Id(id).Doc(data).Do(context.Background())
 
-
 	_, res := gg.esClient.Update().Index(gg.cfg.ES.PWIndexRedefine).Type(gg.cfg.ES.PWType).
 		Id(id).Doc(data).Do(context.Background())
-	icelog.Info("修改ES数据结果 ：", err,res,data,id)
+	icelog.Info("修改ES数据结果 ：", err, res, data, id)
 
 	if err != nil {
 		return err
@@ -243,7 +242,7 @@ func (gg *GodGame) ESDeleteGodGame(id string) error {
 		Id(id).
 		Do(context.Background())
 
-	icelog.Info("删除结果：", err,res,id)
+	icelog.Info("删除结果：", err, res, id)
 
 	if err != nil {
 		return err
@@ -302,10 +301,10 @@ func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGame, err
 }
 
 //重构ES数据 godgame
-func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodGameRedefine , error) {
+func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodGameRedefine, error) {
 	var result model.ESGodGameRedefine
 
-	if (godID == 0 || gameID == 0) {
+	if godID == 0 || gameID == 0 {
 		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
 	}
 
@@ -344,11 +343,11 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 	//
 	//
 
-	result.IsVoice = 0;
+	result.IsVoice = 0
 
 	// 语聊品类不展示
 	if gg.isVoiceCallGame(gameID) {
-		result.IsVoice = 1;
+		result.IsVoice = 1
 	}
 
 	icelog.Info("大神品类更新: ", result)
@@ -360,7 +359,7 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 //
 //}
 
-func (gg * GodGame) updateESGodGameRedefine() (model.ESGodGameRedefine){
+func (gg *GodGame) updateESGodGameRedefine() model.ESGodGameRedefine {
 	var result model.ESGodGameRedefine
 
 	return result
@@ -373,6 +372,8 @@ func (gg *GodGame) Test(c frame.Context) error {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
 	GodID := req.GetId()
-	data ,_ := gg.BuildESGodGameDataRedefine(GodID,4)
+	GameID := req.GetGameId()
+	gg.ESAddGodGameInternal(GodID, GameID)
+	data, _ := gg.BuildESGodGameDataRedefine(GodID, 4)
 	return c.JSON2(StatusOK_V3, "", data)
 }

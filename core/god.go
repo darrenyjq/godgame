@@ -23,8 +23,6 @@ import (
 
 func (dao *Dao) GetGodListCache(gameID, gender int64) ([]map[string]interface{}, int64) {
 
-
-
 	key := fmt.Sprintf("G:{%d}:{%d}:GodList", gameID, gender)
 	totalHitKey := fmt.Sprintf("G:{%d}:{%d}:GodListHit", gameID, gender)
 	var result []map[string]interface{}
@@ -982,7 +980,6 @@ func (dao *Dao) GetGodGameStatus(godID int64) map[int64]int64 {
 // OM后台修改大神信息
 func (dao *Dao) ModifyGodInfo(godHistory model.GodsHistory) (model.GodsHistory, error) {
 	godHistory.Status = 2
-
 
 	godHistory.Createdtime = time.Now()
 	err := dao.dbw.Table("play_gods_history").Where("god_id=? and status in (?, ?)", godHistory.GodID, 1, 2).Assign(godHistory).FirstOrCreate(&godHistory).Error
