@@ -205,7 +205,8 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 		}
 		godID = userV1.UserID
 	}
-	godGames, err := gg.dao.GetGodGameApplys(req.GetStatus(), req.GetGameId(), godID, req.GetOffset(), req.GetGender(), req.GetLeaderId())
+	godGames, err := gg.dao.GetGodGameApplys(req.GetStatus(), req.GetGameId(), godID, req.GetOffset(),
+		req.GetGender(), req.GetLeaderId(),req.GetGodLevel())
 	if err != nil {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, err.Error(), nil)
 	} else if len(godGames) == 0 {

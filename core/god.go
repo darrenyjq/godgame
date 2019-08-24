@@ -344,7 +344,8 @@ func (dao *Dao) CheckGodCanModifyGameInfo(godID, gameID int64) bool {
 }
 
 // 获取申请列表
-func (dao *Dao) GetGodGameApplys(status, gameID, godID, offset, gender, leaderID int64) ([]model.GodGame, error) {
+func (dao *Dao) GetGodGameApplys(status, gameID, godID, offset, gender, leaderID,godLevel int64) ([]model.GodGame,
+	error) {
 	limit := 10
 	items := make([]model.GodGame, 0, limit)
 	var err error
@@ -357,6 +358,11 @@ func (dao *Dao) GetGodGameApplys(status, gameID, godID, offset, gender, leaderID
 		if godID > 0 {
 			db = db.Where("play_god_games.userid=?", godID)
 		}
+
+		if godLevel > 0 {
+			db = db.Where("play_god_games.god_level=?", godID)
+		}
+
 		if gender > 0 || leaderID > 0 {
 			db = db.Joins("inner join play_gods on play_god_games.userid=play_gods.userid")
 			if gender > 0 {
