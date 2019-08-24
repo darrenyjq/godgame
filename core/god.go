@@ -360,7 +360,7 @@ func (dao *Dao) GetGodGameApplys(status, gameID, godID, offset, gender, leaderID
 		}
 
 		if godLevel > 0 {
-			db = db.Where("play_god_games.god_level=?", godID)
+			db = db.Where("play_god_games.god_level=?", godLevel)
 		}
 
 		if gender > 0 || leaderID > 0 {
