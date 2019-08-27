@@ -112,9 +112,9 @@ func (gg *GodGame) RefreshESGodGame(c frame.Context) error {
 	return c.JSON2(StatusOK_V3, "", nil)
 }
 
-func (gg *GodGame) ESGetGodGame(id string) (model.ESGodGame, error) {
-	var result model.ESGodGame
-	ret, err := gg.esClient.Get().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType).
+func (gg *GodGame) ESGetGodGame(id string) (model.ESGodGameRedefine, error) {
+	var result model.ESGodGameRedefine
+	ret, err := gg.esClient.Get().Index(gg.cfg.ES.PWIndexRedefine).Type(gg.cfg.ES.PWType).
 		Id(id).Do(context.Background())
 	if err != nil {
 		if strings.Index(err.Error(), "Error 404") == -1 {
