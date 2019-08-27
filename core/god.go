@@ -1258,7 +1258,7 @@ func (dao *Dao) SimpleGodGames(godID int64, hidePirce bool) *godgamepb.SimpleGod
 	return result
 }
 
-// SimpleGodGameIds 返回大神正在接单的品类ID列表，按品类ID升序
+// SimpleGodGameIds 返回大神已通过的品类ID列表，按品类ID升序
 func (dao *Dao) SimpleGodGameIds(godID int64) []int64 {
 	var gameIds []int64
 	if !dao.IsGod2(godID) {
@@ -1269,9 +1269,6 @@ func (dao *Dao) SimpleGodGameIds(godID int64) []int64 {
 		return gameIds
 	}
 	for _, v1 := range v1s {
-		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
-			continue
-		}
 		gameIds = append(gameIds, v1.GameID)
 	}
 	if len(gameIds) > 1 {

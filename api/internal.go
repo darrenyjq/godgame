@@ -809,7 +809,7 @@ func (gg *GodGame) SimpleGodGames(c frame.Context) error {
 	return c.RetSuccess("success", gg.dao.SimpleGodGames(req.GetGodId(), req.GetHidePrice()))
 }
 
-// SimpleGodGameIds 返回大神正在接单的品类ID列表，按品类ID升序
+// SimpleGodGameIds 返回大神已通过的品类ID列表，按品类ID升序
 func (gg *GodGame) SimpleGodGameIds(c frame.Context) error {
 	var req godgamepb.SimpleGodGameIdsReq
 	if err := c.Bind(&req); err != nil || req.GetGodId() <= 0 {
