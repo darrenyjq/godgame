@@ -492,7 +492,7 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 // 苹果审核开启期间使用此方法
 func (gg *GodGame) queryGodsForAppleAudit(args godgamepb.GodListReq, currentUser model.CurrentUser) ([]model.ESGodGame, int64) {
 	var pwObjs []model.ESGodGame
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
@@ -562,7 +562,7 @@ func (gg *GodGame) queryGodsForAppleAudit(args godgamepb.GodListReq, currentUser
 
 func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.CurrentUser) ([]model.ESGodGame, int64) {
 	var pwObjs []model.ESGodGame
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
@@ -635,7 +635,7 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			levelCondition = append(levelCondition, l)
 		}
 	}
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
@@ -750,7 +750,7 @@ func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser mod
 		priceCondition = make([]interface{}, 0)
 	}
 
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).

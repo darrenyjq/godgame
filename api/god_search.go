@@ -364,16 +364,16 @@ func (gg *GodGame) updateESGodGameRedefine() model.ESGodGameRedefine {
 
 	return result
 }
-
-func (gg *GodGame) Test(c frame.Context) error {
-	var req godgamepb.TestReq
-
-	if err := c.Bind(&req); err != nil {
-		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
-	}
-	GodID := req.GetId()
-	GameID := req.GetGameId()
-	gg.ESAddGodGameInternal(GodID, GameID)
-	data, _ := gg.BuildESGodGameDataRedefine(GodID, 4)
-	return c.JSON2(StatusOK_V3, "", data)
-}
+//
+//func (gg *GodGame) Test(c frame.Context) error {
+//	var req godgamepb.TestReq
+//
+//	if err := c.Bind(&req); err != nil {
+//		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+//	}
+//	GodID := req.GetId()
+//	GameID := req.GetGameId()
+//	gg.ESAddGodGameInternal(GodID, GameID)
+//	data, _ := gg.BuildESGodGameDataRedefine(GodID, 4)
+//	return c.JSON2(StatusOK_V3, "", data)
+//}
