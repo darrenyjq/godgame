@@ -52,7 +52,7 @@ func (gg *GodGame) StartLoop() {
 			case ES_ACTION_BATCH_DELETE:
 				gg.ESBatchDeleteByID(params.IDs)
 			case ES_ACTION_ADD:
-				gg.ESAddGodGameInternal(params.ESGodGame)
+				gg.ESAddGodGameInternal(params.ESGodGameRedefine)
 			}
 		case <-gg.exitChan:
 			goto exit
@@ -128,16 +128,16 @@ func (gg *GodGame) ESGetGodGame(id string) (model.ESGodGameRedefine, error) {
 	return result, err
 }
 
-func (gg *GodGame) ESAddGodGame(godGame model.ESGodGame) error {
+func (gg *GodGame) ESAddGodGame(godGame model.ESGodGameRedefine) error {
 	params := ESParams{
 		Action:    ES_ACTION_ADD,
-		ESGodGame: godGame,
+		ESGodGameRedefine: godGame,
 	}
 	gg.esChan <- params
 	return nil
 }
 
-func (gg *GodGame) ESAddGodGameInternal(godGame model.ESGodGame) error {
+func (gg *GodGame) ESAddGodGameInternal(godGame model.ESGodGameRedefine) error {
 	_, err := gg.esClient.Index().Index(gg.cfg.ES.PWIndex).Type(gg.cfg.ES.PWType).
 		Id(fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)).
 		BodyJson(godGame).
@@ -251,8 +251,8 @@ func (gg *GodGame) ESDeleteGodGame(id string) error {
 }
 
 // 组装Elasticsearch一行陪玩数据
-func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGame, error) {
-	var result model.ESGodGame
+func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGameRedefine, error) {
+	var result model.ESGodGameRedefine
 	godInfo := gg.dao.GetGod(godID)
 	if godInfo.UserID != godID {
 		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
@@ -337,12 +337,6 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 	////获取关注数
 	//count := int64(1) * 5
 	//var H = godGame.GodLevel * 10 + count
-	//
-	////最近完成订单时间
-	//var T = result.LFO
-	//
-	//
-
 	result.IsVoice = 0
 
 	// 语聊品类不展示
