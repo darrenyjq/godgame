@@ -490,9 +490,9 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 }
 
 // 苹果审核开启期间使用此方法
-func (gg *GodGame) queryGodsForAppleAudit(args godgamepb.GodListReq, currentUser model.CurrentUser) ([]model.ESGodGame, int64) {
-	var pwObjs []model.ESGodGame
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+func (gg *GodGame) queryGodsForAppleAudit(args godgamepb.GodListReq, currentUser model.CurrentUser) ([]model.ESGodGameRedefine, int64) {
+	var pwObjs []model.ESGodGameRedefine
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
@@ -550,7 +550,7 @@ func (gg *GodGame) queryGodsForAppleAudit(args godgamepb.GodListReq, currentUser
 	if resp.Hits.TotalHits == 0 {
 		return pwObjs, 0
 	}
-	var pwObj model.ESGodGame
+	var pwObj model.ESGodGameRedefine
 	for _, item := range resp.Hits.Hits {
 		if err = json.Unmarshal(*item.Source, &pwObj); err != nil {
 			continue
@@ -560,9 +560,9 @@ func (gg *GodGame) queryGodsForAppleAudit(args godgamepb.GodListReq, currentUser
 	return pwObjs, resp.Hits.TotalHits
 }
 
-func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.CurrentUser) ([]model.ESGodGame, int64) {
-	var pwObjs []model.ESGodGame
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.CurrentUser) ([]model.ESGodGameRedefine, int64) {
+	var pwObjs []model.ESGodGameRedefine
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
@@ -609,7 +609,7 @@ func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.Curr
 	if resp.Hits.TotalHits == 0 {
 		return pwObjs, 0
 	}
-	var pwObj model.ESGodGame
+	var pwObj model.ESGodGameRedefine
 	for _, item := range resp.Hits.Hits {
 		if err = json.Unmarshal(*item.Source, &pwObj); err != nil {
 			icelog.Errorf("### %s", err.Error())
@@ -620,8 +620,8 @@ func (gg *GodGame) queryGods2(args godgamepb.GodList2Req, currentUser model.Curr
 	return pwObjs, resp.Hits.TotalHits
 }
 
-func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.CurrentUser) ([]model.ESGodGame, int64) {
-	var pwObjs []model.ESGodGame
+func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.CurrentUser) ([]model.ESGodGameRedefine, int64) {
+	var pwObjs []model.ESGodGameRedefine
 	var priceCondition, levelCondition []interface{}
 	if len(args.Price) > 0 {
 		priceCondition = make([]interface{}, 0, len(args.Price))
@@ -635,7 +635,7 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			levelCondition = append(levelCondition, l)
 		}
 	}
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
@@ -724,7 +724,7 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 	if resp.Hits.TotalHits == 0 {
 		return pwObjs, 0
 	}
-	var pwObj model.ESGodGame
+	var pwObj model.ESGodGameRedefine
 	for _, item := range resp.Hits.Hits {
 		if err = json.Unmarshal(*item.Source, &pwObj); err != nil {
 			icelog.Errorf("### %s", err.Error())
@@ -735,10 +735,10 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 	return pwObjs, resp.Hits.TotalHits
 }
 
-func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser model.CurrentUser) []model.ESGodGame {
+func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser model.CurrentUser) []model.ESGodGameRedefine{
 	args.Limit = 40
 	args.Offset = 0
-	var pwObjs []model.ESGodGame
+	var pwObjs []model.ESGodGameRedefine
 	var priceCondition []interface{}
 	if len(args.Price) > 0 {
 		priceCondition = make([]interface{}, 0, len(args.Price))
@@ -750,7 +750,7 @@ func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser mod
 		priceCondition = make([]interface{}, 0)
 	}
 
-	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndex)
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
@@ -827,7 +827,7 @@ func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser mod
 	if resp.Hits.TotalHits == 0 {
 		return pwObjs
 	}
-	var pwObj model.ESGodGame
+	var pwObj model.ESGodGameRedefine
 	for _, item := range resp.Hits.Hits {
 		if err = json.Unmarshal(*item.Source, &pwObj); err != nil {
 			icelog.Warnf("query god error %s\n%s", err, *item.Source)
@@ -838,7 +838,7 @@ func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser mod
 	return pwObjs
 }
 
-func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{} {
+func (gg *GodGame) getGodItems(pwObjs []model.ESGodGameRedefine) []map[string]interface{} {
 	gods := make([]map[string]interface{}, 0, 10)
 	var tmpImages []string
 	var userinfo *user_pb.UserInfo
@@ -920,7 +920,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGame) []map[string]interface{
 	return gods
 }
 
-func (gg *GodGame) getGodItems2(c frame.Context, pwObjs []model.ESGodGame) []map[string]interface{} {
+func (gg *GodGame) getGodItems2(c frame.Context, pwObjs []model.ESGodGameRedefine) []map[string]interface{} {
 	gods := make([]map[string]interface{}, 0, 10)
 	var tmpGod map[string]interface{}
 	var err error
@@ -951,7 +951,7 @@ func (gg *GodGame) GodList(c frame.Context) error {
 		}
 	}
 	currentUser := gg.getCurrentUser(c)
-	var pwObjs []model.ESGodGame
+	var pwObjs []model.ESGodGameRedefine
 	var hits int64
 	var gods, recGods []map[string]interface{}
 	pwObjs, hits = gg.queryGods(req, currentUser)
@@ -1001,7 +1001,7 @@ func (gg *GodGame) GodList2(c frame.Context) error {
 			})
 		}
 	}
-	var pwObjs []model.ESGodGame
+	var pwObjs []model.ESGodGameRedefine
 	var hits int64
 	var gods []map[string]interface{}
 	pwObjs, hits = gg.queryGods2(req, currentUser)

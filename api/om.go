@@ -1573,7 +1573,7 @@ func (gg *GodGame) NearbyGods(c frame.Context) error {
 		}
 	}
 	// agg := elastic.NewTermsAggregation().Field("god_id")
-	resp, err := elastic.NewSearchService(gg.esClient).Index(gg.cfg.ES.PWIndex).
+	resp, err := elastic.NewSearchService(gg.esClient).Index(gg.cfg.ES.PWIndexRedefine).
 		Query(q).SearchSource(searchSource).Sort("lts", false).From(offset).Size(limit).
 		// Aggregation("agg_god", agg).
 		Do(context.Background())

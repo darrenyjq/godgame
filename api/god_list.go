@@ -17,7 +17,8 @@ import (
 func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 	var keyByGender string
 	now := time.Now()
-	searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndex)
+	//searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndex)
+	searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").Lte(now).Gte(now.AddDate(0, 0, gg.cfg.GodLTSDuration))).
 		Must(elastic.NewTermQuery("game_id", game_id)).
