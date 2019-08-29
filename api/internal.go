@@ -411,7 +411,7 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 	geoInfo, geoErr := userpb.Location(c, &userpb.LocationReq{
 		UserId: req.GetGodId(),
 	})
-	var esGodGame model.ESGodGame
+	var esGodGame model.ESGodGameRedefine
 	for _, v1 := range v1s {
 		if v1.Recommend == constants.RECOMMEND_YES {
 			// 被推荐到首页的大神，刷新首页的最后在线时间

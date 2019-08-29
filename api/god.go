@@ -965,6 +965,38 @@ func (gg *GodGame) GodList(c frame.Context) error {
 	})
 }
 
+func (gg *GodGame) GodListInternal(c frame.Context) error {
+	var req godgamepb.GodListReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetLimit() > 20 || req.GetLimit() == 0 {
+		req.Limit = 20
+	}
+	if req.GetGameId() > 0 {
+		if gg.isVoiceCallGame(req.GetGameId()) {
+			// 语聊品类不展示
+			return c.JSON2(StatusOK_V3, "", nil)
+		}
+		if gid, ok := gamepb.GameDicst[req.GetGameId()]; ok {
+			req.GameId = gid
+		}
+	}
+	currentUser := gg.getCurrentUser(c)
+	var pwObjs []model.ESGodGameRedefine
+	var hits int64
+	var gods, recGods []map[string]interface{}
+	pwObjs, hits = gg.queryGods(req, currentUser)
+	gods = gg.getGodItems(pwObjs)
+	if hits < req.Limit && (req.Gender > 0 || len(req.Price) > 0 || len(req.Level) > 0) {
+		recGods = gg.getGodItems(gg.queryRecommendGods(req, currentUser))
+	}
+	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
+		"gods": gods,
+		"rec":  recGods,
+	})
+}
+
 func (gg *GodGame) GodList2(c frame.Context) error {
 	var req godgamepb.GodList2Req
 	var err error
