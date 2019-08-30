@@ -1485,14 +1485,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		if !ok || godGame.Level < godLevel {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "无效的陪玩价格", nil)
 		}
-		for _, tmpLevel := range req.GetAcceptSettings().GetLevelId() {
-			score, ok := resp.GetData().GetLevels()[tmpLevel]
-			if !ok {
-				// return c.JSON2(ERR_CODE_DISPLAY_ERROR, "无效的段位", nil)
-			} else if score > highestLevelScore {
-				return c.JSON2(ERR_CODE_DISPLAY_ERROR, "目标段位高于当前最高段位", nil)
-			}
-		}
+
 	} else {
 		// 接单开关关闭时，抢单开关自动关闭
 		req.GrabSwitch = constants.GRAB_SWITCH_CLOSE
@@ -1599,6 +1592,11 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		if req.GetGrabSwitch2() == constants.GRAB_SWITCH2_OPEN {
 			for _, tmpRegion := range req.GetAcceptSettings().GetRegionId() {
 				for _, tmpLevel := range req.GetAcceptSettings().GetLevelId() {
+					score, _ := resp.GetData().GetLevels()[tmpLevel]
+					if score > highestLevelScore {
+						icelog.Info("目标段位高于当前最高段位",score, highestLevelScore)
+						continue
+					}
 					redisConn.Do("ZADD", core.GodsRedisKey3(req.GetGameId(), tmpRegion, tmpLevel), godGame.HighestLevelID, currentUser.UserID)
 				}
 			}
