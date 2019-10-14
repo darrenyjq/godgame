@@ -130,7 +130,7 @@ func (gg *GodGame) ESGetGodGame(id string) (model.ESGodGameRedefine, error) {
 
 func (gg *GodGame) ESAddGodGame(godGame model.ESGodGameRedefine) error {
 	params := ESParams{
-		Action:    ES_ACTION_ADD,
+		Action:            ES_ACTION_ADD,
 		ESGodGameRedefine: godGame,
 	}
 	gg.esChan <- params
@@ -300,7 +300,7 @@ func (gg *GodGame) BuildESGodGameData(godID, gameID int64) (model.ESGodGameRedef
 	return result, nil
 }
 
-//重构ES数据 godgame
+// 重构ES数据 godgame
 func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodGameRedefine, error) {
 	var result model.ESGodGameRedefine
 
@@ -331,14 +331,18 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 	}
 
 	godGame := gg.dao.GetGodGame(godID, gameID)
+
+	counts, err := plorderpb.Count(frame.TODO(), &plorderpb.CountReq{
+		GodId:  godID,
+		GameId: gameID,
+	})
+	if err == nil {
+		result.OrderSetCnt = counts.GetData().GetCompletedHoursAmount()
+	}
+	result.OrderSetCnt = 1
 	result.GodLevel = godGame.GodLevel
 	result.HotScore = "1"
-
-	////获取关注数
-	//count := int64(1) * 5
-	//var H = godGame.GodLevel * 10 + count
 	result.IsVoice = 0
-
 	// 语聊品类不展示
 	if gg.isVoiceCallGame(gameID) {
 		result.IsVoice = 1
@@ -348,26 +352,8 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 	return result, nil
 }
 
-////获取热门公式中 T 值
-//func getTime(time){
-//
-//}
-
 func (gg *GodGame) updateESGodGameRedefine() model.ESGodGameRedefine {
 	var result model.ESGodGameRedefine
 
 	return result
 }
-//
-//func (gg *GodGame) Test(c frame.Context) error {
-//	var req godgamepb.TestReq
-//
-//	if err := c.Bind(&req); err != nil {
-//		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
-//	}
-//	GodID := req.GetId()
-//	GameID := req.GetGameId()
-//	gg.ESAddGodGameInternal(GodID, GameID)
-//	data, _ := gg.BuildESGodGameDataRedefine(GodID, 4)
-//	return c.JSON2(StatusOK_V3, "", data)
-//}
