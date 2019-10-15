@@ -1,94 +1,53 @@
 stages:
-  - test
   - deploy
 
-test:
-  stage: test
-  tags:
-    - iceberg
-  before_script:
-    - pwd
-    - cd `pwd` && cd ..
-    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
-    - pwd
-  script:
-    - echo $GOPATH
-    - cd $GOPATH/src/godgame
-    - go test -short $(go list ./...)
-  after_script:
-    - rm -rf $GOPATH/src/godgame
+variables:
+  GOPATH: /home/land/go
 
-deploydev:
-  only:
-    - release/dev
+before_script:
+  - export GOPATH=$GOPATH
+  - export GOBIN=$GOPATH/bin
+  - export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
+  - cd $GOPATH/src
+  - ln -sfn $CI_PROJECT_DIR $CI_PROJECT_NAME
+  - cd vendor
+  - if [ -z $Vendor ]; then git checkout master; git pull; else git checkout $Vendor; git pull; fi
+  - cd $GOPATH/src/$CI_PROJECT_NAME
+  - ln -sfn $GOPATH/src/vendor vendor
+  - cd $GOPATH/src
+
+deploy_qa:
   stage: deploy
   tags:
-    - iceberg
-  before_script:
-    - pwd
-    - cd `pwd` && cd ..
-    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
-    - pwd
+    - deploy_go_qa
   script:
-    - ./deploy.sh godgame linux dev
-  environment:
-    name: dev
-  after_script:
-    - rm -rf $GOPATH/src/godgame
-
-deployqa:
-  only:
-    - release/qa
-  stage: deploy
-  tags:
-    - iceberg
-  before_script:
-    - pwd
-    - cd `pwd` && cd ..
-    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
-    - pwd
-  script:
-    - ./deploy.sh godgame linux qa
+    - cd deploy
+    - git pull
+    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux qa $Host; else ./ci_deploy.sh $Project linux qa $Host; fi
   environment:
     name: qa
-  after_script:
-    - rm -rf $GOPATH/src/godgame
-
-deploystaging:
-  only:
-    - release/staging
-  stage: deploy
-  tags:
-    - iceberg
-  before_script:
-    - pwd
-    - cd `pwd` && cd ..
-    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
-    - pwd
-  script:
-    - ./deploy.sh godgame linux staging
-  environment:
-    name: staging
-  after_script:
-    - rm -rf $GOPATH/src/godgame
   when: manual
 
-deployprod:
-  only:
-    - release/master
+deploy_stag:
   stage: deploy
   tags:
-    - iceberg
-  before_script:
-    - pwd
-    - cd `pwd` && cd ..
-    - cp -r ./godgame $GOPATH/src/  && cd $GOPATH/src/deploy
-    - pwd
+    - deploy_go_stag
   script:
-    - ./deploy.sh godgame linux prod
+    - cd deploy
+    - git pull
+    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux stag $Host; else ./ci_deploy.sh $Project linux stag $Host; fi
+  environment:
+    name: stag
+  when: manual
+
+deploy_prod:
+  stage: deploy
+  tags:
+    - deploy_go_prod
+  script:
+    - cd deploy
+    - git pull
+    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux prod $Key $Host; else ./ci_deploy.sh $Project linux prod $Key $Host; fi
   environment:
     name: prod
-  after_script:
-    - rm -rf $GOPATH/src/godgame
   when: manual
-
