@@ -339,9 +339,7 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 	if err == nil {
 		result.OrderSetCnt = counts.GetData().GetCompletedHoursAmount()
 	}
-	result.OrderSetCnt = 1
 	result.GodLevel = godGame.GodLevel
-	result.HotScore = "1"
 	result.IsVoice = 0
 	// 语聊品类不展示
 	if gg.isVoiceCallGame(gameID) {
