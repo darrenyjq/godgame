@@ -1650,12 +1650,12 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 		icelog.Infof("获取大神 %d 优惠券配置失败,err: %s", req.GodId, err.Error())
 	}
 
-	var isGodOpenCoupon bool
+	isGodOpenCoupon := constants.GOD_COUPON_CONFIG_CLOSE
 	coupons := make(map[int64]int64, len(res))
 	for _, v := range res {
 		coupons[v.GameId] = v.Status
 		if v.Status == constants.GOD_COUPON_CONFIG_OPEN {
-			isGodOpenCoupon = true
+			isGodOpenCoupon = constants.GOD_COUPON_CONFIG_OPEN
 		}
 	}
 
@@ -1683,7 +1683,7 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 
 		// 查询大神开启优惠券开关
 		if _, ok := coupons[v1.GameID]; ok {
-			game["god_coupon"] = coupons
+			game["god_coupon"] = coupons[v1.GameID]
 		} else {
 			game["god_coupon"] = constants.GOD_COUPON_CONFIG_CLOSE
 		}
