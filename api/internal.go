@@ -821,3 +821,53 @@ func (gg *GodGame) SimpleGodGameIds(c frame.Context) error {
 		GameIds: gg.dao.SimpleGodGameIds(req.GetGodId()),
 	})
 }
+
+// 大神定向单接单设置数据查询   php一元购活动专用  后面去掉该接口
+func (gg *GodGame) DxdInternal(c frame.Context) error {
+	var req godgamepb.DxdReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetGodId() == 0 {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	v1s, _ := gg.dao.GetGodAllGameV1(req.GetGodId())
+	if len(v1s) == 0 {
+		return c.JSON2(ERR_CODE_GOD_ACCEPT_SETTING_LOAD_FAIL, errGodAcceptSettingLoadFail, nil)
+	}
+	games := make([]map[string]interface{}, 0, len(v1s))
+	var game map[string]interface{}
+	var dxdResp *gamepb.DxdResp
+	// isIOS := gg.isIOS(c)
+	for _, v1 := range v1s {
+		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		} else if gg.isVoiceCallGame(v1.GameID) {
+			// 语聊品类不展示在下定向单页面
+			continue
+		}
+		dxdResp, err = gamepb.Dxd(c, &gamepb.DxdReq{
+			GameId:  v1.GameID,
+			Region2: v1.Regions,
+		})
+		if err != nil || dxdResp.GetErrcode() != 0 {
+			continue
+		}
+		game = make(map[string]interface{})
+		game["game_id"] = v1.GameID
+		game["highest_level_score"] = dxdResp.GetData().GetHighestLevelScore()
+		game["service_type"] = dxdResp.GetData().GetServiceId()
+		game["service_name"] = dxdResp.GetData().GetServiceName()
+		game["regions"] = v1.Regions
+		game["region1"] = dxdResp.GetData().GetRegion1()
+
+		games = append(games, game)
+	}
+	if len(games) == 0 {
+		return c.JSON2(ERR_CODE_GOD_ACCEPT_SETTING_LOAD_FAIL, errGodAcceptSettingLoadFail, nil)
+	}
+	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
+		"god_id": req.GetGodId(),
+		"games":  games,
+	})
+}
