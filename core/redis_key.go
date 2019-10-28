@@ -142,7 +142,3 @@ func RKLastModifyInfoDate(godID int64) string {
 func RKSimpleGodGamesKey(godID int64) string {
 	return fmt.Sprintf("SGG:{%d}", godID)
 }
-
-func RKGodCouponConfig() {
-
-}

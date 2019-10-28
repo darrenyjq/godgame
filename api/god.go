@@ -1650,15 +1650,7 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 		icelog.Infof("获取大神 %d 优惠券配置失败,err: %s", req.GodId, err.Error())
 	}
 
-	var isGodOpenCoupon bool
 	coupons := make(map[int64]int64, len(res))
-	for _, v := range res {
-		coupons[v.GameId] = v.Status
-		if v.Status == constants.GOD_COUPON_CONFIG_OPEN {
-			isGodOpenCoupon = true
-		}
-	}
-
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
@@ -1694,9 +1686,8 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 		return c.JSON2(ERR_CODE_GOD_ACCEPT_SETTING_LOAD_FAIL, errGodAcceptSettingLoadFail, nil)
 	}
 	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
-		"god_id":     req.GetGodId(),
-		"god_coupon": isGodOpenCoupon,
-		"games":      games,
+		"god_id": req.GetGodId(),
+		"games":  games,
 	})
 }
 
