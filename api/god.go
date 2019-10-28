@@ -1675,7 +1675,7 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 
 		// 查询大神开启优惠券开关
 		if _, ok := coupons[v1.GameID]; ok {
-			game["god_coupon"] = coupons
+			game["god_coupon"] = coupons[v1.GameID]
 		} else {
 			game["god_coupon"] = constants.GOD_COUPON_CONFIG_CLOSE
 		}
