@@ -1651,6 +1651,9 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 	}
 
 	coupons := make(map[int64]int64, len(res))
+	for _, v := range res {
+		coupons[v.GameId] = v.Status
+	}
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
