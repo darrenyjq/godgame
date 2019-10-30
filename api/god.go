@@ -735,7 +735,7 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 	return pwObjs, resp.Hits.TotalHits
 }
 
-func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser model.CurrentUser) []model.ESGodGameRedefine{
+func (gg *GodGame) queryRecommendGods(args godgamepb.GodListReq, currentUser model.CurrentUser) []model.ESGodGameRedefine {
 	args.Limit = 40
 	args.Offset = 0
 	var pwObjs []model.ESGodGameRedefine
@@ -1438,6 +1438,37 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	return c.JSON2(StatusOK_V3, "", data)
 }
 
+// 急速接单设置
+func (gg *GodGame) AcceptQuickOrderSetting(c frame.Context) error {
+
+	currentUser := gg.getCurrentUser(c)
+	if currentUser.UserID == 0 {
+		return c.JSON2(ERR_CODE_FORBIDDEN, "", nil)
+	}
+	godInfo := gg.dao.GetGod(currentUser.UserID)
+	if godInfo.Status != constants.GOD_STATUS_PASSED {
+		return c.JSON2(ERR_CODE_FORBIDDEN, "大神状态异常", nil)
+	}
+	var req godgamepb.AcceptOrderSettingReq
+	var err error
+
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetGameId() == 0 {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "game_id is empty", nil)
+	}
+	godGame, err := gg.dao.GetGodSpecialGameV1(currentUser.UserID, req.GetGameId())
+	if err != nil {
+		blockedGodGame, _ := gg.dao.GetGodSpecialBlockedGameV1(currentUser.UserID, req.GetGameId())
+		if blockedGodGame.Status == constants.GOD_GAME_STATUS_BLOCKED {
+			return c.JSON2(ERR_CODE_FORBIDDEN, "陪玩服务被冻结，暂时无法接单", nil)
+		}
+		return c.JSON2(ERR_CODE_FORBIDDEN, "", nil)
+	}
+	icelog.Info(godGame)
+	return c.JSON2(StatusOK_V3, "success", nil)
+}
+
 // 接单设置
 func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	currentUser := gg.getCurrentUser(c)
@@ -1492,6 +1523,8 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		req.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 		req.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
 		req.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
+
+		gg.dao.AcceptQuickOrderSetting(currentUser.UserID, req.GameId, constants.GRAB_SWITCH5_CLOSE)
 	}
 	if req.GetGrabSwitch2() != constants.GRAB_SWITCH2_OPEN {
 		req.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
@@ -1594,7 +1627,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 				for _, tmpLevel := range req.GetAcceptSettings().GetLevelId() {
 					score, _ := resp.GetData().GetLevels()[tmpLevel]
 					if score > highestLevelScore {
-						icelog.Info("目标段位高于当前最高段位",score, highestLevelScore)
+						icelog.Info("目标段位高于当前最高段位", score, highestLevelScore)
 						continue
 					}
 					redisConn.Do("ZADD", core.GodsRedisKey3(req.GetGameId(), tmpRegion, tmpLevel), godGame.HighestLevelID, currentUser.UserID)
