@@ -14,6 +14,7 @@ type es struct {
 	Host            []string `json:"host"`
 	PWIndex         string   `json:"pw_index"`
 	PWIndexRedefine string   `json:"pw_index_redefine"`
+	PWQuickOrder    string   `json:"pw_quick_order"`
 	PWType          string   `json:"pw_type"`
 	Username        string   `json:"username,omitempty"`
 	Password        string   `json:"password,omitempty"`

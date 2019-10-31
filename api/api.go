@@ -13,6 +13,7 @@ import (
 	"laoyuegou.com/httpkit/lyghttp/middleware"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/model"
+	"laoyuegou.pb/godgame/pb"
 	user_pb "laoyuegou.pb/user/pb"
 	"os"
 	"strconv"
@@ -22,13 +23,14 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // GodGame God Game服务
 type GodGame struct {
-	dao        *core.Dao
-	cfg        config.Config
-	esClient   *elastic.Client
-	esChan     chan ESParams
-	shence     shence.SensorsAnalytics
-	nsqHandler *handlers.BaseHandler
-	exitChan   chan struct{}
+	dao              *core.Dao
+	cfg              config.Config
+	esClient         *elastic.Client
+	esChan           chan ESParams
+	esQuickOrderChan chan ESOrderParams
+	shence           shence.SensorsAnalytics
+	nsqHandler       *handlers.BaseHandler
+	exitChan         chan struct{}
 }
 
 // NewGodGame new God Game
@@ -146,4 +148,22 @@ func (gg *GodGame) isVoiceCallGame(gameID int64) bool {
 		return resp.GetData()
 	}
 	return false
+}
+
+func (gg *GodGame) QuickOrder(c frame.Context) error {
+
+	var in godgamepb.QuickOrderReq
+	if err := c.Bind(&in); err != nil || in.GodId == 0 || in.GameId == 0 {
+		return c.RetBadRequestError("params fails")
+	}
+
+	var data model.ESQuickOrder
+
+	data, err := gg.BuildESQuickOrder(in.GodId, in.GameId)
+	if err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	gg.ESAddQuickOrder(data)
+
+	return c.JSON2(StatusOK_V3, "success", data)
 }
