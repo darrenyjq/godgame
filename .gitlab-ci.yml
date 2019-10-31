@@ -11,7 +11,7 @@ before_script:
   - cd $GOPATH/src
   - ln -sfn $CI_PROJECT_DIR $CI_PROJECT_NAME
   - cd vendor
-  - if [ -z $Vendor ]; then git checkout master; git pull; else git checkout $Vendor; git pull; fi
+  - if [ -z $Vendor ]; then git checkout master; git pull; else git pull; git checkout $Vendor;  fi
   - cd $GOPATH/src/$CI_PROJECT_NAME
   - ln -sfn $GOPATH/src/vendor vendor
   - cd $GOPATH/src
@@ -23,7 +23,7 @@ deploy_qa:
   script:
     - cd deploy
     - git pull
-    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux qa $Host; else ./ci_deploy.sh $Project linux qa $Host; fi
+    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux qa $CI_COMMIT_REF_NAME $Host; else ./ci_deploy.sh $Project linux qa $CI_COMMIT_REF_NAME $Host; fi
   environment:
     name: qa
   when: manual
@@ -35,7 +35,7 @@ deploy_stag:
   script:
     - cd deploy
     - git pull
-    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux stag $Host; else ./ci_deploy.sh $Project linux stag $Host; fi
+    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux stag $CI_COMMIT_REF_NAME $Host; else ./ci_deploy.sh $Project linux stag $CI_COMMIT_REF_NAME $Host; fi
   environment:
     name: stag
   when: manual
@@ -47,7 +47,7 @@ deploy_prod:
   script:
     - cd deploy
     - git pull
-    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux prod $Key $Host; else ./ci_deploy.sh $Project linux prod $Key $Host; fi
+    - if [ -z $Project ]; then ./ci_deploy.sh $CI_PROJECT_NAME linux prod $CI_COMMIT_REF_NAME $Key $Host; else ./ci_deploy.sh $Project linux prod $CI_COMMIT_REF_NAME $Key $Host; fi
   environment:
     name: prod
   when: manual
