@@ -12,6 +12,7 @@ import (
 	"iceberg/frame/icelog"
 	"laoyuegou.com/httpkit/lyghttp/middleware"
 	"laoyuegou.pb/game/pb"
+	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	user_pb "laoyuegou.pb/user/pb"
@@ -152,20 +153,21 @@ func (gg *GodGame) isVoiceCallGame(gameID int64) bool {
 	return false
 }
 
-func (gg *GodGame) QuickOrder(c frame.Context) error {
-
-	var in godgamepb.QuickOrderReq
-	if err := c.Bind(&in); err != nil || in.GodId == 0 || in.GameId == 0 {
+func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
+	var in godgamepb.AcceptQuickOrderReq
+	if err := c.Bind(&in); err != nil || in.GodId == 0 || in.GameId == 0 || in.GrabSwitch == 0 {
 		return c.RetBadRequestError("params fails")
 	}
-
-	var data model.ESQuickOrder
-
-	data, err := gg.BuildESQuickOrder(in.GodId, in.GameId)
-	if err != nil {
-		return c.RetBadRequestError(err.Error())
+	if in.GrabSwitch == constants.GRAB_SWITCH5_OPEN {
+		var data model.ESQuickOrder
+		data, err := gg.BuildESQuickOrder(in.GodId, in.GameId)
+		if err != nil {
+			return c.RetBadRequestError(err.Error())
+		}
+		gg.ESAddQuickOrder(data)
+	} else {
+		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
+		gg.ESDeleteQuickOrder([]string{esId})
 	}
-	gg.ESAddQuickOrder(data)
-
-	return c.JSON2(StatusOK_V3, "success", data)
+	return c.JSON2(StatusOK_V3, "success", nil)
 }

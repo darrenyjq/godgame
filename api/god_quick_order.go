@@ -41,12 +41,12 @@ func (gg *GodGame) StartQuickOrderLoop() {
 				goto exit
 			}
 			switch params.Action {
-			// case ES_ORDER_DELETE, ES_ORDER_BATCH_DELETE:
-			// gg.ESDeleteQuickOrder(params.IDs[0], params.Data)
+			case ES_ORDER_DELETE, ES_ORDER_BATCH_DELETE:
+				gg.ESDeleteQuickOrder(params.IDs)
 			// case ES_ORDER_BY_QUERY:
 			// 	gg.ESQueryQuickOrder(params.IDs[0])
-			// case ES_ORDER_UPDATE:
-			// gg.ESUpdateQuickOrder(params.IDs)
+			case ES_ORDER_UPDATE:
+				gg.ESUpdateQuickOrder(params.IDs)
 			case ES_ORDER_ADD:
 				gg.ESAddQuickOrderInternal(params.ESQuickOrder)
 			}
@@ -77,15 +77,13 @@ func (gg *GodGame) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, e
 	if err != nil {
 		return result, fmt.Errorf("price id error %d-%d %s", godID, gameID, err.Error())
 	}
-
 	result.GameID = gameID
 	result.GodID = godID
 	result.Gender = godInfo.Gender
 	result.Price = accpetOrderSetting.PriceID
 	result.UpdateTime = util.XTime(time.Now())
-	result.LevelID = accpetOrderSetting.Levels[1]
-	result.RegionID = accpetOrderSetting.Regions[1]
-
+	result.LevelID = accpetOrderSetting.Levels
+	result.RegionID = accpetOrderSetting.Regions
 	return result, nil
 }
 
@@ -107,9 +105,18 @@ func (gg *GodGame) ESUpdateQuickOrder(esIDs []string) error {
 
 }
 
+// 删除 急速接单池
 func (gg *GodGame) ESDeleteQuickOrder(esIDs []string) error {
+	for _, id := range esIDs {
+		_, err := gg.esClient.Delete().Index(gg.cfg.ES.PWQuickOrder).Type(gg.cfg.ES.PWType).
+			Id(id).
+			Do(context.Background())
+		icelog.Info("删除结果：", err, id)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
-
 }
 
 func (gg *GodGame) ESQueryQuickOrder(query, data map[string]interface{}) error {
