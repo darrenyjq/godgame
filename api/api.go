@@ -55,9 +55,11 @@ func NewGodGame(cfg config.Config) *GodGame {
 		gg.esClient = esClient
 	}
 	gg.esChan = make(chan ESParams, 100)
+	gg.esQuickOrderChan = make(chan ESOrderParams, 100)
 	gg.nsqHandler = handlers.NewBaseHandler(cfg, gg.dao)
 	gg.exitChan = make(chan struct{})
 	go gg.StartLoop()
+	go gg.StartQuickOrderLoop()
 	go gg.fill_god_list()
 	return gg
 }
