@@ -9,7 +9,7 @@ func RKFillGodListLock() string {
 	return "FillGodListLock"
 }
 
-//.RKGodListByGender 大神列表按性别划分
+// .RKGodListByGender 大神列表按性别划分
 func RKGodListByGender(gameID, gender int64) string {
 	return fmt.Sprintf("GL:{%d}:G:{%d}", gameID, gender)
 }
@@ -141,4 +141,8 @@ func RKLastModifyInfoDate(godID int64) string {
 // RKSimpleGodGamesKey 大神当前正在接单的品类简介，主要是给Feed使用
 func RKSimpleGodGamesKey(godID int64) string {
 	return fmt.Sprintf("SGG:{%d}", godID)
+}
+
+func RKQuickOrder(godId, game_id int64) string {
+	return fmt.Sprintf("QUICK_ORDER:{%d}:{$d}", godId, game_id)
 }

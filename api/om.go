@@ -199,6 +199,7 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 	var userV1 core.UserInfoV1
 	var godID int64
 	if req.GetGouhao() > 0 {
+		w
 		userV1, err = gg.dao.UserV1ByGouHao(req.GetGouhao())
 		if err != nil {
 			return c.JSON2(ERR_CODE_BAD_REQUEST, "用户信息查询失败", nil)
@@ -206,7 +207,7 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 		godID = userV1.UserID
 	}
 	godGames, err := gg.dao.GetGodGameApplys(req.GetStatus(), req.GetGameId(), godID, req.GetOffset(),
-		req.GetGender(), req.GetLeaderId(),req.GetGodLevel())
+		req.GetGender(), req.GetLeaderId(), req.GetGodLevel())
 	if err != nil {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, err.Error(), nil)
 	} else if len(godGames) == 0 {

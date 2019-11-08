@@ -3,9 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/olivere/elastic"
+	"godgame/core"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/util"
 	"laoyuegou.pb/godgame/model"
+	"laoyuegou.pb/godgame/pb"
+	"strings"
 	"time"
 )
 
@@ -119,7 +123,33 @@ func (gg *GodGame) ESDeleteQuickOrder(esIDs []string) error {
 	return nil
 }
 
-func (gg *GodGame) ESQueryQuickOrder(query, data map[string]interface{}) error {
+func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) error {
+	searchService := gg.esClient.Scroll(gg.cfg.ES.PWQuickOrder)
+	query := elastic.NewBoolQuery().
+		Must(elastic.NewTermQuery("game_id", req.GameId)).
+		Should(elastic.NewTermQuery("gender", req.Gender)).
+		Should(elastic.NewTermQuery("level_id", req.LevelId)).
+		Should(elastic.NewTermQuery("price_id", req.PriceId)).
+		Should(elastic.NewTermQuery("region_id", req.RegionId))
+
+	data, err := searchService.Query(query).
+		Sort("update_time", false). // 倒序
+		Do(context.Background())
+
+	if err != nil {
+		if err.Error() == "EOF" {
+			return nil
+		}
+	}
+	redisConn := gg.dao.GetRedisPool().Get()
+	defer redisConn.Close()
+	key := core.RKQuickOrder(1, 1)
+
+	for _, item := range data.Hits.Hits {
+		if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
+			redisConn.Do("SADD", key, seq[0])
+		}
+	}
 	return nil
 
 }

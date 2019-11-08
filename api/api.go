@@ -171,3 +171,19 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	}
 	return c.JSON2(StatusOK_V3, "success", nil)
 }
+
+func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
+
+	var in godgamepb.QueryQuickOrderReq
+	if err := c.Bind(&in); err != nil {
+		return c.RetBadRequestError("params fails")
+	}
+
+	data := gg.ESQueryQuickOrder(in)
+	// data := 1
+	return c.JSON2(StatusOK_V3, "success", data)
+}
+
+// func (gg *GodGame) 1  {
+//
+// }

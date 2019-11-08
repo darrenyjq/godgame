@@ -1438,37 +1438,6 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	return c.JSON2(StatusOK_V3, "", data)
 }
 
-// 急速接单设置
-func (gg *GodGame) AcceptQuickOrderSetting(c frame.Context) error {
-
-	currentUser := gg.getCurrentUser(c)
-	if currentUser.UserID == 0 {
-		return c.JSON2(ERR_CODE_FORBIDDEN, "", nil)
-	}
-	godInfo := gg.dao.GetGod(currentUser.UserID)
-	if godInfo.Status != constants.GOD_STATUS_PASSED {
-		return c.JSON2(ERR_CODE_FORBIDDEN, "大神状态异常", nil)
-	}
-	var req godgamepb.AcceptOrderSettingReq
-	var err error
-
-	if err = c.Bind(&req); err != nil {
-		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
-	} else if req.GetGameId() == 0 {
-		return c.JSON2(ERR_CODE_BAD_REQUEST, "game_id is empty", nil)
-	}
-	godGame, err := gg.dao.GetGodSpecialGameV1(currentUser.UserID, req.GetGameId())
-	if err != nil {
-		blockedGodGame, _ := gg.dao.GetGodSpecialBlockedGameV1(currentUser.UserID, req.GetGameId())
-		if blockedGodGame.Status == constants.GOD_GAME_STATUS_BLOCKED {
-			return c.JSON2(ERR_CODE_FORBIDDEN, "陪玩服务被冻结，暂时无法接单", nil)
-		}
-		return c.JSON2(ERR_CODE_FORBIDDEN, "", nil)
-	}
-	icelog.Info(godGame)
-	return c.JSON2(StatusOK_V3, "success", nil)
-}
-
 // 接单设置
 func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	currentUser := gg.getCurrentUser(c)
