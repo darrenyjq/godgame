@@ -153,6 +153,7 @@ func (gg *GodGame) isVoiceCallGame(gameID int64) bool {
 	return false
 }
 
+// 急速接单开关
 func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	var in godgamepb.AcceptQuickOrderReq
 	if err := c.Bind(&in); err != nil || in.GodId == 0 || in.GameId == 0 || in.GrabSwitch == 0 {
@@ -172,6 +173,7 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	return c.JSON2(StatusOK_V3, "success", nil)
 }
 
+// 急速接单匹配
 func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 
 	var in godgamepb.QueryQuickOrderReq
@@ -183,7 +185,3 @@ func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 	// data := 1
 	return c.JSON2(StatusOK_V3, "success", data)
 }
-
-// func (gg *GodGame) 1  {
-//
-// }
