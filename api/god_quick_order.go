@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/olivere/elastic"
-	"godgame/core"
+	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/util"
+	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"strings"
@@ -123,33 +124,94 @@ func (gg *GodGame) ESDeleteQuickOrder(esIDs []string) error {
 	return nil
 }
 
-func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) error {
-	searchService := gg.esClient.Scroll(gg.cfg.ES.PWQuickOrder)
-	query := elastic.NewBoolQuery().
-		Must(elastic.NewTermQuery("game_id", req.GameId)).
-		Should(elastic.NewTermQuery("gender", req.Gender)).
-		Should(elastic.NewTermQuery("level_id", req.LevelId)).
-		Should(elastic.NewTermQuery("price_id", req.PriceId)).
-		Should(elastic.NewTermQuery("region_id", req.RegionId))
+func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string {
 
-	data, err := searchService.Query(query).
+	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWQuickOrder).Type(gg.cfg.ES.PWType)
+	query := elastic.NewBoolQuery()
+
+	if req.GetGameId() > 0 {
+		query = query.Must(elastic.NewTermQuery("game_id", req.GameId))
+	}
+
+	if req.GetGender() > 0 {
+		query = query.Should(elastic.NewTermQuery("gender", req.Gender))
+	}
+
+	if req.GetLevelId() > 0 {
+		query = query.Should(elastic.NewTermQuery("level_id", req.LevelId))
+	}
+
+	if req.GetPriceId() > 0 {
+		query = query.Should(elastic.NewTermQuery("price_id", req.PriceId))
+	}
+
+	if req.GetRegionId() > 0 {
+		query = query.Should(elastic.NewTermQuery("region_id", req.RegionId))
+	}
+
+	resp, err := searchService.Query(query).
+		From(0).
+		Size(100).
 		Sort("update_time", false). // 倒序
+		Pretty(true).
 		Do(context.Background())
 
 	if err != nil {
-		if err.Error() == "EOF" {
-			return nil
+		panic(err)
+	}
+	fmt.Printf("query cost %d millisecond.\n", resp.TookInMillis)
+
+	icelog.Info(resp, err, "%%%%%%%%%%%%", query, "********", req)
+
+	if err != nil {
+		return nil
+	}
+	if resp.Hits.TotalHits == 0 {
+		return nil
+	}
+	res := []string{}
+
+	if resp != nil {
+		for _, item := range resp.Hits.Hits {
+			if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
+				res = append(res, seq[0])
+			}
 		}
 	}
-	redisConn := gg.dao.GetRedisPool().Get()
-	defer redisConn.Close()
-	key := core.RKQuickOrder(1, 1)
+	return res
 
-	for _, item := range data.Hits.Hits {
-		if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
-			redisConn.Do("SADD", key, seq[0])
-		}
+}
+
+// 急速接单开关
+func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
+	var in godgamepb.AcceptQuickOrderReq
+	if err := c.Bind(&in); err != nil || in.GodId == 0 || in.GameId == 0 || in.GrabSwitch == 0 {
+		return c.RetBadRequestError("params fails")
 	}
-	return nil
+	if in.GrabSwitch == constants.GRAB_SWITCH5_OPEN {
+		var data model.ESQuickOrder
+		data, err := gg.BuildESQuickOrder(in.GodId, in.GameId)
+		if err != nil {
+			return c.RetBadRequestError(err.Error())
+		}
+		gg.ESAddQuickOrder(data)
+	} else {
+		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
+		gg.ESDeleteQuickOrder([]string{esId})
+	}
+	return c.JSON2(StatusOK_V3, "success", nil)
+}
 
+// 急速接单匹配
+func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
+	var in godgamepb.QueryQuickOrderReq
+	if err := c.Bind(&in); err != nil {
+		return c.RetBadRequestError("params fails")
+	}
+	data := gg.ESQueryQuickOrder(in)
+
+	if data == nil {
+		return c.RetBadRequestError("not find result")
+	}
+	return c.JSON2(StatusOK_V3, "success", data)
 }

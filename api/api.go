@@ -12,9 +12,7 @@ import (
 	"iceberg/frame/icelog"
 	"laoyuegou.com/httpkit/lyghttp/middleware"
 	"laoyuegou.pb/game/pb"
-	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
-	"laoyuegou.pb/godgame/pb"
 	user_pb "laoyuegou.pb/user/pb"
 	"os"
 	"strconv"
@@ -151,37 +149,4 @@ func (gg *GodGame) isVoiceCallGame(gameID int64) bool {
 		return resp.GetData()
 	}
 	return false
-}
-
-// 急速接单开关
-func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
-	var in godgamepb.AcceptQuickOrderReq
-	if err := c.Bind(&in); err != nil || in.GodId == 0 || in.GameId == 0 || in.GrabSwitch == 0 {
-		return c.RetBadRequestError("params fails")
-	}
-	if in.GrabSwitch == constants.GRAB_SWITCH5_OPEN {
-		var data model.ESQuickOrder
-		data, err := gg.BuildESQuickOrder(in.GodId, in.GameId)
-		if err != nil {
-			return c.RetBadRequestError(err.Error())
-		}
-		gg.ESAddQuickOrder(data)
-	} else {
-		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
-		gg.ESDeleteQuickOrder([]string{esId})
-	}
-	return c.JSON2(StatusOK_V3, "success", nil)
-}
-
-// 急速接单匹配
-func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
-
-	var in godgamepb.QueryQuickOrderReq
-	if err := c.Bind(&in); err != nil {
-		return c.RetBadRequestError("params fails")
-	}
-
-	data := gg.ESQueryQuickOrder(in)
-	// data := 1
-	return c.JSON2(StatusOK_V3, "success", data)
 }
