@@ -161,8 +161,6 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string 
 	}
 	fmt.Printf("query cost %d millisecond.\n", resp.TookInMillis)
 
-	icelog.Info(resp, err, "%%%%%%%%%%%%", query, "********", req)
-
 	if err != nil {
 		return nil
 	}
