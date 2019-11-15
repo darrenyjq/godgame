@@ -28,6 +28,7 @@ type shence struct {
 
 type nsq struct {
 	Topic   string   `json:"nsq_topic"`
+	ImTopic string   `json:"nsq_im_event_topic"`
 	Writers []string `json:"nsq_writers"`
 	Lookups []string `json:"nsq_lookups"`
 }

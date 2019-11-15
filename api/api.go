@@ -36,7 +36,6 @@ type GodGame struct {
 func NewGodGame(cfg config.Config) *GodGame {
 	gg := new(GodGame)
 	gg.cfg = cfg
-	gg.dao = core.NewDao(cfg)
 	shenceConsumer, _ := shence.InitDefaultConsumer(cfg.Shence.URL, cfg.Shence.Timeout)
 	gg.shence = shence.InitSensorsAnalytics(shenceConsumer, cfg.Shence.Project, false)
 	esOptions := []elastic.ClientOptionFunc{
@@ -53,13 +52,14 @@ func NewGodGame(cfg config.Config) *GodGame {
 	} else {
 		gg.esClient = esClient
 	}
+	gg.dao = core.NewDao(cfg, esClient)
 	gg.esChan = make(chan ESParams, 100)
 	gg.esQuickOrderChan = make(chan ESOrderParams, 100)
 	gg.nsqHandler = handlers.NewBaseHandler(cfg, gg.dao)
 	gg.exitChan = make(chan struct{})
 	go gg.StartLoop()
 	go gg.StartQuickOrderLoop()
-	go gg.fill_god_list()
+	go gg.FillGodList()
 	return gg
 }
 

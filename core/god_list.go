@@ -57,11 +57,11 @@ func (dao *Dao) GenPeiWanShareURL(godAvatar, godName, gameName, desc string, god
 	title := fmt.Sprintf("#%s# %s", gameName, godName)
 	subTitle := desc
 
-	if dao.cfg.Env.Production() {
+	if dao.Cfg.Env.Production() {
 		h5URL = fmt.Sprintf("https://imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
-	} else if dao.cfg.Env.QA() {
+	} else if dao.Cfg.Env.QA() {
 		h5URL = fmt.Sprintf("https://guest-test-imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
-	} else if dao.cfg.Env.Stag() {
+	} else if dao.Cfg.Env.Stag() {
 		h5URL = fmt.Sprintf("https://guest-staging-imgx.lygou.cc/tang/dist/pages/god/?user_id=%d&gameid=%d", godID, gameID)
 	}
 	if subTitle == "" {

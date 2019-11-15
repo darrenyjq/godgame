@@ -5,6 +5,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/json-iterator/go"
+	"github.com/olivere/elastic"
 	"godgame/config"
 	"iceberg/frame"
 	iconfig "iceberg/frame/config"
@@ -17,17 +18,19 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Dao core dao
 type Dao struct {
-	cfg      config.Config
+	Cfg      config.Config
 	cpool    *redis.Pool             // 缓存池
 	dbr      *gorm.DB                // 读库
 	dbw      *gorm.DB                // 写库
 	ypClient *lyg_util.YunPianClient // 云片客户端
+	EsClient *elastic.Client         // ES
 }
 
 // NewDao dao object
-func NewDao(cfg config.Config) *Dao {
+func NewDao(cfg config.Config, esClient *elastic.Client) *Dao {
 	dao := new(Dao)
-	dao.cfg = cfg
+	dao.EsClient = esClient
+	dao.Cfg = cfg
 	dao.cpool = util.NewRedisPool(&cfg.Redis)
 	dsnr := fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.Mysql.User, cfg.Mysql.Psw, cfg.Mysql.Host.Read, cfg.Mysql.Port, cfg.Mysql.DbName)

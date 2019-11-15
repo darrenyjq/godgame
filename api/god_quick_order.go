@@ -48,10 +48,8 @@ func (gg *GodGame) StartQuickOrderLoop() {
 			switch params.Action {
 			case ES_ORDER_DELETE, ES_ORDER_BATCH_DELETE:
 				gg.ESDeleteQuickOrder(params.IDs)
-			// case ES_ORDER_BY_QUERY:
-			// 	gg.ESQueryQuickOrder(params.IDs[0])
 			case ES_ORDER_UPDATE:
-				gg.ESUpdateQuickOrder(params.IDs)
+				gg.ESUpdateQuickOrder(params.IDs[0], params.Data)
 			case ES_ORDER_ADD:
 				gg.ESAddQuickOrderInternal(params.ESQuickOrder)
 			}
@@ -105,9 +103,16 @@ func (gg *GodGame) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
 
 }
 
-func (gg *GodGame) ESUpdateQuickOrder(esIDs []string) error {
-	return nil
-
+func (gg *GodGame) ESUpdateQuickOrder(id string, data map[string]interface{}) {
+	_, err := gg.esClient.Update().
+		Index(gg.cfg.ES.PWQuickOrder).
+		Type(gg.cfg.ES.PWType).
+		Id(id).
+		Doc(data).
+		Do(context.Background())
+	if err != nil {
+		icelog.Info("急速接单大神池更新失败：", id, err.Error())
+	}
 }
 
 // 删除 急速接单池

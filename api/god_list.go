@@ -60,7 +60,7 @@ func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 	}
 }
 
-func (gg *GodGame) fill_god_list() {
+func (gg *GodGame) FillGodList() {
 	ticker := time.NewTicker(gg.cfg.FillGodListInterval * time.Second)
 	redisKey := core.RKFillGodListLock()
 	redisConn := gg.dao.GetRedisPool().Get()

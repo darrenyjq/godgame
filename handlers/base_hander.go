@@ -39,6 +39,14 @@ func (self *BaseHandler) init() {
 		}
 		godLevelConsumer.Init2(self.ctx, self.cfg.Nsq.Topic, "god_level", &GodLevelHandler{self.dao})
 	})
+
+	self.waitGroup.Wrap(func() {
+		godGameImOnline := &mq.NsqConsumer{
+			NsqWriters: self.cfg.Nsq.Writers,
+			NsqLookups: self.cfg.Nsq.Lookups,
+		}
+		godGameImOnline.Init2(self.ctx, self.cfg.Nsq.ImTopic, "godgame_time", &GodImOnline{self.dao})
+	})
 }
 
 func (self *BaseHandler) Stop() {
