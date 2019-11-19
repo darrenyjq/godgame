@@ -2,11 +2,16 @@ package core
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
-	"github.com/jinzhu/gorm"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	log "iceberg/frame/icelog"
+	"math/rand"
+	"regexp"
+	"sort"
+	"time"
+
+	"github.com/gomodule/redigo/redis"
+	"github.com/jinzhu/gorm"
 	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
@@ -15,10 +20,6 @@ import (
 	plcommentpb "laoyuegou.pb/plcomment/pb"
 	"laoyuegou.pb/plorder/pb"
 	purse_pb "laoyuegou.pb/purse/pb"
-	"math/rand"
-	"regexp"
-	"sort"
-	"time"
 )
 
 func (dao *Dao) GetGodListCache(gameID, gender int64) ([]map[string]interface{}, int64) {
@@ -345,7 +346,7 @@ func (dao *Dao) CheckGodCanModifyGameInfo(godID, gameID int64) bool {
 }
 
 // 获取申请列表
-func (dao *Dao) GetGodGameApplys(status, gameID, godID, offset, gender, leaderID,godLevel int64) ([]model.GodGame,
+func (dao *Dao) GetGodGameApplys(status, gameID, godID, offset, gender, leaderID, godLevel int64) ([]model.GodGame,
 	error) {
 	limit := 10
 	items := make([]model.GodGame, 0, limit)
@@ -656,6 +657,23 @@ func (dao *Dao) GetOldData(godID, gameID int64) (model.GodGameApply, error) {
 	}
 	err = dao.dbr.Table("play_god_games").Where("userid=? AND gameid=?", godID, gameID).First(&data).Error
 	return data, err
+}
+
+// 获取大神所有游戏陪玩信息
+func (dao *Dao) GetGodAllGames(godID int64) ([]model.GodGameV1, error) {
+	var err error
+	var v1s []model.GodGameV1
+	var games []model.GodGame
+	err = dao.dbr.Table("play_god_games").Select("gameid").Where("userid=? AND status=?", godID, constants.GOD_GAME_STATUS_PASSED).Find(&games).Error
+	if err != nil {
+		return v1s, err
+	}
+	for _, game := range games {
+		if v1, err := dao.GetGodSpecialGameV1(godID, game.GameID); err == nil {
+			v1s = append(v1s, v1)
+		}
+	}
+	return v1s, nil
 }
 
 func (dao *Dao) GetGodAllGameV1(godID int64) (model.GodGameV1sSortedByAcceptNum, error) {

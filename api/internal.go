@@ -2,9 +2,12 @@ package api
 
 import (
 	"fmt"
-	"github.com/olivere/elastic"
 	"godgame/core"
 	"iceberg/frame"
+	"sort"
+	"time"
+
+	"github.com/olivere/elastic"
 	"laoyuegou.com/util"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
@@ -13,8 +16,6 @@ import (
 	"laoyuegou.pb/imapi/pb"
 	"laoyuegou.pb/plorder/pb"
 	"laoyuegou.pb/user/pb"
-	"sort"
-	"time"
 )
 
 func (gg *GodGame) Vcard(c frame.Context) error {
@@ -870,4 +871,33 @@ func (gg *GodGame) DxdInternal(c frame.Context) error {
 		"god_id": req.GetGodId(),
 		"games":  games,
 	})
+}
+
+// 获取大神接单最多的语音介绍和时长
+func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
+	var req godgamepb.GodMostOrderVoiceReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	god := gg.dao.GetGod(req.GetGodId())
+	if god.Status != constants.GOD_STATUS_PASSED {
+		return c.RetSuccess("非大神用户", nil)
+	}
+	v1s, err := gg.dao.GetGodAllGames(req.GetGodId())
+	if err != nil {
+		c.Error(err.Error())
+		return c.RetSuccess("大神信息获取异常", nil)
+	}
+	var resp godgamepb.GodMostOrderVoiceResp
+	if len(v1s) > 0 {
+		sort.Slice(v1s, func(i, j int) bool {
+			return v1s[i].AcceptNum > v1s[j].AcceptNum
+		})
+		resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
+			Voice:         v1s[0].Voice,
+			VoiceDuration: v1s[0].VoiceDuration,
+		}
+	}
+	return c.RetSuccess("success", resp)
 }
