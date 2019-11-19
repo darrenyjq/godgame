@@ -1646,7 +1646,16 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 	games := make([]map[string]interface{}, 0, len(v1s))
 	var game map[string]interface{}
 	var dxdResp *gamepb.DxdResp
-	// isIOS := gg.isIOS(c)
+
+	res, err := gg.dao.GetGodCouponConfig(req.GodId)
+	if err != nil {
+		icelog.Infof("获取大神 %d 优惠券配置失败,err: %s", req.GodId, err.Error())
+	}
+
+	coupons := make(map[int64]int64, len(res))
+	for _, v := range res {
+		coupons[v.GameId] = v.Status
+	}
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
@@ -1666,29 +1675,15 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 		game["highest_level_score"] = dxdResp.GetData().GetHighestLevelScore()
 		game["service_type"] = dxdResp.GetData().GetServiceId()
 		game["service_name"] = dxdResp.GetData().GetServiceName()
-		// if v1.GameID == 15 && isIOS {
-		// 	// iOS下定向单，王者荣耀不展示Android大区
-		// 	tmpRegions := make([]*gamepb.Region2, 0, 2)
-		// 	tmpRegionIDs := make([]int64, 0, 2)
-		// 	if len(dxdResp.GetData().GetRegion1()) > 0 {
-		// 		for _, region2 := range dxdResp.GetData().GetRegion1()[0].GetRegion2() {
-		// 			if strings.Index(region2.GetName(), "安卓") != -1 {
-		// 				continue
-		// 			}
-		// 			tmpRegionIDs = append(tmpRegionIDs, region2.GetId())
-		// 			tmpRegions = append(tmpRegions, region2)
-		// 		}
-		// 		if len(tmpRegions) == 0 {
-		// 			continue
-		// 		}
-		// 		dxdResp.GetData().GetRegion1()[0].Region2 = tmpRegions
-		// 		game["regions"] = tmpRegionIDs
-		// 		game["region1"] = dxdResp.GetData().GetRegion1()
-		// 	}
-		// } else {
 		game["regions"] = v1.Regions
 		game["region1"] = dxdResp.GetData().GetRegion1()
-		// }
+
+		// 查询大神开启优惠券开关
+		if _, ok := coupons[v1.GameID]; ok {
+			game["god_coupon"] = coupons[v1.GameID]
+		} else {
+			game["god_coupon"] = constants.GOD_COUPON_CONFIG_CLOSE
+		}
 
 		games = append(games, game)
 	}

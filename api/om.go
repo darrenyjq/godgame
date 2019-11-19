@@ -63,14 +63,14 @@ func (gg *GodGame) GodAudit(c frame.Context) error {
 		if newGame {
 			msg = imapipb.CommonSystemMessage{
 				Title:   fmt.Sprintf("%s大神审核通过", gameName),
-				Content: fmt.Sprintf("恭喜您已成为%s大神，赶快去设置接单吧", gameName),
+				Content: fmt.Sprintf("恭喜您已经成为%s大神，在“大神中心”里开启接单开关就能被用户下单辣！", gameName),
 				JText:   "查看详情",
 				JUrl:    imapipb.LYG_URL_WSDS,
 			}
 			push = imapipb.PushNotification{
 				UserDefine: imapipb.PushUserDefine{UrlScheme: imapipb.LYG_URL_SYSTEM_MSG}.Marshall(),
 				Title:      fmt.Sprintf("%s大神审核通过", gameName),
-				Desc:       fmt.Sprintf("恭喜您已成为%s大神，赶快去设置接单吧", gameName),
+				Desc:       fmt.Sprintf("恭喜您已经成为%s大神，在“大神中心”里开启接单开关就能被用户下单辣！", gameName),
 				Sound:      "default",
 			}
 			// 神策埋点

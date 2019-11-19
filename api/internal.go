@@ -2,9 +2,12 @@ package api
 
 import (
 	"fmt"
-	"github.com/olivere/elastic"
 	"godgame/core"
 	"iceberg/frame"
+	"sort"
+	"time"
+
+	"github.com/olivere/elastic"
 	"laoyuegou.com/util"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
@@ -13,8 +16,6 @@ import (
 	"laoyuegou.pb/imapi/pb"
 	"laoyuegou.pb/plorder/pb"
 	"laoyuegou.pb/user/pb"
-	"sort"
-	"time"
 )
 
 func (gg *GodGame) Vcard(c frame.Context) error {
@@ -820,4 +821,83 @@ func (gg *GodGame) SimpleGodGameIds(c frame.Context) error {
 		Gender:  godInfo.Gender,
 		GameIds: gg.dao.SimpleGodGameIds(req.GetGodId()),
 	})
+}
+
+// 大神定向单接单设置数据查询   php一元购活动专用  后面去掉该接口
+func (gg *GodGame) DxdInternal(c frame.Context) error {
+	var req godgamepb.DxdReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetGodId() == 0 {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	}
+	v1s, _ := gg.dao.GetGodAllGameV1(req.GetGodId())
+	if len(v1s) == 0 {
+		return c.JSON2(ERR_CODE_GOD_ACCEPT_SETTING_LOAD_FAIL, errGodAcceptSettingLoadFail, nil)
+	}
+	games := make([]map[string]interface{}, 0, len(v1s))
+	var game map[string]interface{}
+	var dxdResp *gamepb.DxdResp
+	// isIOS := gg.isIOS(c)
+	for _, v1 := range v1s {
+		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
+			continue
+		} else if gg.isVoiceCallGame(v1.GameID) {
+			// 语聊品类不展示在下定向单页面
+			continue
+		}
+		dxdResp, err = gamepb.Dxd(c, &gamepb.DxdReq{
+			GameId:  v1.GameID,
+			Region2: v1.Regions,
+		})
+		if err != nil || dxdResp.GetErrcode() != 0 {
+			continue
+		}
+		game = make(map[string]interface{})
+		game["game_id"] = v1.GameID
+		game["highest_level_score"] = dxdResp.GetData().GetHighestLevelScore()
+		game["service_type"] = dxdResp.GetData().GetServiceId()
+		game["service_name"] = dxdResp.GetData().GetServiceName()
+		game["regions"] = v1.Regions
+		game["region1"] = dxdResp.GetData().GetRegion1()
+
+		games = append(games, game)
+	}
+	if len(games) == 0 {
+		return c.JSON2(ERR_CODE_GOD_ACCEPT_SETTING_LOAD_FAIL, errGodAcceptSettingLoadFail, nil)
+	}
+	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
+		"god_id": req.GetGodId(),
+		"games":  games,
+	})
+}
+
+// 获取大神接单最多的语音介绍和时长
+func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
+	var req godgamepb.GodMostOrderVoiceReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	god := gg.dao.GetGod(req.GetGodId())
+	if god.Status != constants.GOD_STATUS_PASSED {
+		return c.RetSuccess("非大神用户", nil)
+	}
+	v1s, err := gg.dao.GetGodAllGames(req.GetGodId())
+	if err != nil {
+		c.Error(err.Error())
+		return c.RetSuccess("大神信息获取异常", nil)
+	}
+	var resp godgamepb.GodMostOrderVoiceResp
+	if len(v1s) > 0 {
+		sort.Slice(v1s, func(i, j int) bool {
+			return v1s[i].AcceptNum > v1s[j].AcceptNum
+		})
+		resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
+			Voice:         v1s[0].Voice,
+			VoiceDuration: v1s[0].VoiceDuration,
+		}
+	}
+	return c.RetSuccess("success", resp)
 }
