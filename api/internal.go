@@ -899,5 +899,5 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 			VoiceDuration: v1s[0].VoiceDuration,
 		}
 	}
-	return c.RetSuccess("success", resp)
+	return c.RetSuccess("success", resp.Data)
 }
