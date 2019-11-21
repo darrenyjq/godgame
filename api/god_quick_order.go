@@ -80,6 +80,7 @@ func (gg *GodGame) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, e
 	if err != nil {
 		return result, fmt.Errorf("price id error %d-%d %s", godID, gameID, err.Error())
 	}
+	Score := gg.dao.GetGodPotentialLevel(godID, gameID)
 	result.GameID = gameID
 	result.GodID = godID
 	result.Gender = godInfo.Gender
@@ -87,6 +88,11 @@ func (gg *GodGame) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, e
 	result.UpdateTime = util.XTime(time.Now())
 	result.LevelID = accpetOrderSetting.Levels
 	result.RegionID = accpetOrderSetting.Regions
+	result.PotentialLevel = Score.Discounts
+	result.TotalScore = Score.TotalScore
+	result.Repurchase = Score.Repurchase
+	result.TotalWater = Score.TotalWater
+	result.TotalNumber = Score.TotalNumber
 	return result, nil
 }
 
