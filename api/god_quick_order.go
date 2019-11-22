@@ -191,6 +191,42 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string 
 
 }
 
+// 刷新急速接单池
+func (gg *GodGame) FlashAllQuickOrder(c frame.Context) error {
+	var req godgamepb.FlashAllQuickOrderReq
+	// 刷新单个大神
+	if err := c.Bind(&req); err == nil && req.GodId > 0 {
+		lists, err := gg.dao.GetAcceptSettings(req.GodId)
+		if err == nil && len(lists) > 0 {
+			for _, v := range lists {
+				var data model.ESQuickOrder
+				data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+				if err != nil {
+					return c.RetBadRequestError(err.Error())
+				}
+				gg.ESAddQuickOrder(data)
+			}
+			return c.RetSuccess("success", nil)
+		}
+	}
+
+	// 刷新全部大神 及品类
+	lists, err := gg.dao.GetQuickOrderGods()
+	if err == nil && len(lists) > 0 {
+		for _, v := range lists {
+			var data model.ESQuickOrder
+			data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+			if err != nil {
+				return c.RetBadRequestError(err.Error())
+			}
+			gg.ESAddQuickOrder(data)
+		}
+		return c.RetSuccess("success", nil)
+	}
+	return c.RetSuccess("没有大神开启急速接单", nil)
+
+}
+
 // 急速接单开关
 func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	var in godgamepb.AcceptQuickOrderReq

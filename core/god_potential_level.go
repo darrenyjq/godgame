@@ -37,7 +37,6 @@ func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 	}
 
 	score := dao.CalculateScore(god, gameId, days)
-	icelog.Info(score, "大神潜力等级分数")
 	if t2[0] < score.TotalWater && t2[1] < score.TotalNumber && t2[2] < score.Repurchase && t2[3] < score.TotalScore {
 		if t3[0] < score.TotalWater && t3[1] < score.TotalNumber && t3[2] < score.Repurchase && t3[3] < score.TotalScore {
 			if t4[0] < score.TotalWater && t4[1] < score.TotalNumber && t4[2] < score.Repurchase && t4[3] < score.TotalScore {
@@ -45,15 +44,13 @@ func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 					level = 5
 				}
 				level = 4
-
 			}
 			level = 3
-
 		}
 		level = 2
 	}
-
 	score.Discounts = level
+	icelog.Info(score, "大神潜力等级分数")
 	return score
 
 }
@@ -85,7 +82,6 @@ func (dao *Dao) CalculateScore(godId, gameId, days int64) model.StatisticsLevel 
 	}
 	// 接单人数
 	number := len(OrderBuy)
-
 	UserNum1, UserNum2, totalMoney := 0, 0, 0
 	for i := 0; i < number; i++ {
 		UserNum2++
