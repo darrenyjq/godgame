@@ -894,9 +894,13 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 		sort.Slice(v1s, func(i, j int) bool {
 			return v1s[i].AcceptNum > v1s[j].AcceptNum
 		})
-		resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
-			Voice:         v1s[0].Voice,
-			VoiceDuration: v1s[0].VoiceDuration,
+		for _, v := range v1s {
+			if v.Status == 1 {
+				resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
+					Voice:         v1s[0].Voice,
+					VoiceDuration: v1s[0].VoiceDuration,
+				}
+			}
 		}
 	}
 	return c.RetSuccess("success", resp.Data)
