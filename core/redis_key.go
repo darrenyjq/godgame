@@ -151,3 +151,18 @@ func RKQuickOrder(godId, game_id int64) string {
 func RKGameQuickOrder() string {
 	return "GAME:QUICK_ORDER"
 }
+
+// 私聊消息标识
+func RKChatTimes() string {
+	return "IM_CHAT_TIMES"
+}
+
+// 已经抢单的大神id集合
+func RKGrabBedGodsOfBoss(userId int64) string {
+	return fmt.Sprintf("PHP:God:{%d}:AutoGrabGames", userId)
+}
+
+// 自动抢单的大神 games集合
+func RKGrabOrderGames(userId int64) string {
+	return fmt.Sprintf("PHP:QuickOrder:Boss:{%d}:GrabbedGods", userId)
+}

@@ -777,6 +777,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	v1.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
 	v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
 	v1.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
+	v1.GrabSwitch5 = constants.GRAB_SWITCH5_CLOSE
 	accpetOrderSetting, err := dao.GetGodSpecialAcceptOrderSetting(godID, gameID)
 	if err == nil {
 		v1.PriceID = accpetOrderSetting.PriceID
@@ -786,8 +787,17 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 		v1.GrabSwitch2 = accpetOrderSetting.GrabSwitch2
 		v1.GrabSwitch3 = accpetOrderSetting.GrabSwitch3
 		v1.GrabSwitch4 = accpetOrderSetting.GrabSwitch4
+		v1.GrabSwitch5 = accpetOrderSetting.GrabSwitch5
 	}
 	v1.GodIcon = godIconUrl
+
+	isGrabOrder, err := redis.Bool(c.Do("sismember", RKGrabBedGodsOfBoss(godID), gameID))
+	if isGrabOrder {
+		v1.GrabSwitch6 = constants.GRAB_SWITCH6_OPEN
+	} else {
+		v1.GrabSwitch6 = constants.GRAB_SWITCH6_CLOSE
+	}
+
 	if bs, err := json.Marshal(v1); err == nil {
 		c.Do("SET", RKOneGodGameV1(godID, gameID), string(bs), "EX", 86400)
 	}

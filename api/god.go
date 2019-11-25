@@ -1403,6 +1403,11 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 		json.Unmarshal([]byte(godGame.Tags), &tmpTags)
 		json.Unmarshal([]byte(godGame.Ext), &tmpExt)
 		json.Unmarshal([]byte(godGame.Videos), &tmpVideos)
+
+		if godGame.GrabSwitch6 != 1 {
+			godGame.GrabSwitch6 = constants.GRAB_SWITCH6_CLOSE
+		}
+
 		settings = append(settings, map[string]interface{}{
 			"game_id":    godGame.GameID,
 			"god_id":     godGame.GodID,
@@ -1430,6 +1435,8 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"grab_switch2":        godGame.GrabSwitch2,
 			"grab_switch3":        godGame.GrabSwitch3,
 			"grab_switch4":        godGame.GrabSwitch4,
+			"grab_switch5":        godGame.GrabSwitch5,
+			"grab_switch6":        godGame.GrabSwitch6,
 			"order_cnt":           godGame.AcceptNum,
 			"order_cnt_desc":      FormatAcceptOrderNumber(godGame.AcceptNum),
 		})
