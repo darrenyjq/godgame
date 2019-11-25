@@ -21,7 +21,7 @@ type GodImOnline struct {
 func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 	var message imcourierpb.IMEventMsg
 	err := proto.Unmarshal(msg.Body, &message)
-	icelog.Infof("########  %v", message)
+	// icelog.Infof("########  %v", message)
 	if err != nil {
 		icelog.Error(err.Error())
 		return err

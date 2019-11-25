@@ -47,6 +47,16 @@ func (self *BaseHandler) init() {
 		}
 		godGameImOnline.Init2(self.ctx, self.cfg.Nsq.ImTopic, "godgame_time", &GodImOnline{self.dao})
 	})
+
+	// self.waitGroup.Wrap(func() {
+	// 	messageRespConsumer := &mq.NsqConsumer{
+	// 		NsqWriters: self.cfg.Nsq.Writers,
+	// 		NsqLookups: self.cfg.Nsq.Lookups,
+	// 	}
+	// 	icelog.Info("启动IM私聊监控")
+	// 	messageRespConsumer.Init2(self.ctx, "message", "godgame_auto_grab_order", &AutoGrabOrderHandler{self.dao})
+	// })
+
 }
 
 func (self *BaseHandler) Stop() {

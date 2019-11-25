@@ -1,6 +1,10 @@
 package core
 
-import "laoyuegou.pb/godgame/model"
+import (
+	"github.com/gomodule/redigo/redis"
+	"laoyuegou.pb/godgame/model"
+	"time"
+)
 
 func (dao *Dao) AcceptQuickOrderSetting(userId, gameId, setting int64) error {
 	err := dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", userId, gameId).
@@ -34,4 +38,45 @@ func (dao *Dao) GetAcceptSettings(godId int64) (data []model.ORMOrderAcceptSetti
 	}
 	return data, nil
 
+}
+
+func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) {
+	c := dao.cpool.Get()
+	defer c.Close()
+	if len(userIds) == 2 {
+		key := RKGrabBedGodsOfBoss(userIds[0])
+		re, err := redis.Bool(c.Do("sismember", key, userIds[1]))
+		if err == nil && re {
+
+		}
+		key = RKGrabBedGodsOfBoss(userIds[0])
+		re, err = redis.Bool(c.Do("sismember", key, userIds[0]))
+		if err == nil && re {
+
+		}
+	}
+
+	return
+}
+
+// 倒计时抢单开关
+func (dao *Dao) GrabOrderLoop(userId int64, exit chan struct{}) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	counts := 65
+	c := dao.cpool.Get()
+	key := RKGameQuickOrder()
+GL:
+	for {
+		select {
+		case <-ticker.C:
+			c.Do("get", key)
+			if counts < 0 {
+
+			}
+			counts--
+		case <-exit:
+			break GL
+		}
+	}
 }
