@@ -1430,6 +1430,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"grab_switch2":        godGame.GrabSwitch2,
 			"grab_switch3":        godGame.GrabSwitch3,
 			"grab_switch4":        godGame.GrabSwitch4,
+			"grab_switch5":        godGame.GrabSwitch5,
 			"order_cnt":           godGame.AcceptNum,
 			"order_cnt_desc":      FormatAcceptOrderNumber(godGame.AcceptNum),
 		})
