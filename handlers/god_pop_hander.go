@@ -8,6 +8,8 @@ import (
 	"github.com/olivere/elastic"
 	"godgame/core"
 	"iceberg/frame/icelog"
+	"iceberg/frame/protocol"
+	"laoyuegou.com/http_api"
 	"laoyuegou.com/util"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/imcourier/pb"
@@ -60,10 +62,28 @@ func (self *GodImOnline) OffLineTimer(userId int64) {
 				diff := time.Now().Unix() - formatTime.Unix()
 				if diff > 3600 {
 					// 大于1小时 自动下线
+					self.PhpHttps(userId)
 				}
 			}
 
 		}
+	}
+}
+
+func (self *GodImOnline) PhpHttps(godId int64) {
+	client := http_api.NewClient()
+	url := fmt.Sprintf("%s%s", self.dao.Cfg.Urls["php_api"], "order/order/interior/quickorder/disable-auto-grab")
+	resp, err := client.POSTV2(url, map[string]interface{}{
+		"god_id": godId,
+	})
+	if err != nil {
+		icelog.Error(err.Error())
+	}
+	if resp.StatusCode == 200 {
+		qq, _ := resp.ReadAll()
+		var ress protocol.Message
+		err = json.Unmarshal(qq, &ress)
+		icelog.Info("离线超时 关闭自动抢单功能", ress.Errmsg)
 	}
 }
 
