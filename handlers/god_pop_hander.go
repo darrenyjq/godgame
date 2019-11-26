@@ -72,7 +72,7 @@ func (self *GodImOnline) OffLineTimer(userId int64) {
 
 func (self *GodImOnline) PhpHttps(godId int64) {
 	client := http_api.NewClient()
-	url := fmt.Sprintf("%s%s", self.dao.Cfg.Urls["php_api"], "order/order/interior/quickorder/disable-auto-grab")
+	url := fmt.Sprintf("%s%s", self.dao.Cfg.Urls["php_api"], "order/interior/quickorder/disable-auto-grab")
 	resp, err := client.POSTV2(url, map[string]interface{}{
 		"god_id": godId,
 	})
