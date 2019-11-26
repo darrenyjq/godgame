@@ -12,6 +12,7 @@ import (
 	"laoyuegou.pb/godgame/pb"
 	order_const "laoyuegou.pb/plorder/constants"
 	"laoyuegou.pb/plorder/pb"
+	"laoyuegou.pb/user/pb"
 	"reflect"
 	"strconv"
 	"strings"
@@ -309,6 +310,9 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 	}
 
 	if data, err := gg.BuildESGodGameData(godID, gameID); err == nil {
+		geoInfo, geoErr := userpb.Location(frame.TODO(), &userpb.LocationReq{
+			UserId: data.GodID,
+		})
 		result.GodID = data.GodID
 		result.GameID = data.GameID
 		result.Gender = data.Gender
@@ -324,9 +328,11 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 		result.PriceID = data.PriceID
 		result.Price = data.Price
 		result.HighestLevelID = data.HighestLevelID
-		result.Location = data.Location
-		result.City = data.City
-		result.District = data.District
+		if geoErr == nil && geoInfo.GetErrcode() == 0 {
+			result.City = geoInfo.GetData().GetCity()
+			result.District = geoInfo.GetData().GetDistrict()
+			result.Location = elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng())
+		}
 		result.Video = data.Video
 	}
 
@@ -354,4 +360,40 @@ func (gg *GodGame) updateESGodGameRedefine() model.ESGodGameRedefine {
 	var result model.ESGodGameRedefine
 
 	return result
+}
+
+// 刷新全部大神池
+func (gg *GodGame) FlashAllGods(c frame.Context) error {
+	var req godgamepb.FlashAllQuickOrderReq
+	// 刷新单个大神
+	if err := c.Bind(&req); err == nil && req.GodId > 0 {
+		lists, err := gg.dao.GetGodAcceptSettings(req.GodId)
+		if err == nil && len(lists) > 0 {
+			for _, v := range lists {
+				var data model.ESGodGameRedefine
+				data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
+				if err != nil {
+					return c.RetBadRequestError(err.Error())
+				}
+				gg.ESAddGodGameInternal(data)
+			}
+			return c.RetSuccess("success", nil)
+		}
+	}
+
+	// 刷新全部大神 及品类
+	lists, err := gg.dao.GetGodsAcceptSettings()
+	if err == nil && len(lists) > 0 {
+		for _, v := range lists {
+			var data model.ESGodGameRedefine
+			data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
+			if err != nil {
+				return c.RetBadRequestError(err.Error())
+			}
+			gg.ESAddGodGameInternal(data)
+		}
+		return c.RetSuccess("success", nil)
+	}
+	return c.RetSuccess("没有大神开启急速接单", nil)
+
 }

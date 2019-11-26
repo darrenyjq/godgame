@@ -123,7 +123,9 @@ func (self *GodImOnline) esQueryQuickOrder(godId int64) []*elastic.SearchHit {
 		Pretty(true).
 		Do(context.Background())
 	if err != nil {
-		panic(err)
+		icelog.Debug(err.Error())
+		return nil
+
 	}
 	fmt.Printf("query cost %d millisecond.\n", resp.TookInMillis)
 
