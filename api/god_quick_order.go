@@ -243,6 +243,7 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	} else {
 		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
 		gg.ESDeleteQuickOrder([]string{esId})
+		gg.dao.DelGodInfoCache(in.GodId, in.GameId)
 	}
 	return c.JSON2(StatusOK_V3, "success", nil)
 }
