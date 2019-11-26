@@ -9,6 +9,13 @@ import (
 
 // 重新计算大神陪玩等级
 func (dao *Dao) ReCalcGodLevel(godID, gameID int64) error {
+	if dao.cfg.GodLevelIgnoreGames != nil {
+		for _, v := range dao.cfg.GodLevelIgnoreGames {
+			if v == gameID {
+				return nil
+			}
+		}
+	}
 	v1, err := dao.GetGodSpecialGameV1(godID, gameID)
 	if err != nil {
 		return err
