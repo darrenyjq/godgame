@@ -24,9 +24,6 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 	// res, err := self.dao.GetGrabBedGodsOfBoss(message.R)
 	// if err != nil || res == 1 {
 	// 	return nil
-	// } else if message.S == message.R[0] {
-	// 	不给自己发邀请
-	// return nil
 	// }
 
 	// list := dao.GlobalBaseDao.GameList()

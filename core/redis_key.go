@@ -153,8 +153,8 @@ func RKGameQuickOrder() string {
 }
 
 // 私聊消息标识
-func RKChatTimes() string {
-	return "IM_CHAT_TIMES"
+func RKChatTimes(userId int64) string {
+	return fmt.Sprintf("IM_CHAT_TIMES:{%d}", userId)
 }
 
 // 已经抢单的大神id集合

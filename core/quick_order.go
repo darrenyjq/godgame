@@ -65,7 +65,7 @@ func (dao *Dao) GrabOrderLoop(userId int64, exit chan struct{}) {
 	defer ticker.Stop()
 	counts := 65
 	c := dao.cpool.Get()
-	key := RKGameQuickOrder()
+	key := RKChatTimes(userId)
 GL:
 	for {
 		select {
@@ -79,4 +79,10 @@ GL:
 			break GL
 		}
 	}
+}
+
+func (dao *Dao) DelGodInfoCache(godID, gameID int64) {
+	c := dao.cpool.Get()
+	defer c.Close()
+	c.Do("DEL", RKOneGodGameV1(godID, gameID))
 }
