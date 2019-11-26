@@ -890,6 +890,9 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 		c.Error(err.Error())
 		return c.RetSuccess("大神信息获取异常", nil)
 	}
+	for _, v := range v1s {
+		icelog.Infof("GodMostOrderVoice v: %#v", v)
+	}
 	var resp godgamepb.GodMostOrderVoiceResp
 	if len(v1s) > 0 {
 		sort.Slice(v1s, func(i, j int) bool {
@@ -897,12 +900,10 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 		})
 		for _, v := range v1s {
 			if v.GrabSwitch == 1 {
-				icelog.Infof("GodMostOrderVoice pick accept: %v, status: %v,  duration:%v", v.AcceptNum, v.GrabStatus, v.VoiceDuration)
 				resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
-					Voice:         v.Voice,
+					Voice:         v.Aac,
 					VoiceDuration: v.VoiceDuration,
 				}
-				icelog.Infof("GodMostOrderVoice data: %v", resp.Data)
 				return c.RetSuccess("success", resp.Data)
 			}
 		}
