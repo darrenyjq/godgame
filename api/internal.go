@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"godgame/core"
 	"iceberg/frame"
+	"iceberg/frame/icelog"
 	"sort"
 	"time"
 
@@ -894,10 +895,17 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 		sort.Slice(v1s, func(i, j int) bool {
 			return v1s[i].AcceptNum > v1s[j].AcceptNum
 		})
-		resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
-			Voice:         v1s[0].Voice,
-			VoiceDuration: v1s[0].VoiceDuration,
+		for _, v := range v1s {
+			if v.GrabSwitch == 1 {
+				icelog.Infof("GodMostOrderVoice pick accept: %v, status: %v,  duration:%v", v.AcceptNum, v.GrabStatus, v.VoiceDuration)
+				resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
+					Voice:         v.Voice,
+					VoiceDuration: v.VoiceDuration,
+				}
+				icelog.Infof("GodMostOrderVoice data: %v", resp.Data)
+				return c.RetSuccess("success", resp.Data)
+			}
 		}
 	}
-	return c.RetSuccess("success", resp.Data)
+	return c.RetSuccess("success", nil)
 }
