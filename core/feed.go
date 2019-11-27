@@ -7,7 +7,7 @@ import (
 
 func (dao *Dao) GetTimeLine() ([]*godgamepb.FeedsResp_IndexFeedRespData_FeedObj, error) {
 	var feeds []*godgamepb.FeedsResp_IndexFeedRespData_FeedObj
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	bs, err := redis.Bytes(c.Do("GET", RKFeedTimeLine()))
 	if err != nil {
@@ -18,7 +18,7 @@ func (dao *Dao) GetTimeLine() ([]*godgamepb.FeedsResp_IndexFeedRespData_FeedObj,
 }
 
 func (dao *Dao) ResetTimeLine(p string) error {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	_, err := c.Do("SET", RKFeedTimeLine(), p)
 	return err

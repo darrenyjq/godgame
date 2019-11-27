@@ -28,7 +28,7 @@ func (dao *Dao) GetGodListCache(gameID, gender int64) ([]map[string]interface{},
 	totalHitKey := fmt.Sprintf("G:{%d}:{%d}:GodListHit", gameID, gender)
 	var result []map[string]interface{}
 	var hits int64
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	if exists, _ := redis.Bool(c.Do("EXISTS", key)); exists {
 		if bs, err := redis.Bytes(c.Do("GET", key)); err == nil {
@@ -48,7 +48,7 @@ func (dao *Dao) SaveGodListCache(gameID, gender, hits int64, result []map[string
 	if err != nil {
 		return
 	}
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("SET", key, string(bs), "EX", 10)
 	c.Do("SET", totalHitKey, hits, "EX", 10)
@@ -56,7 +56,7 @@ func (dao *Dao) SaveGodListCache(gameID, gender, hits int64, result []map[string
 
 // 获取一键呼叫语聊大神，随机开关打开状态的
 func (dao *Dao) GetRandCallGods() ([]int64, error) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	gods, err := redis.Int64s(c.Do("ZRANGEBYSCORE", RKVoiceCallGods(), 1, 1))
 	if err != nil {
@@ -69,7 +69,7 @@ func (dao *Dao) GetRandCallGods() ([]int64, error) {
 
 // 获取语聊大神，接单开关打开状态的
 func (dao *Dao) GetRandCallGods2(start, stop int) ([]int64, error) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	gods, err := redis.Int64s(c.Do("ZRANGE", RKVoiceCallGods(), start, stop))
 	if err != nil {
@@ -83,7 +83,7 @@ func (dao *Dao) GetRandCallGods2(start, stop int) ([]int64, error) {
 // 获取申请大神短信验证码
 func (dao *Dao) SendApplyCode(phone string) error {
 	redisKey := RKAuthCodeForPhone(phone)
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	authCode := rand.Intn(900000) + 100000
 	if ret, _ := redis.String(c.Do("SET", redisKey, authCode, "NX", "EX", 120)); ret != "OK" {
@@ -97,7 +97,7 @@ func (dao *Dao) SendApplyCode(phone string) error {
 }
 
 func (dao *Dao) CheckApplyCode(code, phone string) bool {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	authCode, _ := redis.String(c.Do("GET", RKAuthCodeForPhone(phone)))
 	return code == authCode
@@ -105,7 +105,7 @@ func (dao *Dao) CheckApplyCode(code, phone string) bool {
 
 // 获取大神修改自定义介绍的时间
 func (dao *Dao) GetGodLastModifyDescTimestamp(godID int64) int64 {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	ts, _ := redis.Int64(c.Do("GET", RKGodLastModifyDesc(godID)))
 	return ts
@@ -122,7 +122,7 @@ func (dao *Dao) IsGod2(userID int64) bool {
 	key := RKGodInfo(userID)
 	var god model.God
 	var err error
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	bs, _ := redis.Bytes(c.Do("GET", key))
 	if len(bs) == 1 {
@@ -145,7 +145,7 @@ func (dao *Dao) IsGod2(userID int64) bool {
 
 func (dao *Dao) GetGod(userID int64) model.God {
 	var god model.God
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	bs, _ := redis.Bytes(c.Do("GET", RKGodInfo(userID)))
 	err := json.Unmarshal(bs, &god)
@@ -162,7 +162,7 @@ func (dao *Dao) GetGod(userID int64) model.God {
 }
 
 func (dao *Dao) DropGodCache(userID int64) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("DEL", RKGodInfo(userID))
 }
@@ -175,7 +175,7 @@ func (dao *Dao) GetGodApply(userID int64) model.GodApply {
 
 func (dao *Dao) GetGodGame(godID, gameID int64) model.GodGame {
 	var godGame model.GodGame
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	bs, _ := redis.Bytes(c.Do("GET", RKGodGameInfo(godID, gameID)))
 	err := json.Unmarshal(bs, &godGame)
@@ -246,7 +246,7 @@ func (dao *Dao) BlockGod(godID int64) error {
 		dao.dbw.Table("play_god_accept_setting").Where("god_id=?", godID).Updates(map[string]interface{}{"grab_switch": constants.GRAB_SWITCH_CLOSE, "grab_switch2": constants.GRAB_SWITCH2_CLOSE, "grab_switch3": constants.GRAB_SWITCH3_CLOSE})
 		// Update("grab_switch", constants.GRAB_SWITCH_CLOSE)
 		bs, _ := json.Marshal(god)
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		defer c.Close()
 		c.Do("SET", RKGodInfo(godID), string(bs))
 		c.Do("DEL", GodAcceptOrderSettingKey(godID))
@@ -265,7 +265,7 @@ func (dao *Dao) UnBlockGod(godID int64) error {
 	god.Status = constants.GOD_STATUS_PASSED
 	err = dao.dbw.Model(&god).Update("status", constants.GOD_STATUS_PASSED).Error
 	if err == nil {
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		defer c.Close()
 		bs, _ := json.Marshal(god)
 		c.Do("SET", RKGodInfo(godID), string(bs))
@@ -290,7 +290,7 @@ func (dao *Dao) GodGameApply(apply model.GodGameApply) error {
 		return err
 	}
 	bs, err := json.Marshal(apply)
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	if err == nil {
 		c.Do("SET", RKGodGameApply(apply.UserID, apply.GameID), string(bs), "EX", 604800)
@@ -328,7 +328,7 @@ func (dao *Dao) ModifyVideos(apply model.GodGameApply) error {
 		return err
 	}
 	if len(bs) > 0 {
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		defer c.Close()
 		c.Do("SET", RKGodGameApply(apply.UserID, apply.GameID), string(bs), "EX", 604800)
 	}
@@ -338,7 +338,7 @@ func (dao *Dao) ModifyVideos(apply model.GodGameApply) error {
 // 判断用户是否可以修改陪玩资料，一周一次
 func (dao *Dao) CheckGodCanModifyGameInfo(godID, gameID int64) bool {
 	redisKey := RKLastModifyInfoDate(godID)
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	fin, _ := redis.Int64(c.Do("HGET", redisKey, fmt.Sprintf("fin%d", gameID)))
 	c.Close()
 	now := time.Now().Unix()
@@ -548,7 +548,7 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 		if err != nil {
 			return isGod, err
 		}
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		defer c.Close()
 		bs, _ := json.Marshal(firstGodGame)
 		if !isGod {
@@ -560,7 +560,7 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 		c.Do("DEL", RKGodGameApply(godID, gameID), RKGodGameInfo(godID, gameID))
 	} else if status == constants.GOD_GAME_APPLY_STATUS_REFUSED {
 		err = dao.dbw.Table("play_god_games_apply").Where("userid=? AND gameid=?", godID, gameID).Update("status", constants.GOD_GAME_APPLY_STATUS_REFUSED).Error
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		defer c.Close()
 		c.Do("DEL", RKGodGameApply(godID, gameID), RKOneGodGameV1(godID, gameID), RKGodGameInfo(godID, gameID), RKSimpleGodGamesKey(godID))
 	} else {
@@ -571,7 +571,7 @@ func (dao *Dao) GodGameAudit(status, gameID, godID, recommend, grabStatus int64)
 
 // 更新上一次品类资料修改时间
 func (dao *Dao) ModifyLastModifyInfoTime(godID, gameID int64) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	c.Do("HSET", RKLastModifyInfoDate(godID), fmt.Sprintf("fin%d", gameID), time.Now().Unix())
 	c.Close()
 }
@@ -587,7 +587,7 @@ func (dao *Dao) BlockGodGame(godID, gameID int64) error {
 	err = dao.dbw.Model(&godGame).Update("status", constants.GOD_GAME_STATUS_BLOCKED).Error
 	// 冻结后，自动游戏的接单开关设为关闭，解冻不恢复开关状态，需要让大神自己手动开启
 	dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", godID, gameID).Updates(map[string]interface{}{"grab_switch": constants.GRAB_SWITCH_CLOSE, "grab_switch2": constants.GRAB_SWITCH2_CLOSE, "grab_switch3": constants.GRAB_SWITCH3_CLOSE})
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	c.Do("DEL", RKGodGameInfo(godID, gameID), GodAcceptOrderSettingKey(godID))
 	c.Close()
 	return err
@@ -601,7 +601,7 @@ func (dao *Dao) UnBlockGodGame(godID, gameID int64) error {
 		return err
 	}
 	err = dao.dbw.Model(&godGame).Update("status", constants.GOD_GAME_STATUS_PASSED).Error
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID), RKSimpleGodGamesKey(godID))
 	c.Close()
 	return err
@@ -625,7 +625,7 @@ func (dao *Dao) ModifyGrabPermission(godID, gameID, grabStatus int64) error {
 		if err != nil || resp.GetErrcode() != 0 {
 			icelog.Errorf("ModifyGrabPermission: clean old data error[%d] %v", resp.GetErrcode(), err)
 		} else {
-			redisConn := dao.cpool.Get()
+			redisConn := dao.Cpool.Get()
 			defer redisConn.Close()
 			for region, _ := range resp.GetData().GetRegions() {
 				for level, _ := range resp.GetData().GetLevels() {
@@ -716,7 +716,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	}
 	var godGame model.GodGame
 	var bs []byte
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	var godIconUrl string
 	if bs, err = redis.Bytes(c.Do("GET", RKGodIcon(godID))); err == nil {
@@ -808,7 +808,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 }
 
 func (dao *Dao) GetHeadline(userID, offset int64) time.Time {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	redisKey := fmt.Sprintf("U:{%d}:Headline", userID)
 	if offset == 0 {
@@ -850,7 +850,7 @@ func (dao *Dao) GetOrderGods(gameID, region2, startLevel1, endLevel1 int64) (god
 		log.Error(endLevel.GetErrmsg())
 		return
 	}
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 
 	redisKey := GodsRedisKey3(gameID, region2, acceptID)
@@ -868,7 +868,7 @@ func (dao *Dao) DisableGodGrabOrder(gameID, godID int64) {
 		return
 	}
 	var redisKey string
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	for region, _ := range resp.GetData().GetRegions() {
 		for level1, _ := range resp.GetData().GetLevels() {
@@ -882,7 +882,7 @@ func (dao *Dao) DisableGodGrabOrder(gameID, godID int64) {
 // 按照最后登陆时间降序
 // 只推送最近7天内登陆过的
 func (dao *Dao) GetJSYOrderGods(gameID, gender int64) []int64 {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	var gods []int64
 	begin := time.Now().Unix()
@@ -900,7 +900,7 @@ func (dao *Dao) GetJSYOrderGods(gameID, gender int64) []int64 {
 
 // 从即时约大神池删除
 func (dao *Dao) RemoveFromJSYGodPool(gameID, godID int64) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("ZREM", RKJSYGods(gameID, constants.GENDER_FEMALE), godID)
 	c.Do("ZREM", RKJSYGods(gameID, constants.GENDER_MALE), godID)
@@ -910,7 +910,7 @@ func (dao *Dao) RemoveFromJSYGodPool(gameID, godID int64) {
 // 按照最后登陆时间降序
 // 只推送最近7天内登陆过的
 func (dao *Dao) GetJSYPaiDanGods(gameID, gender int64) []int64 {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	var gods []int64
 	begin := time.Now().Unix()
@@ -928,7 +928,7 @@ func (dao *Dao) GetJSYPaiDanGods(gameID, gender int64) []int64 {
 
 // 从派单大神池删除
 func (dao *Dao) RemoveFromJSYPaiDanGodPool(gameID, godID int64) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("ZREM", RKJSYPaiDanGods(gameID, constants.GENDER_FEMALE), godID)
 	c.Do("ZREM", RKJSYPaiDanGods(gameID, constants.GENDER_MALE), godID)
@@ -936,7 +936,7 @@ func (dao *Dao) RemoveFromJSYPaiDanGodPool(gameID, godID int64) {
 
 // 修改陪玩首页权重
 func (dao *Dao) ModifyUpperGodGame(godID, gameID, weight int64) error {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	val := fmt.Sprintf("%d-%d", godID, gameID)
 	if weight == 0 {
@@ -956,7 +956,7 @@ func (dao *Dao) ModifyUpperGodGame(godID, gameID, weight int64) error {
 
 // 获取陪玩首页权重列表
 func (dao *Dao) GetUpperGodGames() (map[string]int64, []string, error) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	ret1, err := redis.Int64Map(c.Do("ZREVRANGE", RKUpperGodGames(), 0, -1, "WITHSCORES"))
 	ret2, err := redis.Strings(c.Do("ZREVRANGE", RKUpperGodGames(), 0, -1))
@@ -965,7 +965,7 @@ func (dao *Dao) GetUpperGodGames() (map[string]int64, []string, error) {
 
 // 获取大神游戏首页置顶权重值
 func (dao *Dao) GetGodGameWeight(godID, gameID int64) int64 {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	weight, _ := redis.Int64(c.Do("ZSCORE", RKUpperGodGames(), fmt.Sprintf("%d-%d", godID, gameID)))
 	return weight
@@ -977,7 +977,7 @@ func (dao *Dao) ModifyGodGameInfo(godGame model.GodGame) error {
 	if err != nil {
 		return err
 	}
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("DEL", RKGodGameInfo(godGame.UserID, godGame.GameID), RKOneGodGameV1(godGame.UserID, godGame.GameID), RKSimpleGodGamesKey(godGame.UserID))
 	return nil
@@ -1030,7 +1030,7 @@ func (dao *Dao) ModifyGodDesc(godID int64, desc string) error {
 		"updatedtime": time.Now(),
 	}).Error
 	if err == nil {
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		c.Do("DEL", RKGodInfo(godID))
 		c.Do("SET", RKGodLastModifyDesc(godID), time.Now().Unix())
 		c.Close()
@@ -1094,7 +1094,7 @@ func (dao *Dao) AuditModifyGodInfo(godID, status int64) error {
 		if err != nil {
 			return err
 		}
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		c.Do("DEL", RKGodInfo(godID))
 		c.Close()
 	} else {
@@ -1131,7 +1131,7 @@ func (dao *Dao) IsRecommendedGod(godID int64) bool {
 func (dao *Dao) GetGodGameApplyStatus(godID, gameID int64) int64 {
 	var godGameApply model.GodGameApply
 	// redisKey := RKGodGameApply(godID, gameID)
-	// c := dao.cpool.Get()
+	// c := dao.Cpool.Get()
 	// defer c.Close()
 	// bs, _ := redis.Bytes(c.Do("GET", redisKey))
 	// err := json.Unmarshal(bs, &godGameApply)
@@ -1175,7 +1175,7 @@ func (dao *Dao) GetGodSpecialBlockedGameV1(godID, gameID int64) (model.GodGameV1
 	if err != nil {
 		return v1, err
 	}
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	v1.GodID = godID
 	v1.GameID = gameID
@@ -1240,7 +1240,7 @@ func (dao *Dao) SimpleGodGames(godID int64, hidePirce bool) *godgamepb.SimpleGod
 	}
 	result.IsGod = true
 	redisKey := RKSimpleGodGamesKey(godID)
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	bs, _ := redis.Bytes(c.Do("GET", redisKey))
 	if len(bs) > 0 {

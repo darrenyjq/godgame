@@ -75,7 +75,7 @@ func (dao *Dao) GenPeiWanShareURL(godAvatar, godName, gameName, desc string, god
 // GetGodListsByGender 按性别分页获取品类大神列表
 func (dao *Dao) GetGodListsByGender(gameID, gender, offset, limit int64, ctx frame.Context) ([]map[string]interface{}, int64) {
 	redisKey := RKGodListByGender(gameID, gender)
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	totalCnt, _ := redis.Int64(c.Do("ZCARD", redisKey))
 	if totalCnt == 0 {

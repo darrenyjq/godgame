@@ -15,7 +15,7 @@ func (dao *Dao) AddGodIcon(godIcon model.GodIcon) (*model.GodIcon, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("HSET", RKGodIcons(), godIcon.ID, godIcon.Url)
 	return &godIcon, nil
@@ -35,7 +35,7 @@ func (dao *Dao) DisableGodIcon(id int64) error {
 	if err != nil {
 		return err
 	}
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("HDEL", RKGodIcons(), id)
 	return nil
@@ -67,7 +67,7 @@ func (dao *Dao) ModifyGodIcon(godIcon model.GodIcon) (*model.GodIcon, error) {
 
 // OM后台配置定时展示大神认证标签
 func (dao *Dao) SetGodIcon(godID, iconID, begin, end int64) error {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	if url, _ := redis.String(c.Do("HGET", RKGodIcons(), iconID)); url == "" {
 		var godIcon model.GodIcon
@@ -92,7 +92,7 @@ func (dao *Dao) SetGodIcon(godID, iconID, begin, end int64) error {
 func (dao *Dao) GetGodIcon(godID int64) (*model.TmpGodIcon, error) {
 	var godIcon model.TmpGodIcon
 	var err error
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	bs, err := redis.Bytes(c.Do("GET", RKGodIcon(godID)))
 	if err != nil {
@@ -106,7 +106,7 @@ func (dao *Dao) GetGodIcon(godID int64) (*model.TmpGodIcon, error) {
 }
 
 func (dao *Dao) RemoveGodIcon(godID int64) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("DEL", RKGodIcon(godID))
 }

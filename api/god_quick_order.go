@@ -246,7 +246,6 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 		gg.ESAddQuickOrder(data)
 	} else {
 		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
-		icelog.Info(esId, "&&&&&&")
 		gg.ESDeleteQuickOrder([]string{esId})
 		gg.dao.AcceptQuickOrderSetting(in.GodId, in.GameId, constants.GRAB_SWITCH5_CLOSE)
 

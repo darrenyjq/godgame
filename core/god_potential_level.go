@@ -9,7 +9,7 @@ import (
 
 func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 	level := 1 // 初始默认1级
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	keyQuickOrder := RKGameQuickOrder()
 	// bs, _ := redis.Bytes(c.Do("HGET", keyQuickOrder, "god_potential_level1"))

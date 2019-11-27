@@ -10,7 +10,7 @@ import (
 func (dao *Dao) GetGodSpecialAcceptOrderSetting(godID, gameID int64) (model.OrderAcceptSetting, error) {
 	var oas model.OrderAcceptSetting
 	var err error
-	redisConn := dao.cpool.Get()
+	redisConn := dao.Cpool.Get()
 	redisKey := GodAcceptOrderSettingKey(godID)
 	defer redisConn.Close()
 	if bs, err := redis.Bytes(redisConn.Do("HGET", redisKey, gameID)); err == nil {
@@ -56,7 +56,7 @@ func (dao *Dao) ModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) e
 	if err != nil {
 		return err
 	}
-	redisConn := dao.cpool.Get()
+	redisConn := dao.Cpool.Get()
 	redisConn.Do("DEL", GodAcceptOrderSettingKey(settings.GodID), RKOneGodGameV1(settings.GodID, settings.GameID), RKSimpleGodGamesKey(settings.GodID))
 	redisConn.Close()
 	return nil

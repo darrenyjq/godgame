@@ -62,7 +62,7 @@ func (dao *Dao) ReCalcGodLevel(godID, gameID int64) error {
 			icelog.Errorf("ReCalcGodLevel %d-%d error %s", godID, gameID, err)
 		}
 	}
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("DEL", RKGodGameInfo(godID, gameID), RKOneGodGameV1(godID, gameID), RKSimpleGodGamesKey(godID))
 	return nil

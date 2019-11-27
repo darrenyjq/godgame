@@ -641,6 +641,12 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
 			Gte(time.Now().AddDate(0, 0, gg.cfg.GodLTSDuration)))
 
+	if args.Latitude != "" && args.Longitude != "" {
+		icelog.Info("ES搜索附近大神查看")
+		query = query.Must(elastic.NewRangeQuery("location.lat").
+			Lte("45")).Must(elastic.NewRangeQuery("location.lon").
+			Lte("140"))
+	}
 	if args.Type == constants.SORT_TYPE_DEFAULT {
 		if args.GameId > 0 {
 			query = query.Must(elastic.NewTermQuery("game_id", args.GameId))

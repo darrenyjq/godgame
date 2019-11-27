@@ -13,7 +13,7 @@ func (dao *Dao) AcceptQuickOrderSetting(userId, gameId, setting int64) error {
 	if err != nil {
 		return err
 	}
-	redisConn := dao.cpool.Get()
+	redisConn := dao.Cpool.Get()
 	redisKey := GodAcceptOrderSettingKey(userId)
 	redisConn.Do("DEL", redisKey)
 	return nil
@@ -44,42 +44,34 @@ func (dao *Dao) GetAcceptSettings(godId int64) (data []model.ORMOrderAcceptSetti
 
 }
 
-// 私聊用的
-func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) {
-	c := dao.cpool.Get()
+// 是否为 抢单大神的对话  私聊用的
+func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) bool {
+	c := dao.Cpool.Get()
 	defer c.Close()
-	if len(userIds) == 2 {
-		key := RKGrabBedGodsOfBoss(userIds[0])
-		re, err := redis.Bool(c.Do("sismember", key, userIds[1]))
-		if err == nil && re {
-
-		}
-		key = RKGrabBedGodsOfBoss(userIds[0])
-		re, err = redis.Bool(c.Do("sismember", key, userIds[0]))
-		if err == nil && re {
-
-		}
+	key := RKGrabBedGodsOfBoss(userIds[0])
+	re, err := redis.Bool(c.Do("sismember", key, userIds[1]))
+	if err == nil && re {
+		return true
 	}
-
-	return
+	return false
 }
 
-// 倒计时抢单开关
-func (dao *Dao) GrabOrderLoop(userId int64, exit chan struct{}) {
-	ticker := time.NewTicker(time.Second)
+// 超时未回复 关闭自动抢单
+func (dao *Dao) TimeOutGrabOrder(userId int64, exit chan struct{}) {
+	// counts := int64(65)
+	ticker := time.NewTimer(65 * time.Second)
 	defer ticker.Stop()
-	counts := 65
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	key := RKChatTimes(userId)
+	c.Do("set", key, 1)
 GL:
 	for {
 		select {
 		case <-ticker.C:
-			c.Do("get", key)
-			if counts < 0 {
-
+			tag, _ := redis.Int64(c.Do("get", key))
+			if tag == 2 {
+				dao.PhpHttps(userId, 1)
 			}
-			counts--
 		case <-exit:
 			break GL
 		}
@@ -87,7 +79,7 @@ GL:
 }
 
 func (dao *Dao) DelGodInfoCache(godID, gameID int64) {
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("DEL", RKOneGodGameV1(godID, gameID))
 }

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+	"github.com/gomodule/redigo/redis"
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame/icelog"
@@ -20,39 +22,32 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 		return nil
 	}
 	//检查是否为抢单大神
+	if self.dao.GetGrabBedGodsOfBoss(message.R) {
+		c := self.dao.Cpool.Get()
+		defer c.Close()
+		key := fmt.Sprintf("IM_CHAT_TIMES:{%d}", message.R[1])
+		tag, _ := redis.Int64(c.Do("Get", key))
+		if tag != 1 {
+			Chan := make(chan struct{})
+			go self.dao.TimeOutGrabOrder(message.R[1], Chan)
+		}
 
-	// res, err := self.dao.GetGrabBedGodsOfBoss(message.R)
-	// if err != nil || res == 1 {
-	// 	return nil
-	// }
+		return nil
+	}
 
-	// list := dao.GlobalBaseDao.GameList()
-	// resp := make(map[string]interface{})
-	// resp["desc"] = "我们的小游戏"
-	// resp["games"] = list
-	// ms, _ := json.Marshal(resp)
-	// imapipb.SendMessage(frame.TODO(), &imapipb.SendMessageReq{
-	// 	Thread:      imapipb.CreateNotificationMessageThread(50001).ThreadString(),
-	// 	FromId:      message.S,
-	// 	ToId:        message.R[0],
-	// 	ContentType: imapipb.MESSAGE_CONTENT_TYPE_NEW_CMD,
-	// 	Subtype:     50001,
-	// 	Message:     string(ms),
-	// 	Pt:          imapipb.PLATFORM_TYPE_PLATFORM_TYPE_APP,
-	// })
-	//
-	// resp["desc"] = "邀请你来约战"
-	// imapipb.SendMessage(frame.TODO(), &imapipb.SendMessageReq{
-	// 	Thread:      imapipb.CreateNotificationMessageThread(50001).ThreadString(),
-	// 	FromId:      message.R[0],
-	// 	ToId:        message.S,
-	// 	ContentType: imapipb.MESSAGE_CONTENT_TYPE_NEW_CMD,
-	// 	Subtype:     50001,
-	// 	Message:     string(ms),
-	// 	Pt:          imapipb.PLATFORM_TYPE_PLATFORM_TYPE_APP,
-	// })
-	// dao.GlobalBaseDao.CacheStore.SetFightTip(message.S, message.R[0])
-	// icelog.Infof("成功发起邀约提示~  %d 发给 %d", message.R[0], message.S)
 	return nil
 
 }
+
+// 超时未回复自动 关闭抢单
+// func (self *AutoGrabOrderHandler) OffLineTimer2(userId int64) {
+// 	c := self.dao.Cpool
+// 	defer c.Close()
+// 	ticker := time.NewTimer(60 * time.Second)
+// 	defer ticker.Stop()
+// 	select {
+// 	case <-ticker.C:
+// 		icelog.Info("超时未回复自动", userId)
+//
+// 	}
+// }

@@ -14,7 +14,7 @@ func (dao *Dao) CreateGodLeader(godLeader model.GodLeader) (model.GodLeader, err
 func (dao *Dao) ModifyGodLeader(godLeader model.GodLeader) (model.GodLeader, error) {
 	err := dao.dbw.Save(&godLeader).Error
 	if err == nil {
-		c := dao.cpool.Get()
+		c := dao.Cpool.Get()
 		c.Do("DEL", RKGodLeaderInfo(godLeader.ID))
 		c.Close()
 	}
@@ -41,7 +41,7 @@ func (dao *Dao) QueryGodLeaders(args godgamepb.GodLeadersReq) ([]model.GodLeader
 
 func (dao *Dao) GetGodLeaderByID(leaderID int64) *model.GodLeader {
 	var godLeader model.GodLeader
-	c := dao.cpool.Get()
+	c := dao.Cpool.Get()
 	defer c.Close()
 	redisKey := RKGodLeaderInfo(leaderID)
 	bs, _ := redis.Bytes(c.Do("GET", redisKey))
