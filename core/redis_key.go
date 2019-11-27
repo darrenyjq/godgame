@@ -143,9 +143,9 @@ func RKSimpleGodGamesKey(godID int64) string {
 	return fmt.Sprintf("SGG:{%d}", godID)
 }
 
-func RKQuickOrder(godId, game_id int64) string {
-	return fmt.Sprintf("QUICK_ORDER:{%d}:{$d}", godId, game_id)
-}
+// func RKQuickOrder(godId, game_id int64) string {
+// 	return fmt.Sprintf("QUICK_ORDER:{%d}:{$d}", godId, game_id)
+// }
 
 // 急速接单后台配置key
 func RKGameQuickOrder() string {

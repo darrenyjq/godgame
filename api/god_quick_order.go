@@ -236,7 +236,6 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	}
 	if in.GrabSwitch == constants.GRAB_SWITCH5_OPEN {
 		gg.dao.AcceptQuickOrderSetting(in.GodId, in.GameId, constants.GRAB_SWITCH5_OPEN)
-
 		var data model.ESQuickOrder
 		data, err := gg.BuildESQuickOrder(in.GodId, in.GameId)
 		if err != nil {
@@ -246,10 +245,11 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	} else {
 		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
 		gg.ESDeleteQuickOrder([]string{esId})
-		gg.dao.DelGodInfoCache(in.GodId, in.GameId)
 		gg.dao.AcceptQuickOrderSetting(in.GodId, in.GameId, constants.GRAB_SWITCH5_CLOSE)
 
 	}
+	// 删除大神数据缓存
+	gg.dao.DelGodInfoCache(in.GodId, in.GameId)
 	return c.JSON2(StatusOK_V3, "success", nil)
 }
 
