@@ -821,23 +821,15 @@ func (gg *GodGame) ModifyGodGame(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
 	}
-
-	setting, err := gg.dao.GetGodSpecialAcceptOrderSetting(godGame.UserID, godGame.GameID)
-	if err != nil {
-		c.Warnf("GetGodSpecialAcceptOrderSetting error:%s", err)
-		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
-	}
-
 	priceId, err := gg.dao.GetGamePriceId(godGame.GameID, req.GetGodLevel())
 	if err != nil {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
 	}
 	settings := model.ORMOrderAcceptSetting{
 		GameID:  req.GetGameId(),
-		GodID:   setting.GodID,
+		GodID:   req.GetGodId(),
 		PriceID: priceId,
 	}
-	icelog.Info("修改大神接单设置")
 	err = gg.dao.OmModifyAcceptOrderSetting(settings)
 	if err != nil {
 		c.Warnf("ModifyAcceptOrderSetting error:%s", err)
