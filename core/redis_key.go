@@ -164,5 +164,6 @@ func RKGrabBedGodsOfBoss(userId int64) string {
 
 // 自动抢单的大神 games集合
 func RKGrabOrderGames(userId int64) string {
-	return fmt.Sprintf("PHP:QuickOrder:Boss:{%d}:GrabbedGods", userId)
+	return fmt.Sprintf("PHP:God:{%d}:AutoGrabGames", userId)
+	// return fmt.Sprintf("PHP:QuickOrder:Boss:{%d}:GrabbedGods", userId)
 }

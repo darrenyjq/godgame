@@ -20,7 +20,7 @@ import (
 	"laoyuegou.pb/keyword/pb"
 	"laoyuegou.pb/lfs/pb"
 	"laoyuegou.pb/live/pb"
-	plcommentpb "laoyuegou.pb/plcomment/pb"
+	"laoyuegou.pb/plcomment/pb"
 	order_const "laoyuegou.pb/plorder/constants"
 	"laoyuegou.pb/plorder/pb"
 	"laoyuegou.pb/pumpkin/pb"
@@ -1403,11 +1403,6 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 		json.Unmarshal([]byte(godGame.Tags), &tmpTags)
 		json.Unmarshal([]byte(godGame.Ext), &tmpExt)
 		json.Unmarshal([]byte(godGame.Videos), &tmpVideos)
-
-		if godGame.GrabSwitch6 != 1 {
-			godGame.GrabSwitch6 = constants.GRAB_SWITCH6_CLOSE
-		}
-
 		settings = append(settings, map[string]interface{}{
 			"game_id":    godGame.GameID,
 			"god_id":     godGame.GodID,
