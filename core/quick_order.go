@@ -44,6 +44,7 @@ func (dao *Dao) GetAcceptSettings(godId int64) (data []model.ORMOrderAcceptSetti
 
 }
 
+// 私聊用的
 func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) {
 	c := dao.cpool.Get()
 	defer c.Close()

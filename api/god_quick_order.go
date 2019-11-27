@@ -97,6 +97,7 @@ func (gg *GodGame) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, e
 }
 
 func (gg *GodGame) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
+	icelog.Info("急速接单池添加数据", godGame.GameID, godGame.GodID)
 	_, err := gg.esClient.Index().Index(gg.cfg.ES.PWQuickOrder).
 		Type(gg.cfg.ES.PWType).
 		Id(fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)).
@@ -127,6 +128,7 @@ func (gg *GodGame) ESDeleteQuickOrder(esIDs []string) error {
 		_, err := gg.esClient.Delete().Index(gg.cfg.ES.PWQuickOrder).Type(gg.cfg.ES.PWType).
 			Id(id).
 			Do(context.Background())
+
 		icelog.Info("删除结果：", err, id)
 		if err != nil {
 			return err

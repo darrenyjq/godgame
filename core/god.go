@@ -794,7 +794,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	}
 	v1.GodIcon = godIconUrl
 
-	isGrabOrder, err := redis.Bool(c.Do("sismember", RKGrabOrderGames(godID), gameID))
+	isGrabOrder, err := redis.Bool(c.Do("sismember", RKGodAutoGrabGames(godID), gameID))
 	if isGrabOrder {
 		v1.GrabSwitch6 = constants.GRAB_SWITCH6_OPEN
 	} else {

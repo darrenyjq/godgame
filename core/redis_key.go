@@ -157,13 +157,12 @@ func RKChatTimes(userId int64) string {
 	return fmt.Sprintf("IM_CHAT_TIMES:{%d}", userId)
 }
 
-// 已经抢单的大神id集合
-func RKGrabBedGodsOfBoss(userId int64) string {
+// 某大神开启了自动抢单的品类ID
+func RKGodAutoGrabGames(userId int64) string {
 	return fmt.Sprintf("PHP:God:{%d}:AutoGrabGames", userId)
 }
 
-// 自动抢单的大神 games集合
-func RKGrabOrderGames(userId int64) string {
-	return fmt.Sprintf("PHP:God:{%d}:AutoGrabGames", userId)
-	// return fmt.Sprintf("PHP:QuickOrder:Boss:{%d}:GrabbedGods", userId)
+// 已抢某Boss极速下单的大神ID集合
+func RKGrabBedGodsOfBoss(userId int64) string {
+	return fmt.Sprintf("PHP:QuickOrder:Boss:{%d}:GrabbedGods", userId)
 }
