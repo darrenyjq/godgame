@@ -103,7 +103,7 @@ func (gg *GodGame) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
 		BodyJson(godGame).
 		Do(context.Background())
 	if err != nil {
-		icelog.Errorf("ESAddQuickOrder %+v error %s", godGame, err)
+		icelog.Errorf("ESAddQuickOrder： %+v； error： %s", godGame, err)
 	}
 	return nil
 
@@ -244,6 +244,7 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 		gg.ESAddQuickOrder(data)
 	} else {
 		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
+		icelog.Info(esId, "&&&&&&")
 		gg.ESDeleteQuickOrder([]string{esId})
 		gg.dao.AcceptQuickOrderSetting(in.GodId, in.GameId, constants.GRAB_SWITCH5_CLOSE)
 

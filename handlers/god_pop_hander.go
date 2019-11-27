@@ -48,9 +48,8 @@ func (self *GodImOnline) OffLineTimer(userId int64) {
 	defer ticker.Stop()
 	select {
 	case <-ticker.C:
-		icelog.Info("用户离线，关闭自动接单", userId)
+		icelog.Info("用户离线，1小时后关闭自动接单", userId)
 		list := self.esQueryQuickOrder(userId)
-
 		for _, item := range list {
 			var GodInfo model.ESQuickOrder
 			if err := json.Unmarshal(*item.Source, &GodInfo); err != nil {
