@@ -689,7 +689,10 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 		c.Errorf("%s", resp.GetErrmsg())
 		return c.JSON2(ERR_CODE_INTERNAL, "内部错误[5]", nil)
 	}
-	return c.JSON2(StatusOK_V3, "", len(gods))
+	return c.JSON2(StatusOK_V3, "", &godgamepb.PaidanResp_Data{
+		Gods:  gods,
+		Count: int64(len(gods)),
+	})
 }
 
 func (gg *GodGame) GetGodGameInfo(c frame.Context) error {
