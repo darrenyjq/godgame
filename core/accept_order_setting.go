@@ -60,3 +60,19 @@ func (dao *Dao) ModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) e
 	redisConn.Close()
 	return nil
 }
+
+// oxpp 修改大神接单设置
+func (dao *Dao) OmModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) error {
+	err := dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", settings.GodID, settings.GameID).
+		Assign(map[string]interface{}{
+			"pei_wan_uniprice_id": settings.PriceID,
+		}).
+		FirstOrCreate(&settings).Error
+	if err != nil {
+		return err
+	}
+	redisConn := dao.cpool.Get()
+	redisConn.Do("DEL", GodAcceptOrderSettingKey(settings.GodID), RKOneGodGameV1(settings.GodID, settings.GameID), RKSimpleGodGamesKey(settings.GodID))
+	redisConn.Close()
+	return nil
+}

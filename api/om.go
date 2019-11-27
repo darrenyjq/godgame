@@ -206,7 +206,7 @@ func (gg *GodGame) OMGodGames(c frame.Context) error {
 		godID = userV1.UserID
 	}
 	godGames, err := gg.dao.GetGodGameApplys(req.GetStatus(), req.GetGameId(), godID, req.GetOffset(),
-		req.GetGender(), req.GetLeaderId(),req.GetGodLevel())
+		req.GetGender(), req.GetLeaderId(), req.GetGodLevel())
 	if err != nil {
 		return c.JSON2(ERR_CODE_DISPLAY_ERROR, err.Error(), nil)
 	} else if len(godGames) == 0 {
@@ -820,6 +820,20 @@ func (gg *GodGame) ModifyGodGame(c frame.Context) error {
 	err = gg.dao.ModifyGodGameInfo(godGame)
 	if err != nil {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
+	}
+	priceId, err := gg.dao.LoadGamePWPrice(godGame.GameID, req.GetGodLevel())
+	if err != nil {
+		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
+	}
+	settings := model.ORMOrderAcceptSetting{
+		GameID:  req.GetGameId(),
+		GodID:   req.GetGodId(),
+		PriceID: priceId,
+	}
+	err = gg.dao.OmModifyAcceptOrderSetting(settings)
+	if err != nil {
+		c.Warnf("ModifyAcceptOrderSetting error:%s", err)
+		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
 	}
 	if oldGrabStatus == constants.GRAB_STATUS_YES && req.GetGrabStatus() == constants.GRAB_STATUS_NO {
 		// 取消大神抢单权限需要将大神从大神池移除
