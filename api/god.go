@@ -1608,6 +1608,13 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		}
 	}
 
+	// 更新大神 急速接单es
+	data, err := gg.BuildESQuickOrder(godGame.GodID, godGame.GameID)
+	if err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	gg.ESAddQuickOrder(data)
+
 	if godGame.Recommend == constants.RECOMMEND_YES {
 		esID := fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)
 		if req.GetGrabSwitch() == constants.GRAB_SWITCH_OPEN {
