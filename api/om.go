@@ -821,7 +821,7 @@ func (gg *GodGame) ModifyGodGame(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
 	}
-	priceId, err := gg.dao.GetGamePriceId(godGame.GameID, req.GetGodLevel())
+	priceId, err := gg.dao.LoadGamePWPrice(godGame.GameID, req.GetGodLevel())
 	if err != nil {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
 	}
