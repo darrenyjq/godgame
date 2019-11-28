@@ -642,9 +642,10 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			Gte(time.Now().AddDate(0, 0, gg.cfg.GodLTSDuration)))
 
 	if args.Latitude != 0 && args.Longitude != 0 {
+		icelog.Info("ES搜索 附近功能")
 		q := elastic.NewGeoDistanceQuery("location2").
 			GeoPoint(elastic.GeoPointFromLatLon(args.Latitude, args.Longitude)).
-			Distance("200km")
+			Distance("50km")
 		query = query.Filter(q)
 
 	}
@@ -717,9 +718,9 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 		}
 		searchService = searchService.Query(query).Sort("_score", false).Sort("passedtime", false)
 	}
-	// src, _ := query.Source()
-	// bs, _ := json.Marshal(src)
-	// icelog.Infof("### %d query:%s, gameid:%d, type:%d", currentUser.UserID, string(bs), args.GameId, args.Type)
+	src, _ := query.Source()
+	bs, _ := json.Marshal(src)
+	icelog.Infof("_doc ### %d query:%s, gameid:%d, type:%d", currentUser.UserID, string(bs), args.GameId, args.Type)
 
 	resp, err := searchService.From(int(args.Offset)).
 		Size(int(args.Limit)).
