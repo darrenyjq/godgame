@@ -641,11 +641,12 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
 			Gte(time.Now().AddDate(0, 0, gg.cfg.GodLTSDuration)))
 
-	if args.Latitude != "" && args.Longitude != "" {
-		icelog.Info("ES搜索附近大神查看")
-		query = query.Must(elastic.NewRangeQuery("location.lat").
-			Lte("45")).Must(elastic.NewRangeQuery("location.lon").
-			Lte("140"))
+	if args.Latitude != 0 && args.Longitude != 0 {
+		q := elastic.NewGeoDistanceQuery("location2").
+			GeoPoint(elastic.GeoPointFromLatLon(args.Latitude, args.Longitude)).
+			Distance("200km")
+		query = query.Filter(q)
+
 	}
 	if args.Type == constants.SORT_TYPE_DEFAULT {
 		if args.GameId > 0 {
@@ -975,7 +976,7 @@ func (gg *GodGame) GodListInternal(c frame.Context) error {
 	var req godgamepb.GodListReq
 	var err error
 	if err = c.Bind(&req); err != nil {
-		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "参数格式错误", nil)
 	} else if req.GetLimit() > 20 || req.GetLimit() == 0 {
 		req.Limit = 20
 	}

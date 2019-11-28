@@ -8,13 +8,9 @@ import (
 )
 
 func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
-	level := 1 // 初始默认1级
 	c := dao.Cpool.Get()
 	defer c.Close()
 	keyQuickOrder := RKGameQuickOrder()
-	// bs, _ := redis.Bytes(c.Do("HGET", keyQuickOrder, "god_potential_level1"))
-	// t1 := []int{0, 0, 0, 0}
-	// json.Unmarshal(bs, &t1)
 	bs2, _ := redis.Bytes(c.Do("HGET", keyQuickOrder, "god_potential_level2"))
 	t2 := []int{0, 0, 0, 0}
 	json.Unmarshal(bs2, &t2)
@@ -35,7 +31,7 @@ func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 		// 起码15天起
 		days = 15
 	}
-
+	level := 1 // 初始默认1级
 	score := dao.CalculateScore(god, gameId, days)
 	if t2[0] < score.TotalWater && t2[1] < score.TotalNumber && t2[2] < score.Repurchase && t2[3] < score.TotalScore {
 		if t3[0] < score.TotalWater && t3[1] < score.TotalNumber && t3[2] < score.Repurchase && t3[3] < score.TotalScore {

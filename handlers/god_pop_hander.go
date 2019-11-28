@@ -33,7 +33,9 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 	if message.Event == imcourierpb.IMEvent_IMEventOffline {
 		// icelog.Info("离线了！！！！！", message)
 		// self.esQueryQuickOrder(message.ClientInfo.ClientId, fmt.Sprintf("%s", "offlinetime"))
-		go self.OffLineTimer(message.ClientInfo.ClientId)
+		if message.ClientInfo.ClientId > 0 {
+			go self.OffLineTimer(message.ClientInfo.ClientId)
+		}
 	}
 	return nil
 }

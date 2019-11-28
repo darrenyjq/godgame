@@ -58,10 +58,17 @@ func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) bool {
 
 // 超时未回复 关闭自动抢单
 func (dao *Dao) TimeOutGrabOrder(userId int64, exit chan struct{}) {
-	// counts := int64(65)
-	ticker := time.NewTimer(65 * time.Second)
-	defer ticker.Stop()
 	c := dao.Cpool.Get()
+	defer c.Close()
+	// keyQuickOrder := RKGameQuickOrder()
+
+	// var timeOut time.Duration
+	// timeOut, _ = redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
+
+	// d := time.Duration(1 * time.Minute)
+	// counts := int64(65)
+	ticker := time.NewTimer(time.Minute * 50)
+	defer ticker.Stop()
 	key := RKChatTimes(userId)
 	c.Do("set", key, 1)
 GL:

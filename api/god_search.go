@@ -331,7 +331,7 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 		if geoErr == nil && geoInfo.GetErrcode() == 0 {
 			result.City = geoInfo.GetData().GetCity()
 			result.District = geoInfo.GetData().GetDistrict()
-			result.Location = elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng())
+			result.Location2 = elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng())
 		}
 		result.Video = data.Video
 	}
@@ -370,12 +370,22 @@ func (gg *GodGame) FlashAllGods(c frame.Context) error {
 		lists, err := gg.dao.GetGodAcceptSettings(req.GodId)
 		if err == nil && len(lists) > 0 {
 			for _, v := range lists {
-				var data model.ESGodGameRedefine
-				data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
-				if err != nil {
-					return c.RetBadRequestError(err.Error())
+				// var data model.ESGodGameRedefine
+				// data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
+
+				// 更新位置数据
+				geoInfo, geoErr := userpb.Location(frame.TODO(), &userpb.LocationReq{
+					UserId: v.GodID,
+				})
+				if geoErr == nil {
+					gg.ESUpdateGodGame(fmt.Sprintf("%d-%d", v.GodID, v.GameID), map[string]interface{}{
+						"location2": elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng()),
+					})
 				}
-				gg.ESAddGodGameInternal(data)
+				// if err != nil {
+				// 	return c.RetBadRequestError(err.Error())
+				// }
+				// gg.ESAddGodGameInternal(data)
 			}
 			return c.RetSuccess("success", nil)
 		}
@@ -385,12 +395,22 @@ func (gg *GodGame) FlashAllGods(c frame.Context) error {
 	lists, err := gg.dao.GetGodsAcceptSettings()
 	if err == nil && len(lists) > 0 {
 		for _, v := range lists {
-			var data model.ESGodGameRedefine
-			data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
-			if err != nil {
-				return c.RetBadRequestError(err.Error())
+			// 更新位置数据
+			geoInfo, geoErr := userpb.Location(frame.TODO(), &userpb.LocationReq{
+				UserId: v.GodID,
+			})
+			if geoErr == nil {
+				gg.ESUpdateGodGame(fmt.Sprintf("%d-%d", v.GodID, v.GameID), map[string]interface{}{
+					"location2": elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng()),
+				})
 			}
-			gg.ESAddGodGameInternal(data)
+
+			// var data model.ESGodGameRedefine
+			// data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
+			// if err != nil {
+			// 	return c.RetBadRequestError(err.Error())
+			// }
+			// gg.ESAddGodGameInternal(data)
 		}
 		return c.RetSuccess("success", nil)
 	}

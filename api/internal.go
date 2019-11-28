@@ -422,7 +422,7 @@ func (gg *GodGame) RefreshGodAllGame(c frame.Context) error {
 				if geoErr == nil && geoInfo.GetErrcode() == 0 {
 					esGodGame.City = geoInfo.GetData().GetCity()
 					esGodGame.District = geoInfo.GetData().GetDistrict()
-					esGodGame.Location = elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng())
+					esGodGame.Location2 = elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng())
 				}
 				gg.ESAddGodGame(esGodGame)
 			}
