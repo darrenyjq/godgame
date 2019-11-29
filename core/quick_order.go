@@ -90,3 +90,10 @@ func (dao *Dao) DelGodInfoCache(godID, gameID int64) {
 	defer c.Close()
 	c.Do("DEL", RKOneGodGameV1(godID, gameID))
 }
+
+// 关闭自动抢单功能
+func (dao *Dao) CloseAutoGrabOrder(godID, gameID int64) {
+	c := dao.Cpool.Get()
+	defer c.Close()
+	c.Do("SREM", RKGodAutoGrabGames(godID), gameID)
+}

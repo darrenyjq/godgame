@@ -1530,6 +1530,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		PriceID:     req.GetUnitPriceId(),
 	}
 	err = gg.dao.ModifyAcceptOrderSetting(settings)
+	gg.FlashGodQuickOrder(currentUser.UserID)
 	if err != nil {
 		c.Warnf("ModifyAcceptOrderSetting error:%s", err)
 		return c.JSON2(ERR_CODE_INTERNAL, "", nil)

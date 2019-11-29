@@ -230,6 +230,21 @@ func (gg *GodGame) FlashAllQuickOrder(c frame.Context) error {
 
 }
 
+// 刷新急速接单池  刷新单个大神
+func (gg *GodGame) FlashGodQuickOrder(god int64) {
+	lists, err := gg.dao.GetAcceptSettings(god)
+	if err == nil && len(lists) > 0 {
+		for _, v := range lists {
+			var data model.ESQuickOrder
+			data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+			if err != nil {
+				continue
+			}
+			gg.ESAddQuickOrder(data)
+		}
+	}
+}
+
 // 急速接单开关
 func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	var in godgamepb.AcceptQuickOrderReq
@@ -248,7 +263,7 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 		esId := fmt.Sprintf("%d-%d", in.GodId, in.GameId)
 		gg.ESDeleteQuickOrder([]string{esId})
 		gg.dao.AcceptQuickOrderSetting(in.GodId, in.GameId, constants.GRAB_SWITCH5_CLOSE)
-
+		gg.dao.CloseAutoGrabOrder(in.GodId, in.GameId)
 	}
 	// 删除大神数据缓存
 	gg.dao.DelGodInfoCache(in.GodId, in.GameId)
