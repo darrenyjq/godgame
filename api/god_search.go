@@ -425,7 +425,26 @@ func (gg *GodGame) FlashAllGods(c frame.Context) error {
 		}
 
 		// 刷新全部大神 及品类  标识game==100
-		if req.GetGameId() == 100 {
+		if req.GetTag() == 100 {
+			go func() {
+				lists, err := gg.dao.GetGodsAcceptSettings()
+				if err == nil && len(lists) > 0 {
+					for _, v := range lists {
+						var data model.ESGodGameRedefine
+						data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
+						if err != nil {
+							return
+						}
+						gg.ESAddGodGameInternal(data)
+					}
+					return
+				}
+
+			}()
+			return c.RetSuccess("success 已经异步刷新大神池，请不要频繁操作", nil)
+		}
+
+		if req.GetTag() == 50 {
 			go func() {
 				lists, err := gg.dao.GetGodsAcceptSettings()
 				if err == nil && len(lists) > 0 {

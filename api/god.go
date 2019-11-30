@@ -644,7 +644,7 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 	if args.Latitude != 0 && args.Longitude != 0 {
 		icelog.Info("ES搜索 附近功能")
 		q := elastic.NewGeoDistanceQuery("location2").
-			GeoPoint(elastic.GeoPointFromLatLon(args.Latitude, args.Longitude)).
+			GeoPoint(elastic.GeoPointFromLatLon(float64(args.Latitude), float64(args.Longitude))).
 			Distance("50km")
 		query = query.Filter(q)
 
