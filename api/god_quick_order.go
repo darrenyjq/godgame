@@ -6,7 +6,6 @@ import (
 	"github.com/olivere/elastic"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
-	"laoyuegou.com/util"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
@@ -85,7 +84,8 @@ func (gg *GodGame) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, e
 	result.GodID = godID
 	result.Gender = godInfo.Gender
 	result.Price = accpetOrderSetting.PriceID
-	result.UpdateTime = util.XTime(time.Now())
+	result.UpdateTime = time.Now().Unix()
+	result.OnlineTime = time.Now()
 	result.LevelID = accpetOrderSetting.Levels
 	result.RegionID = accpetOrderSetting.Regions
 	result.PotentialLevel = Score.Discounts
@@ -197,37 +197,47 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string 
 // 刷新急速接单池
 func (gg *GodGame) FlashAllQuickOrder(c frame.Context) error {
 	var req godgamepb.FlashAllQuickOrderReq
-	// 刷新单个大神
-	if err := c.Bind(&req); err == nil && req.GodId > 0 {
-		lists, err := gg.dao.GetAcceptSettings(req.GodId)
-		if err == nil && len(lists) > 0 {
-			for _, v := range lists {
-				var data model.ESQuickOrder
-				data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
-				if err != nil {
-					return c.RetBadRequestError(err.Error())
+	if err := c.Bind(&req); err == nil {
+		// 刷新单个大神 及品类
+		if req.GetGodId() > 0 {
+			go func() {
+				lists, err := gg.dao.GetAcceptSettings(req.GetGodId())
+				if err == nil && len(lists) > 0 {
+					for _, v := range lists {
+						var data model.ESQuickOrder
+						data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+						if err != nil {
+							continue
+						}
+						gg.ESAddQuickOrder(data)
+					}
 				}
-				gg.ESAddQuickOrder(data)
-			}
-			return c.RetSuccess("success", nil)
+			}()
+			return c.RetSuccess("success 已经异步刷新大神池，请不要频繁操作", nil)
 		}
+		// 刷新全部大神 及品类  标识game==100
+		if req.GetGameId() == 100 {
+			go func() {
+				lists, err := gg.dao.GetQuickOrderGods()
+				if err == nil && len(lists) > 0 {
+					for _, v := range lists {
+						var data model.ESQuickOrder
+						data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+						if err != nil {
+							return
+						}
+						gg.ESAddQuickOrder(data)
+					}
+					return
+				}
+
+			}()
+			return c.RetSuccess("success 已经异步刷新大神池，请不要频繁操作", nil)
+		}
+
 	}
 
-	// 刷新全部大神 及品类
-	lists, err := gg.dao.GetQuickOrderGods()
-	if err == nil && len(lists) > 0 {
-		for _, v := range lists {
-			var data model.ESQuickOrder
-			data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
-			if err != nil {
-				return c.RetBadRequestError(err.Error())
-			}
-			gg.ESAddQuickOrder(data)
-		}
-		return c.RetSuccess("success", nil)
-	}
 	return c.RetSuccess("没有大神开启急速接单", nil)
-
 }
 
 // 刷新急速接单池  刷新单个大神

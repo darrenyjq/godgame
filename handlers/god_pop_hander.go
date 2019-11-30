@@ -6,7 +6,6 @@ import (
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame/icelog"
-	"laoyuegou.com/util"
 	"laoyuegou.pb/imcourier/pb"
 	"time"
 )
@@ -43,7 +42,7 @@ func (self *GodImOnline) esUpdate(godId int64, lineTime string) {
 	if len(data) > 0 {
 		for _, item := range data {
 			self.dao.EsUpdateQuickOrder(item.Id, map[string]interface{}{
-				lineTime: util.XTime(time.Now()),
+				lineTime: time.Now(),
 			})
 		}
 	}

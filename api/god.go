@@ -1630,8 +1630,9 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 			oldData, err := gg.ESGetGodGame(esID)
 			if err == nil {
 				gg.ESUpdateGodGame(esID, map[string]interface{}{
-					"lts":      time.Now(),
-					"price_id": req.GetUnitPriceId(),
+					"lts":         time.Now(),
+					"update_time": time.Now().Unix(),
+					"price_id":    req.GetUnitPriceId(),
 				})
 			} else {
 				oldData, err = gg.BuildESGodGameData(godGame.GodID, godGame.GameID)

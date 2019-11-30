@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"godgame/core"
 	"iceberg/frame"
-	"iceberg/frame/icelog"
 	"sort"
 	"time"
 
@@ -889,9 +888,6 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 	if err != nil {
 		c.Error(err.Error())
 		return c.RetSuccess("大神信息获取异常", nil)
-	}
-	for _, v := range v1s {
-		icelog.Infof("GodMostOrderVoice v: %#v", v)
 	}
 	var resp godgamepb.GodMostOrderVoiceResp
 	if len(v1s) > 0 {

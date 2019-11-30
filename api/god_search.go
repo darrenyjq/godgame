@@ -363,7 +363,7 @@ func (gg *GodGame) updateESGodGameRedefine() model.ESGodGameRedefine {
 }
 
 // 刷新全部大神池
-func (gg *GodGame) FlashAllGods(c frame.Context) error {
+func (gg *GodGame) FlashAllGods1(c frame.Context) error {
 	var req godgamepb.FlashAllQuickOrderReq
 	// 刷新单个大神
 	if err := c.Bind(&req); err == nil && req.GodId > 0 {
@@ -394,16 +394,60 @@ func (gg *GodGame) FlashAllGods(c frame.Context) error {
 					"location2": elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng()),
 				})
 			}
-
-			// var data model.ESGodGameRedefine
-			// data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
-			// if err != nil {
-			// 	return c.RetBadRequestError(err.Error())
-			// }
-			// gg.ESAddGodGameInternal(data)
 		}
 		return c.RetSuccess("success", nil)
 	}
 	return c.RetSuccess("没有大神开启急速接单", nil)
 
+}
+
+// 刷新全部大神池
+func (gg *GodGame) FlashAllGods(c frame.Context) error {
+	var req godgamepb.FlashAllGodsReq
+	if err := c.Bind(&req); err == nil {
+		// 刷新单个大神 及品类
+		if req.GetGodId() > 0 {
+			go func() {
+				lists, err := gg.dao.GetGodAcceptSettings(req.GodId)
+				if err == nil && len(lists) > 0 {
+					for _, v := range lists {
+						var data model.ESGodGameRedefine
+						data, err := gg.BuildESGodGameDataRedefine(v.GodID, v.GameID)
+						if err != nil {
+							return
+						}
+						gg.ESAddGodGameInternal(data)
+					}
+					return
+				}
+			}()
+			return c.RetSuccess("success 已经异步刷新大神池，请不要频繁操作", nil)
+		}
+
+		// 刷新全部大神 及品类  标识game==100
+		if req.GetGameId() == 100 {
+			go func() {
+				lists, err := gg.dao.GetGodsAcceptSettings()
+				if err == nil && len(lists) > 0 {
+					for _, v := range lists {
+						// 更新位置数据
+						geoInfo, geoErr := userpb.Location(frame.TODO(), &userpb.LocationReq{
+							UserId: v.GodID,
+						})
+						if geoErr == nil {
+							gg.ESUpdateGodGame(fmt.Sprintf("%d-%d", v.GodID, v.GameID), map[string]interface{}{
+								"location2": elastic.GeoPointFromLatLon(geoInfo.GetData().GetLat(), geoInfo.GetData().GetLng()),
+							})
+						}
+					}
+					return
+				}
+
+			}()
+			return c.RetSuccess("success 已经异步刷新大神池，请不要频繁操作", nil)
+		}
+
+	}
+
+	return c.RetSuccess("没有大神开启急速接单", nil)
 }
