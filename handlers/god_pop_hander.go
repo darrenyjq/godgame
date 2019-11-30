@@ -3,12 +3,10 @@ package handlers
 import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/gomodule/redigo/redis"
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/util"
-	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/imcourier/pb"
 	"time"
 )
@@ -29,44 +27,14 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 		self.esUpdate(message.ClientInfo.ClientId, fmt.Sprintf("%s", "lts"))
 
 	}
-
 	if message.Event == imcourierpb.IMEvent_IMEventOffline {
 		// icelog.Info("离线了！！！！！", message)
 		// self.esQueryQuickOrder(message.ClientInfo.ClientId, fmt.Sprintf("%s", "offlinetime"))
 		if message.ClientInfo.ClientId > 0 {
-			go self.OffLineTimer(message.ClientInfo.ClientId)
+			go self.dao.OffLineTimer(message.ClientInfo.ClientId)
 		}
 	}
 	return nil
-}
-
-// 离线1小时候自动 关闭抢单
-func (self *GodImOnline) OffLineTimer(userId int64) {
-	c := self.dao.Cpool.Get()
-	defer c.Close()
-	m, _ := redis.Int64(c.Do("hget", core.RKQuickOrder(), "off_line_time"))
-	ticker := time.NewTimer(time.Minute * time.Duration(m))
-	defer ticker.Stop()
-	select {
-	case <-ticker.C:
-		icelog.Info("用户离线，1小时后关闭自动接单", userId)
-		list := self.dao.EsQueryQuickOrder(userId)
-		for _, item := range list {
-			var GodInfo model.ESQuickOrder
-			if err := json.Unmarshal(*item.Source, &GodInfo); err != nil {
-				continue
-			}
-			formatTime, err := time.Parse("2006-01-02 15:04:05", util.XTime.String(GodInfo.OnlineTime))
-			if err == nil {
-				diff := time.Now().Unix() - formatTime.Unix()
-				if diff > 60*m {
-					icelog.Info(GodInfo.OnlineTime, "离线通知php")
-					// 大于1小时 自动下线
-					self.dao.PhpHttps(userId, 2)
-				}
-			}
-		}
-	}
 }
 
 // 查询大神池 更新es

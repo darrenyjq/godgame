@@ -5,6 +5,7 @@ import (
 	"github.com/json-iterator/go"
 	"godgame/config"
 	"godgame/core"
+	"iceberg/frame/icelog"
 	"laoyuegou.com/mq"
 	"laoyuegou.com/util"
 )
@@ -45,9 +46,11 @@ func (self *BaseHandler) init() {
 			NsqWriters: self.cfg.Nsq.Writers,
 			NsqLookups: self.cfg.Nsq.Lookups,
 		}
+		icelog.Info("启动大神上下线事件监控")
 		godGameImOnline.Init2(self.ctx, self.cfg.Nsq.ImTopic, "godgame_time", &GodImOnline{self.dao})
 	})
 
+	// 私聊自动回复问题，后面再做
 	// self.waitGroup.Wrap(func() {
 	// 	messageRespConsumer := &mq.NsqConsumer{
 	// 		NsqWriters: self.cfg.Nsq.Writers,

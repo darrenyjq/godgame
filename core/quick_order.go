@@ -54,27 +54,54 @@ func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) bool {
 	if err == nil && re {
 		return true
 	}
+
+	key = RKGrabBedGodsOfBoss(userIds[1])
+	re, err = redis.Bool(c.Do("sismember", key, userIds[0]))
+	if err == nil && re {
+		return true
+	}
+
 	return false
 }
 
 // 超时未回复 关闭自动抢单
-func (dao *Dao) TimeOutGrabOrder(userId int64) {
+func (dao *Dao) TimeOutGrabOrder(GodId int64) {
 	c := dao.Cpool.Get()
 	defer c.Close()
-	keyQuickOrder := RKQuickOrder()
-	timeOut, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
-	ticker := time.NewTimer(time.Minute * time.Duration(timeOut))
+	// keyQuickOrder := RKQuickOrder()
+	// timeOut, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
+	// ticker := time.NewTimer(time.Minute * time.Duration(timeOut))
+	ticker := time.NewTimer(time.Second * 60)
 	defer ticker.Stop()
-	key := RKChatTimes(userId)
-	c.Do("set", key, 1)
+	key := RKChatTimes(GodId)
+	c.Do("setex", key, 60, 1)
 	for {
 		select {
 		case <-ticker.C:
 			tag, _ := redis.Int64(c.Do("get", key))
-			if tag == 2 {
+			if tag == 1 {
 				icelog.Info("超时未回复 通知php")
-				dao.PhpHttps(userId, 1)
+				c.Do("del", key)
+				dao.PhpHttps(GodId, 1)
 			}
+		}
+	}
+}
+
+// 离线1小时候自动 关闭抢单
+func (dao *Dao) OffLineTimer(userId int64) {
+	c := dao.Cpool.Get()
+	defer c.Close()
+	m, _ := redis.Int64(c.Do("hget", RKQuickOrder(), "off_line_time"))
+	ticker := time.NewTimer(time.Minute * time.Duration(m))
+	lastTime := time.Now().Unix()
+	defer ticker.Stop()
+	select {
+	case <-ticker.C:
+		diff := time.Now().Unix() - lastTime
+		if diff > 60*m {
+			icelog.Info("大神离线通知php ，关闭自动接单", userId)
+			dao.PhpHttps(userId, 2)
 		}
 	}
 }
