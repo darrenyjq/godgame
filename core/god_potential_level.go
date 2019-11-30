@@ -10,7 +10,7 @@ import (
 func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 	c := dao.Cpool.Get()
 	defer c.Close()
-	keyQuickOrder := RKGameQuickOrder()
+	keyQuickOrder := RKQuickOrder()
 	bs2, _ := redis.Bytes(c.Do("HGET", keyQuickOrder, "god_potential_level2"))
 	t2 := []int{0, 0, 0, 0}
 	json.Unmarshal(bs2, &t2)

@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gomodule/redigo/redis"
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame/icelog"
@@ -20,7 +21,6 @@ type GodImOnline struct {
 func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 	var message imcourierpb.IMEventMsg
 	err := proto.Unmarshal(msg.Body, &message)
-	// icelog.Infof("########  %v", message)
 	if err != nil {
 		icelog.Error(err.Error())
 		return err
@@ -42,7 +42,10 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 
 // 离线1小时候自动 关闭抢单
 func (self *GodImOnline) OffLineTimer(userId int64) {
-	ticker := time.NewTimer(3600 * time.Second)
+	c := self.dao.Cpool.Get()
+	defer c.Close()
+	m, _ := redis.Int64(c.Do("hget", core.RKQuickOrder(), "off_line_time"))
+	ticker := time.NewTimer(time.Minute * time.Duration(m))
 	defer ticker.Stop()
 	select {
 	case <-ticker.C:
@@ -53,11 +56,11 @@ func (self *GodImOnline) OffLineTimer(userId int64) {
 			if err := json.Unmarshal(*item.Source, &GodInfo); err != nil {
 				continue
 			}
-			icelog.Info(GodInfo.OnlineTime)
 			formatTime, err := time.Parse("2006-01-02 15:04:05", util.XTime.String(GodInfo.OnlineTime))
 			if err == nil {
 				diff := time.Now().Unix() - formatTime.Unix()
-				if diff > 3600 {
+				if diff > 60*m {
+					icelog.Info(GodInfo.OnlineTime, "离线通知php")
 					// 大于1小时 自动下线
 					self.dao.PhpHttps(userId, 2)
 				}

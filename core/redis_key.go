@@ -148,7 +148,7 @@ func RKSimpleGodGamesKey(godID int64) string {
 // }
 
 // 急速接单后台配置key
-func RKGameQuickOrder() string {
+func RKQuickOrder() string {
 	return "GAME:QUICK_ORDER"
 }
 

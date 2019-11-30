@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/gomodule/redigo/redis"
+	"iceberg/frame/icelog"
 	"laoyuegou.pb/godgame/model"
 	"time"
 )
@@ -57,30 +58,23 @@ func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) bool {
 }
 
 // 超时未回复 关闭自动抢单
-func (dao *Dao) TimeOutGrabOrder(userId int64, exit chan struct{}) {
+func (dao *Dao) TimeOutGrabOrder(userId int64) {
 	c := dao.Cpool.Get()
 	defer c.Close()
-	// keyQuickOrder := RKGameQuickOrder()
-
-	// var timeOut time.Duration
-	// timeOut, _ = redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
-
-	// d := time.Duration(1 * time.Minute)
-	// counts := int64(65)
-	ticker := time.NewTimer(time.Minute * 50)
+	keyQuickOrder := RKQuickOrder()
+	timeOut, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
+	ticker := time.NewTimer(time.Minute * time.Duration(timeOut))
 	defer ticker.Stop()
 	key := RKChatTimes(userId)
 	c.Do("set", key, 1)
-GL:
 	for {
 		select {
 		case <-ticker.C:
 			tag, _ := redis.Int64(c.Do("get", key))
 			if tag == 2 {
+				icelog.Info("超时未回复 通知php")
 				dao.PhpHttps(userId, 1)
 			}
-		case <-exit:
-			break GL
 		}
 	}
 }
