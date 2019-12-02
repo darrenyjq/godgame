@@ -295,12 +295,14 @@ func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 	if err := c.Bind(&in); err != nil {
 		return c.RetBadRequestError("params fails")
 	}
-	data := gg.ESQueryQuickOrder(in)
-
-	if data == nil {
+	GodIds := []string{}
+	if data := gg.ESQueryQuickOrder(in); data != nil {
+		GodIds = gg.GetQuickOrderIds(data)
+	}
+	if GodIds == nil {
 		return c.RetBadRequestError("not find result")
 	}
-	return c.JSON2(StatusOK_V3, "success", data)
+	return c.JSON2(StatusOK_V3, "success", GodIds)
 }
 
 // 急速接单池查询
