@@ -142,6 +142,10 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string 
 	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWQuickOrder).Type(gg.cfg.ES.PWType)
 	query := elastic.NewBoolQuery()
 
+	if req.GetGodId() > 0 {
+		query = query.Must(elastic.NewTermQuery("god_id", req.GodId))
+	}
+
 	if req.GetGameId() > 0 {
 		query = query.Must(elastic.NewTermQuery("game_id", req.GameId))
 	}
@@ -164,7 +168,7 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string 
 
 	resp, err := searchService.Query(query).
 		From(0).
-		Size(100).
+		Size(300).
 		Sort("update_time", false). // 倒序
 		Pretty(true).
 		Do(context.Background())
@@ -181,17 +185,22 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string 
 	if resp.Hits.TotalHits == 0 {
 		return nil
 	}
-	res := []string{}
-
 	if resp != nil {
-		for _, item := range resp.Hits.Hits {
-			if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
-				res = append(res, seq[0])
-			}
+		return resp.Hits.Hits
+
+	}
+	return nil
+
+}
+
+func (gg *GodGame) GetQuickOrderIds(resp godgamepb.QueryQuickOrderReq) []string {
+
+	for _, item := range resp.Hits.Hits {
+		if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
+			res = append(res, seq[0])
 		}
 	}
 	return res
-
 }
 
 // 刷新急速接单池
@@ -282,6 +291,20 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 
 // 急速接单匹配
 func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
+	var in godgamepb.QueryQuickOrderReq
+	if err := c.Bind(&in); err != nil {
+		return c.RetBadRequestError("params fails")
+	}
+	data := gg.ESQueryQuickOrder(in)
+
+	if data == nil {
+		return c.RetBadRequestError("not find result")
+	}
+	return c.JSON2(StatusOK_V3, "success", data)
+}
+
+// 急速接单池查询
+func (gg *GodGame) QueryQuickOrderPool(c frame.Context) error {
 	var in godgamepb.QueryQuickOrderReq
 	if err := c.Bind(&in); err != nil {
 		return c.RetBadRequestError("params fails")
