@@ -137,7 +137,7 @@ func (gg *GodGame) ESDeleteQuickOrder(esIDs []string) error {
 	return nil
 }
 
-func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string {
+func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []*elastic.SearchHit {
 
 	searchService := gg.esClient.Search().Index(gg.cfg.ES.PWQuickOrder).Type(gg.cfg.ES.PWType)
 	query := elastic.NewBoolQuery()
@@ -193,9 +193,9 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []string 
 
 }
 
-func (gg *GodGame) GetQuickOrderIds(resp godgamepb.QueryQuickOrderReq) []string {
-
-	for _, item := range resp.Hits.Hits {
+func (gg *GodGame) GetQuickOrderIds(resp []*elastic.SearchHit) []string {
+	res := []string{}
+	for _, item := range resp {
 		if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
 			res = append(res, seq[0])
 		}
