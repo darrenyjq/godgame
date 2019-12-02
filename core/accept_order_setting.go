@@ -72,7 +72,7 @@ func (dao *Dao) OmModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting)
 	if err != nil {
 		return err
 	}
-	redisConn := dao.cpool.Get()
+	redisConn := dao.Cpool.Get()
 	redisConn.Do("DEL", GodAcceptOrderSettingKey(settings.GodID), RKOneGodGameV1(settings.GodID, settings.GameID), RKSimpleGodGamesKey(settings.GodID))
 	redisConn.Close()
 	return nil
