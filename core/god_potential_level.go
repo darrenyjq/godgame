@@ -46,7 +46,7 @@ func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 		level = 2
 	}
 	score.Discounts = level
-	icelog.Info(score, "大神潜力等级分数")
+	icelog.Infof("大神潜力等级分数: %+v", score)
 	return score
 
 }

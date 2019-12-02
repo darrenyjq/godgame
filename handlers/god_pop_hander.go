@@ -39,6 +39,7 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 // 查询大神池 更新es
 func (self *GodImOnline) esUpdate(godId int64, lineTime string) {
 	data := self.dao.EsQueryQuickOrder(godId)
+	self.dao.DelOffLineTime(godId)
 	if len(data) > 0 {
 		for _, item := range data {
 			self.dao.EsUpdateQuickOrder(item.Id, map[string]interface{}{

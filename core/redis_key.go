@@ -152,6 +152,12 @@ func RKQuickOrder() string {
 	return "GAME:QUICK_ORDER"
 }
 
+// 上次离线时间大神
+func RKOffLineTime(userId int64) string {
+	return fmt.Sprintf("off_line_time:{%d}", userId)
+
+}
+
 // 私聊消息标识
 func RKChatTimes(userId int64) string {
 	return fmt.Sprintf("IM_CHAT_TIMES:{%d}", userId)

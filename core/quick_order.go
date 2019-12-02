@@ -93,13 +93,17 @@ func (dao *Dao) OffLineTimer(userId int64) {
 	c := dao.Cpool.Get()
 	defer c.Close()
 	m, _ := redis.Int64(c.Do("hget", RKQuickOrder(), "off_line_time"))
-	ticker := time.NewTimer(time.Minute * time.Duration(m))
 	lastTime := time.Now().Unix()
+	c.Do("set", RKOffLineTime(userId), lastTime)
+	ticker := time.NewTimer(time.Minute * time.Duration(m))
 	defer ticker.Stop()
 	select {
 	case <-ticker.C:
-		diff := time.Now().Unix() - lastTime
-		if diff > 60*m {
+		lts, _ := redis.Int64(c.Do("get", RKOffLineTime(userId)))
+		now := time.Now().Unix()
+		diff := now - lts
+		// icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff)
+		if diff > 60*m && now != diff {
 			icelog.Info("大神离线通知php ，关闭自动接单", userId)
 			dao.PhpHttps(userId, 2)
 		}
@@ -110,6 +114,12 @@ func (dao *Dao) DelGodInfoCache(godID, gameID int64) {
 	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("DEL", RKOneGodGameV1(godID, gameID))
+}
+
+func (dao *Dao) DelOffLineTime(godID int64) {
+	c := dao.Cpool.Get()
+	defer c.Close()
+	c.Do("DEL", RKOffLineTime(godID))
 }
 
 // 关闭自动抢单功能

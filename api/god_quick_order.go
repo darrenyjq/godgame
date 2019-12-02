@@ -289,32 +289,16 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	return c.JSON2(StatusOK_V3, "success", nil)
 }
 
-// 急速接单匹配
+// 获取急速接单池数据
 func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 	var in godgamepb.QueryQuickOrderReq
 	if err := c.Bind(&in); err != nil {
 		return c.RetBadRequestError("params fails")
 	}
-	GodIds := []string{}
-	if data := gg.ESQueryQuickOrder(in); data != nil {
-		GodIds = gg.GetQuickOrderIds(data)
+	if data := gg.ESQueryQuickOrder(in); data != nil && len(data) > 0 {
+		var into model.ESQuickOrder
+		json.Unmarshal(*data[0].Source, &into)
+		return c.JSON2(StatusOK_V3, "success", into)
 	}
-	if GodIds == nil {
-		return c.RetBadRequestError("not find result")
-	}
-	return c.JSON2(StatusOK_V3, "success", GodIds)
-}
-
-// 急速接单池查询
-func (gg *GodGame) QueryQuickOrderPool(c frame.Context) error {
-	var in godgamepb.QueryQuickOrderReq
-	if err := c.Bind(&in); err != nil {
-		return c.RetBadRequestError("params fails")
-	}
-	data := gg.ESQueryQuickOrder(in)
-
-	if data == nil {
-		return c.RetBadRequestError("not find result")
-	}
-	return c.JSON2(StatusOK_V3, "success", data)
+	return c.RetBadRequestError("not find result")
 }
