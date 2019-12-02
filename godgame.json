@@ -53,5 +53,8 @@
         "topic":"",
         "nsq_writers": [""],
         "nsq_lookups": [""]
+    },
+    "god_level_ignore_games": {
+        "1":1
     }
 }
