@@ -159,8 +159,8 @@ func RKOffLineTime(userId int64) string {
 }
 
 // 私聊消息标识
-func RKChatTimes(userId int64) string {
-	return fmt.Sprintf("IM_CHAT_TIMES:{%d}", userId)
+func RKChatTimes(userId, godId int64) string {
+	return fmt.Sprintf("IM_CHAT_TIMES:{%d}:{%d}", userId, godId)
 }
 
 // 某大神开启了自动抢单的品类ID

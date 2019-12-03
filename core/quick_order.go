@@ -65,21 +65,21 @@ func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) bool {
 }
 
 // 超时未回复 关闭自动抢单
-func (dao *Dao) TimeOutGrabOrder(GodId int64) {
+func (dao *Dao) TimeOutGrabOrder(userId, GodId int64) {
 	c := dao.Cpool.Get()
 	defer c.Close()
-	// keyQuickOrder := RKQuickOrder()
-	// timeOut, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
-	// ticker := time.NewTimer(time.Minute * time.Duration(timeOut))
-	ticker := time.NewTimer(time.Second * 60)
+	keyQuickOrder := RKQuickOrder()
+	timeOut, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
+	ticker := time.NewTimer(time.Minute * time.Duration(timeOut))
+	// ticker := time.NewTimer(time.Second * 10)
 	defer ticker.Stop()
-	key := RKChatTimes(GodId)
-	c.Do("setex", key, 60, 1)
+	key := RKChatTimes(userId, GodId)
+	c.Do("setex", key, 300, 1)
 	for {
 		select {
 		case <-ticker.C:
-			tag, _ := redis.Int64(c.Do("get", key))
-			if tag == 1 {
+			res_id, _ := redis.Int64(c.Do("get", key))
+			if res_id == 1 {
 				icelog.Info("超时未回复 通知php")
 				c.Do("del", key)
 				dao.PhpHttps(GodId, 1)
