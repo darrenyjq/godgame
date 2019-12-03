@@ -981,6 +981,8 @@ func (gg *GodGame) GodListInternal(c frame.Context) error {
 	} else if req.GetLimit() > 20 || req.GetLimit() == 0 {
 		req.Limit = 20
 	}
+
+	icelog.Infof("******** %+v", req)
 	if req.GetGameId() > 0 {
 		if gg.isVoiceCallGame(req.GetGameId()) {
 			// 语聊品类不展示
@@ -1485,6 +1487,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	}
 	highestLevelScore := resp.GetData().GetLevels()[godGame.HighestLevelID]
 	if req.GetGrabSwitch() == constants.GRAB_SWITCH_OPEN {
+
 		if godGame.PriceID == 0 && len(godGame.Regions) == 0 && len(godGame.Levels) == 0 {
 			return c.JSON2(ERR_CODE_EMPTY_ACCEPT_SETTING, errEmptyAcceptSettingMsg, nil)
 		} else if req.GetUnitPriceId() == 0 {
@@ -1496,7 +1499,6 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		if !ok || godGame.Level < godLevel {
 			return c.JSON2(ERR_CODE_DISPLAY_ERROR, "无效的陪玩价格", nil)
 		}
-
 	} else {
 		// 接单开关关闭时，抢单开关自动关闭
 		req.GrabSwitch = constants.GRAB_SWITCH_CLOSE
@@ -1505,6 +1507,9 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		req.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
 
 		gg.dao.AcceptQuickOrderSetting(currentUser.UserID, req.GameId, constants.GRAB_SWITCH5_CLOSE)
+		esId := fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)
+		gg.ESDeleteQuickOrder([]string{esId})
+
 	}
 	if req.GetGrabSwitch2() != constants.GRAB_SWITCH2_OPEN {
 		req.GrabSwitch2 = constants.GRAB_SWITCH2_CLOSE
@@ -1530,11 +1535,12 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		PriceID:     req.GetUnitPriceId(),
 	}
 	err = gg.dao.ModifyAcceptOrderSetting(settings)
-	gg.FlashGodQuickOrder(currentUser.UserID)
-	if err != nil {
-		c.Warnf("ModifyAcceptOrderSetting error:%s", err)
-		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
+
+	if settings.GrabSwitch == constants.GRAB_SWITCH_OPEN {
+		// 更新大神 急速接单es
+		gg.FlashGodQuickOrder(currentUser.UserID)
 	}
+
 	// 神策埋点
 	go func() {
 		gg.shence.Track(fmt.Sprintf("%d", currentUser.UserID),
@@ -1616,13 +1622,6 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 			}
 		}
 	}
-
-	// 更新大神 急速接单es
-	data, err := gg.BuildESQuickOrder(godGame.GodID, godGame.GameID)
-	if err != nil {
-		return c.RetBadRequestError(err.Error())
-	}
-	gg.ESAddQuickOrder(data)
 
 	if godGame.Recommend == constants.RECOMMEND_YES {
 		esID := fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)

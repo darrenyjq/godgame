@@ -95,15 +95,17 @@ func (dao *Dao) OffLineTimer(userId int64) {
 	m, _ := redis.Int64(c.Do("hget", RKQuickOrder(), "off_line_time"))
 	lastTime := time.Now().Unix()
 	c.Do("set", RKOffLineTime(userId), lastTime)
+	icelog.Info("大神离线通知", lastTime)
 	ticker := time.NewTimer(time.Minute * time.Duration(m))
+
 	defer ticker.Stop()
 	select {
 	case <-ticker.C:
 		lts, _ := redis.Int64(c.Do("get", RKOffLineTime(userId)))
 		now := time.Now().Unix()
 		diff := now - lts
-		// icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff)
-		if diff > 60*m && now != diff {
+		icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff)
+		if now != diff {
 			icelog.Info("大神离线通知php ，关闭自动接单", userId)
 			dao.PhpHttps(userId, 2)
 		}
