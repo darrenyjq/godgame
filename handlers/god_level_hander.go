@@ -45,5 +45,7 @@ func (self *GodLevelHandler) HandleMessage(msg *nsq.Message) error {
 		icelog.Errorf("GodLevelHandler error %s", err.Error())
 		return err
 	}
+	// 刷新急速接单池
+	self.dao.FlashGodQuickOrder(godID)
 	return nil
 }

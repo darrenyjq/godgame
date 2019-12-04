@@ -10,7 +10,6 @@ import (
 	"laoyuegou.pb/godgame/model"
 	"laoyuegou.pb/godgame/pb"
 	"strings"
-	"time"
 )
 
 const (
@@ -50,7 +49,7 @@ func (gg *GodGame) StartQuickOrderLoop() {
 			case ES_ORDER_UPDATE:
 				gg.ESUpdateQuickOrder(params.IDs[0], params.Data)
 			case ES_ORDER_ADD:
-				gg.ESAddQuickOrderInternal(params.ESQuickOrder)
+				gg.dao.ESAddQuickOrderInternal(params.ESQuickOrder)
 			}
 		case <-gg.exitChan:
 			goto exit
@@ -58,56 +57,6 @@ func (gg *GodGame) StartQuickOrderLoop() {
 	}
 exit:
 	icelog.Info("exiting loop...")
-}
-
-func (gg *GodGame) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, error) {
-	var result model.ESQuickOrder
-	if godID == 0 || gameID == 0 {
-		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
-	}
-	godInfo := gg.dao.GetGod(godID)
-	if godInfo.UserID != godID {
-		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
-	}
-
-	godGame := gg.dao.GetGodGame(godID, gameID)
-	if godGame.UserID == 0 {
-		return result, fmt.Errorf("god game not found %d-%d", godID, gameID)
-	}
-
-	accpetOrderSetting, err := gg.dao.GetGodSpecialAcceptOrderSetting(godID, gameID)
-	if err != nil {
-		return result, fmt.Errorf("price id error %d-%d %s", godID, gameID, err.Error())
-	}
-	Score := gg.dao.GetGodPotentialLevel(godID, gameID)
-	result.GameID = gameID
-	result.GodID = godID
-	result.Gender = godInfo.Gender
-	result.Price = accpetOrderSetting.PriceID
-	result.UpdateTime = time.Now().Unix()
-	result.OnlineTime = time.Now()
-	result.LevelID = accpetOrderSetting.Levels
-	result.RegionID = accpetOrderSetting.Regions
-	result.PotentialLevel = Score.Discounts
-	result.TotalScore = Score.TotalScore
-	result.Repurchase = Score.Repurchase
-	result.TotalWater = Score.TotalWater
-	result.TotalNumber = Score.TotalNumber
-	return result, nil
-}
-
-func (gg *GodGame) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
-	icelog.Info("急速接单池添加数据", godGame.GameID, godGame.GodID)
-	_, err := gg.esClient.Index().Index(gg.cfg.ES.PWQuickOrder).
-		Type(gg.cfg.ES.PWType).
-		Id(fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)).
-		BodyJson(godGame).
-		Do(context.Background())
-	if err != nil {
-		icelog.Errorf("ESAddQuickOrder： %+v； error： %s", godGame, err)
-	}
-	return nil
-
 }
 
 func (gg *GodGame) ESUpdateQuickOrder(id string, data map[string]interface{}) {
@@ -214,7 +163,7 @@ func (gg *GodGame) FlashAllQuickOrder(c frame.Context) error {
 				if err == nil && len(lists) > 0 {
 					for _, v := range lists {
 						var data model.ESQuickOrder
-						data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+						data, err := gg.dao.BuildESQuickOrder(v.GodID, v.GameID)
 						if err != nil {
 							continue
 						}
@@ -231,7 +180,7 @@ func (gg *GodGame) FlashAllQuickOrder(c frame.Context) error {
 				if err == nil && len(lists) > 0 {
 					for _, v := range lists {
 						var data model.ESQuickOrder
-						data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+						data, err := gg.dao.BuildESQuickOrder(v.GodID, v.GameID)
 						if err != nil {
 							return
 						}
@@ -255,7 +204,7 @@ func (gg *GodGame) FlashGodQuickOrder(god int64) {
 	if err == nil && len(lists) > 0 {
 		for _, v := range lists {
 			var data model.ESQuickOrder
-			data, err := gg.BuildESQuickOrder(v.GodID, v.GameID)
+			data, err := gg.dao.BuildESQuickOrder(v.GodID, v.GameID)
 			if err != nil {
 				continue
 			}
@@ -273,7 +222,7 @@ func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	if in.GrabSwitch == constants.GRAB_SWITCH5_OPEN {
 		gg.dao.AcceptQuickOrderSetting(in.GodId, in.GameId, constants.GRAB_SWITCH5_OPEN)
 		var data model.ESQuickOrder
-		data, err := gg.BuildESQuickOrder(in.GodId, in.GameId)
+		data, err := gg.dao.BuildESQuickOrder(in.GodId, in.GameId)
 		if err != nil {
 			return c.RetBadRequestError(err.Error())
 		}
@@ -296,7 +245,8 @@ func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 		return c.RetBadRequestError("params fails")
 	}
 	if data := gg.ESQueryQuickOrder(in); data != nil && len(data) > 0 {
-		var into model.ESQuickOrder
+		// var into model.ESQuickOrder
+		var into godgamepb.QueryQuickOrderResp_Data
 		json.Unmarshal(*data[0].Source, &into)
 		return c.JSON2(StatusOK_V3, "success", into)
 	}

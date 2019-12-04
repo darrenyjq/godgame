@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/godgame/model"
@@ -80,10 +82,10 @@ func (dao *Dao) TimeOutGrabOrder(userId, GodId int64) {
 		case <-ticker.C:
 			res_id, _ := redis.Int64(c.Do("get", key))
 			if res_id == 1 {
-				icelog.Info("超时未回复 通知php")
-				c.Do("del", key)
+				icelog.Info("超时未回复 通知php", userId, GodId)
 				dao.PhpHttps(GodId, 1)
 			}
+			c.Do("del", key)
 		}
 	}
 }
@@ -129,4 +131,69 @@ func (dao *Dao) CloseAutoGrabOrder(godID, gameID int64) {
 	c := dao.Cpool.Get()
 	defer c.Close()
 	c.Do("SREM", RKGodAutoGrabGames(godID), gameID)
+}
+
+func (dao *Dao) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, error) {
+	var result model.ESQuickOrder
+	if godID == 0 || gameID == 0 {
+		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
+	}
+	godInfo := dao.GetGod(godID)
+	if godInfo.UserID != godID {
+		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
+	}
+
+	godGame := dao.GetGodGame(godID, gameID)
+	if godGame.UserID == 0 {
+		return result, fmt.Errorf("god game not found %d-%d", godID, gameID)
+	}
+
+	accpetOrderSetting, err := dao.GetGodSpecialAcceptOrderSetting(godID, gameID)
+	if err != nil {
+		return result, fmt.Errorf("price id error %d-%d %s", godID, gameID, err.Error())
+	}
+	Score := dao.GetGodPotentialLevel(godID, gameID)
+	result.GameID = gameID
+	result.GodID = godID
+	result.Gender = godInfo.Gender
+	result.Price = accpetOrderSetting.PriceID
+	result.UpdateTime = time.Now().Unix()
+	result.OnlineTime = time.Now()
+	result.LevelID = accpetOrderSetting.Levels
+	result.RegionID = accpetOrderSetting.Regions
+	result.PotentialLevel = Score.Discounts
+	result.TotalScore = Score.TotalScore
+	result.Repurchase = Score.Repurchase
+	result.TotalWater = Score.TotalWater
+	result.TotalNumber = Score.TotalNumber
+	return result, nil
+}
+
+// 刷新急速接单池  刷新单个大神
+func (dao *Dao) FlashGodQuickOrder(god int64) {
+	lists, err := dao.GetAcceptSettings(god)
+	if err == nil && len(lists) > 0 {
+		for _, v := range lists {
+			var data model.ESQuickOrder
+			data, err := dao.BuildESQuickOrder(v.GodID, v.GameID)
+			if err != nil {
+				continue
+			}
+			dao.ESAddQuickOrderInternal(data)
+		}
+	}
+}
+
+func (dao *Dao) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
+	icelog.Info("急速接单池添加数据", godGame.GameID, godGame.GodID)
+	_, err := dao.EsClient.Index().Index(dao.Cfg.ES.PWQuickOrder).
+		Type(dao.Cfg.ES.PWType).
+		Id(fmt.Sprintf("%d-%d", godGame.GodID, godGame.GameID)).
+		BodyJson(godGame).
+		Do(context.Background())
+	if err != nil {
+		icelog.Errorf("ESAddQuickOrder： %+v； error： %s", godGame, err)
+	}
+	return nil
+
 }

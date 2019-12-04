@@ -40,7 +40,7 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 		key := fmt.Sprintf("IM_CHAT_TIMES:{%d}:{%d}", user1, user2)
 		tag, _ = redis.Int64(c.Do("Get", key))
 		if tag != 1 && tag != 2 {
-			icelog.Info("第一次问大神")
+			icelog.Info("第一次问大神", user1, user2)
 			go self.dao.TimeOutGrabOrder(user1, user2)
 			return nil
 		}
@@ -49,7 +49,7 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 		tag, _ = redis.Int64(c.Do("Get", key))
 		// tag ==1 表示老板已经给大神发消息，待大神回复
 		if tag == 1 {
-			icelog.Info("第二次，大神已回复老板 ！")
+			icelog.Info("第二次，大神已回复老板 ！", user1, user2)
 			// 	tag == 1 表示 已记录上次
 			c.Do("setex", key, 300, 2)
 		}
