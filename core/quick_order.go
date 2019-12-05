@@ -82,7 +82,7 @@ func (dao *Dao) TimeOutGrabOrder(userId, GodId int64) {
 		case <-ticker.C:
 			res_id, _ := redis.Int64(c.Do("get", key))
 			if res_id == 1 {
-				icelog.Info("超时未回复 通知php", userId, GodId)
+				//icelog.Info("超时未回复 通知php", userId, GodId)
 				dao.PhpHttps(GodId, 1)
 			}
 			c.Do("del", key)
@@ -97,7 +97,7 @@ func (dao *Dao) OffLineTimer(userId int64) {
 	m, _ := redis.Int64(c.Do("hget", RKQuickOrder(), "off_line_time"))
 	lastTime := time.Now().Unix()
 	c.Do("set", RKOffLineTime(userId), lastTime)
-	icelog.Info("大神离线通知", lastTime)
+	//icelog.Info("大神离线通知", lastTime)
 	ticker := time.NewTimer(time.Minute * time.Duration(m))
 
 	defer ticker.Stop()
@@ -106,7 +106,7 @@ func (dao *Dao) OffLineTimer(userId int64) {
 		lts, _ := redis.Int64(c.Do("get", RKOffLineTime(userId)))
 		now := time.Now().Unix()
 		diff := now - lts
-		icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff)
+		//icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff)
 		if now != diff {
 			icelog.Info("大神离线通知php ，关闭自动接单", userId)
 			dao.PhpHttps(userId, 2)
