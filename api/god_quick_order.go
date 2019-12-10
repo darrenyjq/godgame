@@ -127,16 +127,10 @@ func (gg *GodGame) ESQueryQuickOrder(req godgamepb.QueryQuickOrderReq) []*elasti
 		return nil
 	}
 	// fmt.Printf("query cost %d millisecond.\n", resp.TookInMillis)
-	icelog.Infof("%+v,&&&&&&&&&& %+v", resp, req)
 	if resp.Hits.TotalHits == 0 {
 		return nil
 	}
 	if resp != nil {
-		for _, item := range resp.Hits.Hits {
-			if seq := strings.Split(item.Id, "-"); len(seq) == 2 {
-				icelog.Infof("%+v @@@@@@@", &item)
-			}
-		}
 		return resp.Hits.Hits
 
 	}
@@ -249,7 +243,7 @@ func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 	if data := gg.ESQueryQuickOrder(in); data != nil && len(data) > 0 {
 		var into godgamepb.QueryQuickOrderResp_Data
 		json.Unmarshal(*data[0].Source, &into)
-		icelog.Infof("%+v ^^^^ %+v", into, data[0].Source)
+		// icelog.Infof("%+v ^^^^ %+v", into, data[0].Source)
 		return c.JSON2(StatusOK_V3, "success", into)
 	}
 	return c.RetBadRequestError("not find result")

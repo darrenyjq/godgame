@@ -1401,8 +1401,21 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	}
 	settings := make([]map[string]interface{}, 0, len(godGames))
 	IsShowAutoGrabOrder, AutoGrabLevel := gg.dao.GetAutoGrabCfg()
-
-	icelog.Info(AutoGrabLevel)
+	// availableLevel 可开自动接单 1开启 2关闭
+	availableLevel := make(map[int64]int64, 0)
+	// 后台配置开启情况下  取各个品类的潜力等级
+	if IsShowAutoGrabOrder == 1 {
+		if data := gg.ESQueryQuickOrder(godgamepb.QueryQuickOrderReq{
+			GodId: currentUserID,
+		}); data != nil && len(data) > 0 {
+			for _, v := range data {
+				var info godgamepb.QueryQuickOrderResp_Data
+				json.Unmarshal(*v.Source, &info)
+				availableLevel[info.GameId] = info.GetPotentialLevel()
+			}
+		}
+	}
+	// 获取急速接单信息 用于埋点
 	var resp *gamepb.AcceptCfgV2Resp
 	for _, godGame := range godGames {
 		resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
@@ -1416,6 +1429,14 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 		json.Unmarshal([]byte(godGame.Tags), &tmpTags)
 		json.Unmarshal([]byte(godGame.Ext), &tmpExt)
 		json.Unmarshal([]byte(godGame.Videos), &tmpVideos)
+
+		// 如果潜力等级不符合 则不显示自动接单
+		if L, ok := availableLevel[godGame.GameID]; ok && IsShowAutoGrabOrder == 1 {
+			if L < AutoGrabLevel {
+				IsShowAutoGrabOrder = 2
+			}
+		}
+
 		settings = append(settings, map[string]interface{}{
 			"game_id":    godGame.GameID,
 			"god_id":     godGame.GodID,
@@ -1448,6 +1469,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"is_show_auto_grab_order": IsShowAutoGrabOrder, // 1 显示 2不显示
 			"order_cnt":               godGame.AcceptNum,
 			"order_cnt_desc":          FormatAcceptOrderNumber(godGame.AcceptNum),
+			"potential_level":         availableLevel, // 大神当前ES中的潜力等级
 		})
 	}
 	data["order_settings"] = settings
