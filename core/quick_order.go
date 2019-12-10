@@ -82,7 +82,7 @@ func (dao *Dao) TimeOutGrabOrder(userId, GodId int64) {
 		case <-ticker.C:
 			res_id, _ := redis.Int64(c.Do("get", key))
 			if res_id == 1 {
-				//icelog.Info("超时未回复 通知php", userId, GodId)
+				// icelog.Info("超时未回复 通知php", userId, GodId)
 				dao.PhpHttps(GodId, 1)
 			}
 			c.Do("del", key)
@@ -97,9 +97,9 @@ func (dao *Dao) OffLineTimer(userId int64) {
 	m, _ := redis.Int64(c.Do("hget", RKQuickOrder(), "off_line_time"))
 	lastTime := time.Now().Unix()
 	c.Do("set", RKOffLineTime(userId), lastTime)
-	//icelog.Info("大神离线通知", lastTime, userId)
+	// icelog.Info("大神离线通知", lastTime, userId)
 	ticker := time.NewTimer(time.Minute * time.Duration(m))
-	//ticker := time.NewTimer(time.Second * 10)
+	// ticker := time.NewTimer(time.Second * 10)
 
 	defer ticker.Stop()
 	select {
@@ -107,11 +107,11 @@ func (dao *Dao) OffLineTimer(userId int64) {
 		lts, _ := redis.Int64(c.Do("get", RKOffLineTime(userId)))
 		now := time.Now().Unix()
 		diff := now - lts
-		//icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff, userId)
-		//if now != diff {
+		// icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff, userId)
+		// if now != diff {
 		// 存在时间差且 时间差符合后台规定时间即通知php
 		if now != diff && diff > 60*m-60 {
-			//icelog.Info("大神离线通知php ，关闭自动接单", userId)
+			// icelog.Info("大神离线通知php ，关闭自动接单", userId)
 			dao.PhpHttps(userId, 2)
 		}
 	}
@@ -202,7 +202,18 @@ func (dao *Dao) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
 
 }
 
-func (dao *Dao) GetAutoGrabCfg() int64 {
+// 急速接单配置获取 是否开启自动抢单
+func (dao *Dao) GetAutoGrabCfg() (int64, int64) {
+	c := dao.Cpool.Get()
+	keyQuickOrder := RKQuickOrder()
+	re1, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "is_auto_grab_order"))
+	re2, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "auto_grab_order_level"))
+
+	return re1, re2
+}
+
+//  根据配置要求潜力等级 是否开启自动抢单
+func (dao *Dao) GetAutoGrabCf22g(godId, gameId int64) int64 {
 	c := dao.Cpool.Get()
 	keyQuickOrder := RKQuickOrder()
 	re, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "is_auto_grab_order"))

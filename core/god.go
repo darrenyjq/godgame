@@ -794,9 +794,6 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 		v1.GrabSwitch3 = accpetOrderSetting.GrabSwitch3
 		v1.GrabSwitch4 = accpetOrderSetting.GrabSwitch4
 		v1.GrabSwitch5 = accpetOrderSetting.GrabSwitch5
-		// if v1.GrabSwitch5 != 1 {
-		// 	v1.GrabSwitch5 = constants.GRAB_SWITCH5_CLOSE
-		// }
 	}
 	v1.GodIcon = godIconUrl
 	if bs, err := json.Marshal(v1); err == nil {

@@ -1400,8 +1400,10 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 		godGames = append(godGames, blockedGodGames...)
 	}
 	settings := make([]map[string]interface{}, 0, len(godGames))
+	IsShowAutoGrabOrder, AutoGrabLevel := gg.dao.GetAutoGrabCfg()
+
+	icelog.Info(AutoGrabLevel)
 	var resp *gamepb.AcceptCfgV2Resp
-	IsShowAutoGrabOrder := gg.dao.GetAutoGrabCfg()
 	for _, godGame := range godGames {
 		resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
 			GameId: godGame.GameID,

@@ -247,7 +247,6 @@ func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 		return c.RetBadRequestError("params fails")
 	}
 	if data := gg.ESQueryQuickOrder(in); data != nil && len(data) > 0 {
-		// var into model.ESQuickOrder
 		var into godgamepb.QueryQuickOrderResp_Data
 		json.Unmarshal(*data[0].Source, &into)
 		icelog.Infof("%+v ^^^^ %+v", into, data[0].Source)
