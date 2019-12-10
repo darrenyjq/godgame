@@ -359,6 +359,9 @@ func (gg *GodGame) BlockGod(c frame.Context) error {
 			// 如果大神被推荐到首页，冻结则需要从首页下掉
 			if v1.Recommend == constants.RECOMMEND_YES {
 				gg.ESDeleteGodGame(fmt.Sprintf("%d-%d", req.GetGodId(), v1.GameID))
+
+				esId := fmt.Sprintf("%d-%d", req.GetGodId(), v1.GameID)
+				gg.ESDeleteQuickOrder([]string{esId})
 			}
 			// 如果大神具有抢开黑单权限，需要从大神池删除
 			if v1.GrabStatus == constants.GRAB_STATUS_YES {

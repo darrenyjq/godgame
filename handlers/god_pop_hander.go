@@ -27,8 +27,6 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 
 	}
 	if message.Event == imcourierpb.IMEvent_IMEventOffline {
-		// icelog.Info("离线了！！！！！", message)
-		// self.esQueryQuickOrder(message.ClientInfo.ClientId, fmt.Sprintf("%s", "offlinetime"))
 		if message.ClientInfo.ClientId > 0 {
 			go self.dao.OffLineTimer(message.ClientInfo.ClientId)
 		}
@@ -39,6 +37,7 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 // 查询大神池 更新es
 func (self *GodImOnline) esUpdate(godId int64, lineTime string) {
 	data := self.dao.EsQueryQuickOrder(godId)
+	// 删除大神 离线时间
 	self.dao.DelOffLineTime(godId)
 	if len(data) > 0 {
 		for _, item := range data {

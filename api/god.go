@@ -1401,6 +1401,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	}
 	settings := make([]map[string]interface{}, 0, len(godGames))
 	var resp *gamepb.AcceptCfgV2Resp
+	IsShowAutoGrabOrder := gg.dao.GetAutoGrabCfg()
 	for _, godGame := range godGames {
 		resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
 			GameId: godGame.GameID,
@@ -1442,7 +1443,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"grab_switch4":            godGame.GrabSwitch4,
 			"grab_switch5":            godGame.GrabSwitch5,
 			"grab_switch6":            godGame.GrabSwitch6,
-			"is_show_auto_grab_order": 1, // 1 显示 2不显示
+			"is_show_auto_grab_order": IsShowAutoGrabOrder, // 1 显示 2不显示
 			"order_cnt":               godGame.AcceptNum,
 			"order_cnt_desc":          FormatAcceptOrderNumber(godGame.AcceptNum),
 		})

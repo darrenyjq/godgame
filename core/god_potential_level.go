@@ -33,10 +33,11 @@ func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 	}
 	level := 1 // 初始默认1级
 	score := dao.CalculateScore(god, gameId, days)
-	if t2[0] < score.TotalWater && t2[1] < score.TotalNumber && t2[2] < score.Repurchase && t2[3] < score.TotalScore {
-		if t3[0] < score.TotalWater && t3[1] < score.TotalNumber && t3[2] < score.Repurchase && t3[3] < score.TotalScore {
-			if t4[0] < score.TotalWater && t4[1] < score.TotalNumber && t4[2] < score.Repurchase && t4[3] < score.TotalScore {
-				if t5[0] < score.TotalWater && t5[1] < score.TotalNumber && t5[2] < score.Repurchase && t5[3] < score.TotalScore {
+
+	if t2[0] <= score.TotalWater && t2[1] <= score.TotalNumber && t2[2] <= score.Repurchase && t2[3] <= score.TotalScore {
+		if t3[0] <= score.TotalWater && t3[1] <= score.TotalNumber && t3[2] <= score.Repurchase && t3[3] <= score.TotalScore {
+			if t4[0] <= score.TotalWater && t4[1] <= score.TotalNumber && t4[2] <= score.Repurchase && t4[3] <= score.TotalScore {
+				if t5[0] <= score.TotalWater && t5[1] <= score.TotalNumber && t5[2] <= score.Repurchase && t5[3] <= score.TotalScore {
 					level = 5
 				}
 				level = 4
@@ -46,7 +47,7 @@ func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 		level = 2
 	}
 	score.Discounts = level
-	icelog.Infof("大神潜力等级分数: %+v", score)
+	icelog.Infof("大神潜力等级分数: %+v,WWWWWW %+v,WWWWWW %+v,WWWWWW %+v,WWWWWW %+v", score, t2, t3, t4, t5)
 	return score
 
 }
@@ -88,6 +89,9 @@ func (dao *Dao) CalculateScore(godId, gameId, days int64) model.StatisticsLevel 
 	}
 	repurchase := (float32(UserNum1) / float32(UserNum2)) * 100
 
+	if repurchase < 0 || number == 0 {
+		repurchase = 0
+	}
 	// 历史评分
 	var Score model.StatisticsLevel
 	err = dao.dbr.Table("play_order_comment").
@@ -95,6 +99,12 @@ func (dao *Dao) CalculateScore(godId, gameId, days int64) model.StatisticsLevel 
 		Where("god_id=? and create_time > ?", godId, end_time).
 		First(&Score).Error
 
+	icelog.Infof("DDDDDDDDDDDDD  %+v", model.StatisticsLevel{
+		TotalScore:  Score.TotalScore,
+		Repurchase:  int(repurchase),
+		TotalWater:  TotalWater,
+		TotalNumber: number,
+	})
 	return model.StatisticsLevel{
 		TotalScore:  Score.TotalScore,
 		Repurchase:  int(repurchase),
