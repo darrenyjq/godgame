@@ -206,6 +206,7 @@ func (dao *Dao) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
 // 急速接单配置获取 是否开启自动抢单
 func (dao *Dao) GetAutoGrabCfg() (int64, int64) {
 	c := dao.Cpool.Get()
+	defer c.Close()
 	keyQuickOrder := RKQuickOrder()
 	re1, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "is_auto_grab_order"))
 	re2, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "auto_grab_order_level"))
