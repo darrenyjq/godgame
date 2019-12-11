@@ -47,7 +47,7 @@ func (self *BaseHandler) init() {
 			NsqLookups: self.cfg.IMNsq.Lookups,
 		}
 		icelog.Info("启动大神上下线事件监控")
-		godGameImOnline.Init2(self.ctx, self.cfg.Nsq.Topic, "godgame_time", &GodImOnline{self.dao})
+		godGameImOnline.Init2(self.ctx, self.cfg.IMNsq.Topic, "godgame_time", &GodImOnline{self.dao})
 	})
 
 	// 私聊自动回复问题，后面再做
