@@ -17,6 +17,7 @@ func (dao *Dao) AcceptQuickOrderSetting(userId, gameId, setting int64) error {
 		return err
 	}
 	redisConn := dao.Cpool.Get()
+	defer redisConn.Close()
 	redisKey := GodAcceptOrderSettingKey(userId)
 	redisConn.Do("DEL", redisKey)
 	return nil
@@ -206,6 +207,7 @@ func (dao *Dao) ESAddQuickOrderInternal(godGame model.ESQuickOrder) error {
 // 急速接单配置获取 是否开启自动抢单
 func (dao *Dao) GetAutoGrabCfg() (int64, int64) {
 	c := dao.Cpool.Get()
+	defer c.Close()
 	keyQuickOrder := RKQuickOrder()
 	re1, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "is_auto_grab_order"))
 	re2, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "auto_grab_order_level"))
@@ -216,6 +218,7 @@ func (dao *Dao) GetAutoGrabCfg() (int64, int64) {
 //  根据配置要求潜力等级 是否开启自动抢单
 func (dao *Dao) GetAutoGrabCf22g(godId, gameId int64) int64 {
 	c := dao.Cpool.Get()
+	defer c.Close()
 	keyQuickOrder := RKQuickOrder()
 	re, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "is_auto_grab_order"))
 	return re
