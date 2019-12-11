@@ -28,7 +28,7 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 	}
 	if message.Event == imcourierpb.IMEvent_IMEventOffline {
 		if message.ClientInfo.ClientId > 0 {
-			go self.dao.OffLineTimer(message.ClientInfo.ClientId)
+			// go self.dao.OffLineTimer(message.ClientInfo.ClientId)
 		}
 	}
 	return nil

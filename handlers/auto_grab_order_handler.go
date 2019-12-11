@@ -33,8 +33,7 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 		key := fmt.Sprintf("IM_CHAT_TIMES:{%d}:{%d}", user1, user2)
 		tag, _ = redis.Int64(c.Do("Get", key))
 		if tag != 1 && tag != 2 {
-			//icelog.Info("第一次问大神", user1, user2)
-			go self.dao.TimeOutGrabOrder(user1, user2)
+			// go self.dao.TimeOutGrabOrder(user1, user2)
 			return nil
 		}
 
