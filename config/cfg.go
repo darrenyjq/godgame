@@ -28,7 +28,6 @@ type shence struct {
 
 type nsq struct {
 	Topic   string   `json:"nsq_topic"`
-	ImTopic string   `json:"nsq_im_event_topic"`
 	Writers []string `json:"nsq_writers"`
 	Lookups []string `json:"nsq_lookups"`
 }
@@ -46,6 +45,7 @@ type Config struct {
 	GodLTSDuration      int                `json:"god_lts_duration"`
 	YunPianApiKey       string             `json:"yunpian_apikey"`
 	Nsq                 nsq                `json:"nsq"`
+	IMNsq               nsq                `json:"im_nsq"`
 	FillGodListInterval time.Duration      `json:"fill_god_list_interval"`
 	GodLevelIgnoreGames map[string]int64   `json:"god_level_ignore_games"`
 }
