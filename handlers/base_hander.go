@@ -43,18 +43,18 @@ func (self *BaseHandler) init() {
 
 	self.waitGroup.Wrap(func() {
 		godGameImOnline := &mq.NsqConsumer{
-			NsqWriters: self.cfg.Nsq.Writers,
-			NsqLookups: self.cfg.Nsq.Lookups,
+			NsqWriters: self.cfg.IMNsq.Writers,
+			NsqLookups: self.cfg.IMNsq.Lookups,
 		}
 		icelog.Info("启动大神上下线事件监控")
-		godGameImOnline.Init2(self.ctx, self.cfg.Nsq.ImTopic, "godgame_time", &GodImOnline{self.dao})
+		godGameImOnline.Init2(self.ctx, self.cfg.Nsq.Topic, "godgame_time", &GodImOnline{self.dao})
 	})
 
 	// 私聊自动回复问题，后面再做
 	self.waitGroup.Wrap(func() {
 		messageRespConsumer := &mq.NsqConsumer{
-			NsqWriters: self.cfg.Nsq.Writers,
-			NsqLookups: self.cfg.Nsq.Lookups,
+			NsqWriters: self.cfg.IMNsq.Writers,
+			NsqLookups: self.cfg.IMNsq.Lookups,
 		}
 		icelog.Info("启动IM私聊监控")
 		messageRespConsumer.Init2(self.ctx, "message", "godgame_auto_grab_order", &AutoGrabOrderHandler{self.dao})
