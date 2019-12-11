@@ -170,6 +170,7 @@ func (dao *Dao) BuildESQuickOrder(godID, gameID int64) (model.ESQuickOrder, erro
 	result.TotalWater = Score.TotalWater
 	result.TotalNumber = Score.TotalNumber
 	result.GodLevel = GodLevel
+	result.IsGrabOrder = accpetOrderSetting.GrabSwitch5
 	return result, nil
 }
 
