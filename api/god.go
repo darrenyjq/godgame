@@ -1436,7 +1436,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 				IsShowAutoGrabOrder = 2
 			}
 		}
-
+		GrabSwitch6 := gg.dao.GetAutoGrabGames(godGame.GodID, godGame.GameID)
 		settings = append(settings, map[string]interface{}{
 			"game_id":    godGame.GameID,
 			"god_id":     godGame.GodID,
@@ -1465,7 +1465,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"grab_switch3":            godGame.GrabSwitch3,
 			"grab_switch4":            godGame.GrabSwitch4,
 			"grab_switch5":            godGame.GrabSwitch5,
-			"grab_switch6":            godGame.GrabSwitch6,
+			"grab_switch6":            GrabSwitch6,
 			"is_show_auto_grab_order": IsShowAutoGrabOrder, // 1 显示 2不显示
 			"order_cnt":               godGame.AcceptNum,
 			"order_cnt_desc":          FormatAcceptOrderNumber(godGame.AcceptNum),

@@ -728,12 +728,6 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 		}
 	}
 	if bs, err := redis.Bytes(c.Do("GET", RKOneGodGameV1(godID, gameID))); err == nil {
-		isGrabOrder, err := redis.Bool(c.Do("sismember", RKGodAutoGrabGames(godID), gameID))
-		if isGrabOrder {
-			v1.GrabSwitch6 = constants.GRAB_SWITCH6_OPEN
-		} else {
-			v1.GrabSwitch6 = constants.GRAB_SWITCH6_CLOSE
-		}
 		if err = json.Unmarshal(bs, &v1); err == nil {
 			v1.AcceptNum = acceptNum
 			v1.GodIcon = godIconUrl
@@ -1309,4 +1303,17 @@ func (dao *Dao) SimpleGodGameIds(godID int64) []int64 {
 		})
 	}
 	return gameIds
+}
+
+func (dao *Dao) GetAutoGrabGames(godId, GameId int64) int64 {
+	c := dao.Cpool.Get()
+	defer c.Close()
+	isGrabOrder, _ := redis.Bool(c.Do("sismember", RKGodAutoGrabGames(godId), GameId))
+	var GrabSwitch6 int64
+	if isGrabOrder {
+		GrabSwitch6 = constants.GRAB_SWITCH6_OPEN
+	} else {
+		GrabSwitch6 = constants.GRAB_SWITCH6_CLOSE
+	}
+	return GrabSwitch6
 }
