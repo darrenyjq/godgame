@@ -60,12 +60,17 @@ func NewGodGame(cfg config.Config) *GodGame {
 	go gg.StartLoop()
 	go gg.StartQuickOrderLoop()
 	go gg.FillGodList()
+	go gg.dao.StartGodLineLoop()
+	// go gg.dao.StartImLoop()
 	return gg
 }
 
 func (gg *GodGame) Stop(s os.Signal) bool {
 	gg.nsqHandler.Stop()
 	close(gg.exitChan)
+
+	close(gg.dao.ExitImChan)
+	close(gg.dao.ExitChatChan)
 	return true
 }
 

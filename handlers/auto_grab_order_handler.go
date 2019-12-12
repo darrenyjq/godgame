@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/imapi/pb"
+	"time"
 )
 
 type AutoGrabOrderHandler struct {
@@ -23,29 +23,37 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 	}
 	// 检查是否为抢单大神
 	var tag int64
-	if message.S > 0 && len(message.R) == 1 && self.dao.GetGrabBedGodsOfBoss([]int64{message.S, message.R[0]}) {
-		// if message.S > 0 && len(message.R) == 1 {
-		var user1, user2 int64
-		user1 = message.S
-		user2 = message.R[0]
-		c := self.dao.Cpool.Get()
-		defer c.Close()
-		key := fmt.Sprintf("IM_CHAT_TIMES:{%d}:{%d}", user1, user2)
-		tag, _ = redis.Int64(c.Do("Get", key))
-		if tag != 1 && tag != 2 {
-			// go self.dao.TimeOutGrabOrder(user1, user2)
-			return nil
-		}
+	var user1, user2 int64
+	user1 = message.S
+	user2 = message.R[0]
+	Rkey := core.RkSendImStartTime()
+	key := core.RKChatTimes(user1, user2)
+	key2 := core.RKChatTimes(user2, user1)
+	c := self.dao.Cpool.Get()
+	defer c.Close()
+	tag, _ = redis.Int64(c.Do("Get", key))
+	tag2, _ := redis.Int64(c.Do("Get", key2))
 
-		key = fmt.Sprintf("IM_CHAT_TIMES:{%d}:{%d}", user2, user1)
-		tag, _ = redis.Int64(c.Do("Get", key))
-		// tag ==1 表示老板已经给大神发消息，待大神回复
-		if tag == 1 {
-			//icelog.Info("第二次，大神已回复老板 ！", user1, user2)
-			c.Do("setex", key, 300, 2)
+	// tag ==2 表示大神回复了老板
+	if tag2 > 0 {
+		c.Do("zrem", Rkey, user1)
+		// 删除后延时 300s 防止被锁
+		c.Do("setex", key2, 300, 2)
+		return nil
+	}
+
+	// 接收者为大神
+	if self.dao.IsGrabBedGodsOfBoss([]int64{user1, user2}) {
+		// 查接收者是否有开启自动接单
+		arr, _ := redis.Int64s(c.Do("scan", core.RKGodAutoGrabGames(user2)))
+		// tag2==0表示 接受者没有发过消息   tag！=1是发消息人第一次发
+		if tag2 == 0 && len(arr) > 0 && tag == 0 {
+			c.Do("zadd", Rkey, time.Now().Unix(), user2)
+			// tag ==1 表示老板第一次找大神
+			c.Do("setex", key, 300, 1)
+			return nil
 		}
 		return nil
 	}
 	return nil
-
 }

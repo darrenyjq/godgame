@@ -194,21 +194,6 @@ func (gg *GodGame) FlashAllQuickOrder(c frame.Context) error {
 	return c.RetSuccess("没有大神开启急速接单", nil)
 }
 
-// 刷新急速接单池  刷新单个大神
-func (gg *GodGame) FlashGodQuickOrder(god int64) {
-	lists, err := gg.dao.GetAcceptSettings(god)
-	if err == nil && len(lists) > 0 {
-		for _, v := range lists {
-			var data model.ESQuickOrder
-			data, err := gg.dao.BuildESQuickOrder(v.GodID, v.GameID)
-			if err != nil {
-				continue
-			}
-			gg.ESAddQuickOrder(data)
-		}
-	}
-}
-
 // 急速接单开关
 func (gg *GodGame) AcceptQuickOrder(c frame.Context) error {
 	var in godgamepb.AcceptQuickOrderReq
@@ -243,8 +228,17 @@ func (gg *GodGame) QueryQuickOrder(c frame.Context) error {
 	if data := gg.ESQueryQuickOrder(in); data != nil && len(data) > 0 {
 		var into godgamepb.QueryQuickOrderResp_Data
 		json.Unmarshal(*data[0].Source, &into)
-		// icelog.Infof("%+v ^^^^ %+v", into, data[0].Source)
 		return c.JSON2(StatusOK_V3, "success", into)
 	}
 	return c.RetBadRequestError("not find result")
+}
+
+// 重载 监控 chan
+func (gg *GodGame) ReloadGodGameLoop(c frame.Context) error {
+	var in godgamepb.ReloadGodGameLoopReq
+	if err := c.Bind(&in); err != nil {
+		return c.RetBadRequestError("params fails")
+	}
+	gg.dao.ReloadChanLoop(in.Signal)
+	return c.RetSuccess("success", nil)
 }

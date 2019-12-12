@@ -18,17 +18,21 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Dao core dao
 type Dao struct {
-	Cfg      config.Config
-	Cpool    *redis.Pool             // 缓存池
-	dbr      *gorm.DB                // 读库
-	dbw      *gorm.DB                // 写库
-	ypClient *lyg_util.YunPianClient // 云片客户端
-	EsClient *elastic.Client         // ES
+	Cfg          config.Config
+	Cpool        *redis.Pool             // 缓存池
+	dbr          *gorm.DB                // 读库
+	dbw          *gorm.DB                // 写库
+	ypClient     *lyg_util.YunPianClient // 云片客户端
+	EsClient     *elastic.Client         // ES
+	ExitImChan   chan int                // Im消息监控
+	ExitChatChan chan int                // Im消息监控
 }
 
 // NewDao dao object
 func NewDao(cfg config.Config, esClient *elastic.Client) *Dao {
 	dao := new(Dao)
+	dao.ExitImChan = make(chan int, 1)
+	dao.ExitChatChan = make(chan int, 1)
 	dao.EsClient = esClient
 	dao.Cfg = cfg
 	dao.Cpool = util.NewRedisPool(&cfg.Redis)

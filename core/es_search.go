@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/olivere/elastic"
 	"iceberg/frame/icelog"
-	"iceberg/frame/protocol"
-	"laoyuegou.com/http_api"
 )
 
 // 查询es数据
@@ -43,22 +41,5 @@ func (dao *Dao) EsUpdateQuickOrder(id string, data map[string]interface{}) {
 		Do(context.Background())
 	if err != nil {
 		icelog.Info("急速接单大神池更新失败：", id, err.Error())
-	}
-}
-func (dao *Dao) PhpHttps(godId, reason int64) {
-	client := http_api.NewClient()
-	url := fmt.Sprintf("%s%s", dao.Cfg.Urls["php_api"], "order/interior/quickorder/disable-auto-grab")
-	resp, err := client.POSTV2(url, map[string]interface{}{
-		"god_id": godId,
-		"reason": reason,
-	})
-	if err != nil {
-		icelog.Error(err.Error())
-	}
-	if resp.StatusCode == 200 {
-		qq, _ := resp.ReadAll()
-		var ress protocol.Message
-		err = json.Unmarshal(qq, &ress)
-		icelog.Info("离线超时 关闭自动抢单功能", ress.Errmsg)
 	}
 }

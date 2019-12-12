@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/gomodule/redigo/redis"
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame/icelog"
@@ -24,11 +25,18 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 	}
 	if message.Event == imcourierpb.IMEvent_IMEventOnline {
 		self.esUpdate(message.ClientInfo.ClientId, fmt.Sprintf("%s", "lts"))
-
 	}
+
 	if message.Event == imcourierpb.IMEvent_IMEventOffline {
 		if message.ClientInfo.ClientId > 0 {
-			// go self.dao.OffLineTimer(message.ClientInfo.ClientId)
+			c := self.dao.Cpool.Get()
+			defer c.Close()
+			arr, _ := redis.Int64(c.Do("scard", core.RKGodAutoGrabGames(message.ClientInfo.ClientId)))
+			// 已开启自动接单时 计入集合
+			if arr > 0 {
+				Rkey := core.RkGodOfflineTime()
+				c.Do("zadd", Rkey, time.Now().Unix(), message.ClientInfo.ClientId)
+			}
 		}
 	}
 	return nil

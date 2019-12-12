@@ -1563,7 +1563,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 
 	if settings.GrabSwitch == constants.GRAB_SWITCH_OPEN {
 		// 更新大神 急速接单es
-		gg.FlashGodQuickOrder(currentUser.UserID)
+		gg.dao.FlashGodQuickOrder(currentUser.UserID)
 	}
 
 	// 神策埋点

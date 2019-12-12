@@ -148,12 +148,6 @@ func RKQuickOrder() string {
 	return "GAME:QUICK_ORDER"
 }
 
-// 上次离线时间大神
-func RKOffLineTime(userId int64) string {
-	return fmt.Sprintf("off_line_time:{%d}", userId)
-
-}
-
 // 私聊消息标识
 func RKChatTimes(userId, godId int64) string {
 	return fmt.Sprintf("IM_CHAT_TIMES:{%d}:{%d}", userId, godId)
@@ -167,4 +161,19 @@ func RKGodAutoGrabGames(userId int64) string {
 // 已抢某Boss极速下单的大神ID集合
 func RKGrabBedGodsOfBoss(userId int64) string {
 	return fmt.Sprintf("PHP:QuickOrder:Boss:{%d}:GrabbedGods", userId)
+}
+
+// 大神离线时间集合
+func RkGodOfflineTime() string {
+	return fmt.Sprintf("god_offline_time")
+}
+
+// 急速接单私聊 开始时间
+func RkSendImStartTime() string {
+	return fmt.Sprintf("send_im_start_time")
+}
+
+// 锁
+func RkLockProtect(signal int64) string {
+	return fmt.Sprintf("lock_protect:{%d}", signal)
 }

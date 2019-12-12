@@ -40,82 +40,13 @@ func (dao *Dao) GetQuickOrderGods() (data []model.ORMOrderAcceptSetting, err err
 func (dao *Dao) GetAcceptSettings(godId int64) (data []model.ORMOrderAcceptSetting, err error) {
 	err = dao.dbw.Table("play_god_accept_setting").
 		Select("god_id,game_id").
-		Where("grab_switch5=? AND grab_switch=? and god_id=?", 1, 1, godId).Find(&data).Error
+		Where("grab_switch=? and god_id=?", 1, godId).Find(&data).Error
+
+	// Where("grab_switch5=? AND grab_switch=? and god_id=?", 1, 1, godId).Find(&data).Error
 	if err != nil {
 		return data, err
 	}
 	return data, nil
-
-}
-
-// 是否为 抢单大神的对话  私聊用的
-func (dao *Dao) GetGrabBedGodsOfBoss(userIds []int64) bool {
-	c := dao.Cpool.Get()
-	defer c.Close()
-	key := RKGrabBedGodsOfBoss(userIds[0])
-	re, err := redis.Bool(c.Do("sismember", key, userIds[1]))
-	if err == nil && re {
-		return true
-	}
-
-	key = RKGrabBedGodsOfBoss(userIds[1])
-	re, err = redis.Bool(c.Do("sismember", key, userIds[0]))
-	if err == nil && re {
-		return true
-	}
-
-	return false
-}
-
-// 超时未回复 关闭自动抢单
-func (dao *Dao) TimeOutGrabOrder(userId, GodId int64) {
-	c := dao.Cpool.Get()
-	defer c.Close()
-	keyQuickOrder := RKQuickOrder()
-	timeOut, _ := redis.Int64(c.Do("HGET", keyQuickOrder, "chat_timeout"))
-	ticker := time.NewTimer(time.Minute * time.Duration(timeOut))
-	// ticker := time.NewTimer(time.Second * 10)
-	defer ticker.Stop()
-	key := RKChatTimes(userId, GodId)
-	c.Do("setex", key, 300, 1)
-	for {
-		select {
-		case <-ticker.C:
-			res_id, _ := redis.Int64(c.Do("get", key))
-			if res_id == 1 {
-				// icelog.Info("超时未回复 通知php", userId, GodId)
-				dao.PhpHttps(GodId, 1)
-			}
-			c.Do("del", key)
-		}
-	}
-}
-
-// 离线1小时候自动 关闭抢单
-func (dao *Dao) OffLineTimer(userId int64) {
-	c := dao.Cpool.Get()
-	defer c.Close()
-	m, _ := redis.Int64(c.Do("hget", RKQuickOrder(), "off_line_time"))
-	lastTime := time.Now().Unix()
-	c.Do("set", RKOffLineTime(userId), lastTime)
-	// icelog.Info("大神离线通知", lastTime, userId)
-	ticker := time.NewTimer(time.Minute * time.Duration(m))
-	// ticker := time.NewTimer(time.Second * 10)
-
-	defer ticker.Stop()
-	select {
-	case <-ticker.C:
-		lts, _ := redis.Int64(c.Do("get", RKOffLineTime(userId)))
-		now := time.Now().Unix()
-		diff := now - lts
-		// icelog.Info("大神离线通知xiaxian!!!!", now, lts, m, diff, userId)
-		// if now != diff {
-		// 存在时间差且 时间差符合后台规定时间即通知php
-		if now != diff && diff > 60*m-60 {
-			// icelog.Info("大神离线通知php ，关闭自动接单", userId)
-			dao.PhpHttps(userId, 2)
-		}
-	}
 }
 
 func (dao *Dao) DelGodInfoCache(godID, gameID int64) {
@@ -127,7 +58,8 @@ func (dao *Dao) DelGodInfoCache(godID, gameID int64) {
 func (dao *Dao) DelOffLineTime(godID int64) {
 	c := dao.Cpool.Get()
 	defer c.Close()
-	c.Do("DEL", RKOffLineTime(godID))
+	Rkey := RkGodOfflineTime()
+	c.Do("zrem", Rkey, godID)
 }
 
 // 关闭自动抢单功能
