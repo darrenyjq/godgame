@@ -12,6 +12,7 @@ import (
 // 上下线消息事件
 func (dao *Dao) StartGodLineLoop() {
 	ticker := time.NewTicker(time.Minute * time.Duration(5))
+	// ticker := time.NewTicker(time.Second * time.Duration(15))
 	defer ticker.Stop()
 	for {
 		select {
@@ -27,7 +28,6 @@ exit:
 
 // 离线1小时候自动 关闭抢单
 func (dao *Dao) handleOffLineTimer() {
-	icelog.Info("执行 关闭逻辑！！！")
 	c := dao.Cpool.Get()
 	defer c.Close()
 	T, _ := redis.Int64(c.Do("hget", RKQuickOrder(), "off_line_time"))
@@ -36,28 +36,34 @@ func (dao *Dao) handleOffLineTimer() {
 	}
 	Rkey := RkGodOfflineTime()
 	// 规定时间范围 以前
-	endTime := time.Now().Unix() - T
+	endTime := time.Now().Unix() - T*60
 	arr, _ := redis.Int64s(c.Do("ZRANGEBYSCORE", Rkey, 0, endTime, "WITHSCORES"))
 	userIds := ""
 	for _, userId := range arr {
 		userIds += fmt.Sprintf(",%d", userId)
 	}
-	userIds = userIds[0 : len(userIds)-1]
-	dao.PhpHttps(userIds, 2)
-
-	c.Do("ZREMRANGEBYSCORE", Rkey, 0, endTime)
+	if len(userIds) > 0 {
+		userIds = userIds[0 : len(userIds)-1]
+		dao.PhpHttps(userIds, 2)
+		c.Do("ZREMRANGEBYSCORE", Rkey, 0, endTime)
+	}
+	icelog.Info("离线1小时候自动 打印关闭抢单开关", userIds, Rkey, endTime)
 }
 
 // 消息超时监听
 func (dao *Dao) StartImLoop() {
 	ticker := time.NewTicker(time.Minute * time.Duration(5))
+	// ticker := time.NewTicker(time.Second * time.Duration(15))
 	defer ticker.Stop()
-	select {
-	case <-ticker.C:
-		dao.ChatTimeOut()
-	case <-dao.ExitImChan:
-		goto exit
+	for {
+		select {
+		case <-ticker.C:
+			dao.ChatTimeOut()
+		case <-dao.ExitImChan:
+			goto exit
+		}
 	}
+
 exit:
 	icelog.Info("exiting StartImLoop loop...")
 }
@@ -72,15 +78,19 @@ func (dao *Dao) ChatTimeOut() {
 	}
 	Rkey := RkSendImStartTime()
 	// 规定时间范围 以前
-	endTime := time.Now().Unix() - T
+	endTime := time.Now().Unix() - T*60
 	arr, _ := redis.Int64s(c.Do("ZRANGEBYSCORE", Rkey, 0, endTime, "WITHSCORES"))
 	userIds := ""
 	for _, userId := range arr {
 		userIds += fmt.Sprintf(",%d", userId)
 	}
-	userIds = userIds[0 : len(userIds)-1]
-	dao.PhpHttps(userIds, 1)
-	c.Do("ZREMRANGEBYSCORE", Rkey, 0, endTime)
+	if len(userIds) > 0 {
+		userIds = userIds[0 : len(userIds)-1]
+		dao.PhpHttps(userIds, 1)
+		c.Do("ZREMRANGEBYSCORE", Rkey, 0, endTime)
+	}
+	icelog.Info("超时未回复 打印关闭抢单开关", userIds, Rkey, endTime)
+
 }
 
 // ReloadImLoop 重加载信号

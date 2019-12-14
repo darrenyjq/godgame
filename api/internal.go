@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/olivere/elastic"
+	"gopkg.in/olivere/elastic.v5"
 	"laoyuegou.com/util"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"

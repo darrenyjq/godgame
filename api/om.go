@@ -3,8 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/olivere/elastic"
 	"godgame/core"
+	"gopkg.in/olivere/elastic.v5"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/geo"

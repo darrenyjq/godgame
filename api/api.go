@@ -3,11 +3,11 @@ package api
 import (
 	"fmt"
 	"github.com/json-iterator/go"
-	"github.com/olivere/elastic"
 	shence "github.com/sensorsdata/sa-sdk-go"
 	"godgame/config"
 	"godgame/core"
 	"godgame/handlers"
+	"gopkg.in/olivere/elastic.v5"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.com/httpkit/lyghttp/middleware"
@@ -61,7 +61,7 @@ func NewGodGame(cfg config.Config) *GodGame {
 	go gg.StartQuickOrderLoop()
 	go gg.FillGodList()
 	go gg.dao.StartGodLineLoop()
-	// go gg.dao.StartImLoop()
+	go gg.dao.StartImLoop()
 	return gg
 }
 

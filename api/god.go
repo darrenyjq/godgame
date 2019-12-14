@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/jinzhu/gorm"
-	"github.com/olivere/elastic"
 	"godgame/core"
+	"gopkg.in/olivere/elastic.v5"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
@@ -641,13 +641,14 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
 			Gte(time.Now().AddDate(0, 0, gg.cfg.GodLTSDuration)))
 
+	// if args.Nearby == 1 && args.Latitude != 0 && args.Longitude != 0 {
 	if args.Latitude != 0 && args.Longitude != 0 {
 		icelog.Info("ES搜索 附近功能")
 		q := elastic.NewGeoDistanceQuery("location2").
 			GeoPoint(elastic.GeoPointFromLatLon(float64(args.Latitude), float64(args.Longitude))).
 			Distance("50km")
-		query = query.Filter(q)
-
+		// 默认查询 is_show_near ==2 大神开启附近功能
+		query = query.Filter(q).Must(elastic.NewTermQuery("is_show_near", 2))
 	}
 	if args.Type == constants.SORT_TYPE_DEFAULT {
 		if args.GameId > 0 {
@@ -982,7 +983,6 @@ func (gg *GodGame) GodListInternal(c frame.Context) error {
 		req.Limit = 20
 	}
 
-	icelog.Infof("******** %+v", req)
 	if req.GetGameId() > 0 {
 		if gg.isVoiceCallGame(req.GetGameId()) {
 			// 语聊品类不展示

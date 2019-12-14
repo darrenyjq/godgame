@@ -23,20 +23,21 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 		icelog.Error(err.Error())
 		return err
 	}
+	icelog.Info("记录上下线！！！当前执行：", message.Event, message.ClientInfo.ClientId)
 	if message.Event == imcourierpb.IMEvent_IMEventOnline {
 		self.esUpdate(message.ClientInfo.ClientId, fmt.Sprintf("%s", "lts"))
 	}
 
-	if message.Event == imcourierpb.IMEvent_IMEventOffline {
-		if message.ClientInfo.ClientId > 0 {
-			c := self.dao.Cpool.Get()
-			defer c.Close()
-			arr, _ := redis.Int64(c.Do("scard", core.RKGodAutoGrabGames(message.ClientInfo.ClientId)))
-			// 已开启自动接单时 计入集合
-			if arr > 0 {
-				Rkey := core.RkGodOfflineTime()
-				c.Do("zadd", Rkey, time.Now().Unix(), message.ClientInfo.ClientId)
-			}
+	if message.Event == imcourierpb.IMEvent_IMEventOffline && message.ClientInfo.ClientId > 0 {
+		c := self.dao.Cpool.Get()
+		defer c.Close()
+		arr, _ := redis.Int64(c.Do("scard", core.RKGodAutoGrabGames(message.ClientInfo.ClientId)))
+		// 已开启自动接单时 计入集合
+		icelog.Info("离线消息！！！！：", message.Event, arr, core.RKGodAutoGrabGames(message.ClientInfo.ClientId))
+
+		if arr > 0 {
+			Rkey := core.RkGodOfflineTime()
+			c.Do("zadd", Rkey, time.Now().Unix(), message.ClientInfo.ClientId)
 		}
 	}
 	return nil

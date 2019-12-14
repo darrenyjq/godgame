@@ -46,6 +46,7 @@ type Config struct {
 	YunPianApiKey       string             `json:"yunpian_apikey"`
 	Nsq                 nsq                `json:"nsq"`
 	IMNsq               nsq                `json:"im_nsq"`
+	UserNsq             nsq                `json:"user_nsq"`
 	FillGodListInterval time.Duration      `json:"fill_god_list_interval"`
 	GodLevelIgnoreGames map[string]int64   `json:"god_level_ignore_games"`
 }

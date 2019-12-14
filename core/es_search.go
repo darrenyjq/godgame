@@ -3,8 +3,9 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/olivere/elastic"
+	"gopkg.in/olivere/elastic.v5"
 	"iceberg/frame/icelog"
+	"reflect"
 )
 
 // 查询es数据
@@ -42,4 +43,27 @@ func (dao *Dao) EsUpdateQuickOrder(id string, data map[string]interface{}) {
 	if err != nil {
 		icelog.Info("急速接单大神池更新失败：", id, err.Error())
 	}
+}
+
+//  Dao层 更新大神池数据
+func (dao *Dao) ESUpdateGodGameByQuery(query, data map[string]interface{}) error {
+	var err error
+	var valueType string
+	builderRedefine := dao.EsClient.UpdateByQuery().Index(dao.Cfg.ES.PWIndexRedefine).Type(dao.Cfg.ES.PWType)
+
+	for k, v := range data {
+		valueType = reflect.TypeOf(v).String()
+		if valueType == "int" || valueType == "int64" {
+			builderRedefine = builderRedefine.Script(elastic.NewScriptInline(fmt.Sprintf("ctx._source.%s=%v", k, v)))
+
+		} else {
+			builderRedefine = builderRedefine.Script(elastic.NewScriptInline(fmt.Sprintf("ctx._source.%s='%v'", k, v)))
+		}
+	}
+	for k, v := range query {
+		builderRedefine = builderRedefine.Query(elastic.NewTermQuery(k, v))
+	}
+	_, err = builderRedefine.Do(context.Background())
+	icelog.Info("更新ESRedefine部分字段结果 %+v, %+v error %s", query, data, err)
+	return nil
 }

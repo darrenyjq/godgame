@@ -34,8 +34,10 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 	tag, _ = redis.Int64(c.Do("Get", key))
 	tag2, _ := redis.Int64(c.Do("Get", key2))
 
+	// icelog.Info("新的消息", tag, "****", tag2, "****", key, "****", user1, "****", user2, "****", Rkey)
 	// tag ==2 表示大神回复了老板
 	if tag2 > 0 {
+		// icelog.Info("tag ==2 表示大神回复了老板")
 		c.Do("zrem", Rkey, user1)
 		// 删除后延时 300s 防止被锁
 		c.Do("setex", key2, 300, 2)
@@ -45,9 +47,11 @@ func (self *AutoGrabOrderHandler) HandleMessage(msg *nsq.Message) error {
 	// 接收者为大神
 	if self.dao.IsGrabBedGodsOfBoss([]int64{user1, user2}) {
 		// 查接收者是否有开启自动接单
-		arr, _ := redis.Int64s(c.Do("scan", core.RKGodAutoGrabGames(user2)))
+		arr, _ := redis.Int(c.Do("scard", core.RKGodAutoGrabGames(user2)))
+		// icelog.Info("接收者为大神,大神的开启自动接单", arr, "****", tag2, "&&&&&", core.RKGodAutoGrabGames(user2))
 		// tag2==0表示 接受者没有发过消息   tag！=1是发消息人第一次发
-		if tag2 == 0 && len(arr) > 0 && tag == 0 {
+		if tag2 == 0 && arr > 0 && tag == 0 {
+			icelog.Info("tag！= 1是发消息人第一次发")
 			c.Do("zadd", Rkey, time.Now().Unix(), user2)
 			// tag ==1 表示老板第一次找大神
 			c.Do("setex", key, 300, 1)

@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/olivere/elastic"
+	"gopkg.in/olivere/elastic.v5"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/godgame/constants"

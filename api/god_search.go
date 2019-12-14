@@ -4,7 +4,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/olivere/elastic"
+	"gopkg.in/olivere/elastic.v5"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/godgame/constants"
@@ -309,6 +309,16 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 		return result, fmt.Errorf("get god info error %d-%d", godID, gameID)
 	}
 
+	privacyInfo, _ := userpb.GetPrivacyCfg(frame.TODO(), &userpb.GetPrivacyCfgReq{
+		UserId: godID,
+	})
+	var IsShowNear = int64(2)
+	if privacyInfo.GetData() != nil {
+		IsShowNear = 2
+	} else {
+		IsShowNear = privacyInfo.GetData().GetIsShowNear()
+	}
+
 	if data, err := gg.BuildESGodGameData(godID, gameID); err == nil {
 		geoInfo, geoErr := userpb.Location(frame.TODO(), &userpb.LocationReq{
 			UserId: data.GodID,
@@ -328,6 +338,7 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 		result.PriceID = data.PriceID
 		result.Price = data.Price
 		result.HighestLevelID = data.HighestLevelID
+		result.IsShowNear = IsShowNear
 		if geoErr == nil && geoInfo.GetErrcode() == 0 {
 			result.City = geoInfo.GetData().GetCity()
 			result.District = geoInfo.GetData().GetDistrict()

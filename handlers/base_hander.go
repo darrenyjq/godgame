@@ -50,7 +50,7 @@ func (self *BaseHandler) init() {
 		godGameImOnline.Init2(self.ctx, self.cfg.IMNsq.Topic, "godgame_time", &GodImOnline{self.dao})
 	})
 
-	// 私聊自动回复问题，后面再做
+	// 私聊自动回复
 	self.waitGroup.Wrap(func() {
 		messageRespConsumer := &mq.NsqConsumer{
 			NsqWriters: self.cfg.IMNsq.Writers,
@@ -58,6 +58,16 @@ func (self *BaseHandler) init() {
 		}
 		icelog.Info("启动IM私聊监控")
 		messageRespConsumer.Init2(self.ctx, "message", "godgame_auto_grab_order", &AutoGrabOrderHandler{self.dao})
+	})
+
+	// 更新个人隐私配置
+	self.waitGroup.Wrap(func() {
+		messageRespConsumer := &mq.NsqConsumer{
+			NsqWriters: self.cfg.UserNsq.Writers,
+			NsqLookups: self.cfg.UserNsq.Lookups,
+		}
+		icelog.Info("启动隐私数据监控")
+		messageRespConsumer.Init2(self.ctx, self.cfg.UserNsq.Topic, "godgame_privacy_change", &GodPrivacyHandler{self.dao})
 	})
 
 }
