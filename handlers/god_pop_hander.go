@@ -6,8 +6,11 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
+	"iceberg/frame"
 	"iceberg/frame/icelog"
+	feedpb "laoyuegou.pb/feed/pb"
 	"laoyuegou.pb/imcourier/pb"
+	"strconv"
 	"time"
 )
 
@@ -53,6 +56,24 @@ func (self *GodImOnline) esUpdate(godId int64, lineTime string) {
 			self.dao.EsUpdateQuickOrder(item.Id, map[string]interface{}{
 				lineTime: time.Now(),
 			})
+			// 刷新ES 大神池
+			Query := map[string]interface{}{
+				"god_id": strconv.FormatInt(godId, 10),
+			}
+			// 获取该用户位置坐标
+			resp, err := feedpb.UserPosition(frame.TODO(), &feedpb.UserPositionReq{UserId: godId})
+
+			if err == nil && resp.GetData() != nil {
+
+				resp.GetData().GetLon()
+				Data := map[string]interface{}{
+					"location2['lat']": float64(resp.GetData().GetLat()),
+					"location2['lon']": float64(resp.GetData().GetLon()),
+				}
+
+				self.dao.ESUpdateGodGameByQuery(Query, Data)
+			}
+
 		}
 	}
 }

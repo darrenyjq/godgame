@@ -64,6 +64,8 @@ func (dao *Dao) ESUpdateGodGameByQuery(query, data map[string]interface{}) error
 		builderRedefine = builderRedefine.Query(elastic.NewTermQuery(k, v))
 	}
 	_, err = builderRedefine.Do(context.Background())
-	icelog.Info("更新ESRedefine部分字段结果 %+v, %+v error %s", query, data, err)
+	if err != nil {
+		icelog.Info("更新ESRedefine部分字段失败结果 %+v, %+v error %s", query, data, err.Error())
+	}
 	return nil
 }
