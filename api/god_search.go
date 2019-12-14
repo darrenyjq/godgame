@@ -314,8 +314,6 @@ func (gg *GodGame) BuildESGodGameDataRedefine(godID, gameID int64) (model.ESGodG
 	})
 	var IsShowNear = int64(2)
 	if privacyInfo.GetData() != nil {
-		IsShowNear = 2
-	} else {
 		IsShowNear = privacyInfo.GetData().GetIsShowNear()
 	}
 
@@ -409,7 +407,6 @@ func (gg *GodGame) FlashAllGods1(c frame.Context) error {
 		return c.RetSuccess("success", nil)
 	}
 	return c.RetSuccess("没有大神开启急速接单", nil)
-
 }
 
 // 刷新全部大神池
@@ -450,7 +447,6 @@ func (gg *GodGame) FlashAllGods(c frame.Context) error {
 					}
 					return
 				}
-
 			}()
 			return c.RetSuccess("success 已经异步刷新大神池，请不要频繁操作", nil)
 		}
@@ -472,11 +468,9 @@ func (gg *GodGame) FlashAllGods(c frame.Context) error {
 					}
 					return
 				}
-
 			}()
 			return c.RetSuccess("success 已经异步刷新大神池，请不要频繁操作", nil)
 		}
-
 	}
 
 	return c.RetSuccess("没有大神开启急速接单", nil)
