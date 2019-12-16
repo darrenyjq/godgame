@@ -26,7 +26,7 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 		icelog.Error(err.Error())
 		return err
 	}
-	icelog.Info("记录上下线！！！当前执行：", message.Event, message.ClientInfo.ClientId)
+	// icelog.Debug("记录上下线！：", message.Event, message.ClientInfo.ClientId)
 	if message.Event == imcourierpb.IMEvent_IMEventOnline {
 		self.esUpdate(message.ClientInfo.ClientId, fmt.Sprintf("%s", "lts"))
 	}
@@ -36,8 +36,8 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 		defer c.Close()
 		arr, _ := redis.Int64(c.Do("scard", core.RKGodAutoGrabGames(message.ClientInfo.ClientId)))
 		// 已开启自动接单时 计入集合
-		icelog.Info("离线消息！！！！：", message.Event, arr, core.RKGodAutoGrabGames(message.ClientInfo.ClientId))
 
+		icelog.Info("抢单大神 离线事件：", message.Event, arr, core.RKGodAutoGrabGames(message.ClientInfo.ClientId))
 		if arr > 0 {
 			Rkey := core.RkGodOfflineTime()
 			c.Do("zadd", Rkey, time.Now().Unix(), message.ClientInfo.ClientId)
@@ -46,7 +46,7 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 	return nil
 }
 
-// 查询大神池 更新es
+// 更新es大神池
 func (self *GodImOnline) esUpdate(godId int64, lineTime string) {
 	data := self.dao.EsQueryQuickOrder(godId)
 	// 删除大神 离线时间
