@@ -21,7 +21,7 @@ func (self *GodPrivacyHandler) HandleMessage(msg *nsq.Message) error {
 		icelog.Errorf("%s", err.Error())
 		return nil
 	}
-	icelog.Infof("GodPrivacyHandler received: %s", msg.Body)
+	// icelog.Infof("GodPrivacyHandler received: %s", msg.Body)
 	if message.Schema == "app" && message.Name == "privacy_cfg" && message.Action == "update" && message.Columns[0]["is_show_near"] != message.Columns[1]["is_show_near"] {
 
 		// is_show_near 是否在展示在附近 1 展示 2 不展示
