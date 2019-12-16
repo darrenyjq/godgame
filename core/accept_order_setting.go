@@ -62,14 +62,24 @@ func (dao *Dao) ModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) e
 	return nil
 }
 
-// oxpp 修改大神接单设置
-func (dao *Dao) OmModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) error {
-	err := dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", settings.GodID, settings.GameID).
+// 根据大神等级 获取接单价格id 修改接单设置
+func (dao *Dao) UpdateAcceptOrderInfo(GodLevel, GameId, GodId int64) error {
+	priceId, err := dao.LoadGamePWPrice(GameId, GodLevel)
+	if err != nil {
+		return err
+	}
+	settings := model.ORMOrderAcceptSetting{
+		GameID:  GameId,
+		GodID:   GodId,
+		PriceID: priceId,
+	}
+	err = dao.dbw.Table("play_god_accept_setting").Where("god_id=? AND game_id=?", settings.GodID, settings.GameID).
 		Assign(map[string]interface{}{
 			"pei_wan_uniprice_id": settings.PriceID,
 		}).
 		FirstOrCreate(&settings).Error
 	if err != nil {
+		icelog.Warnf("ModifyAcceptOrderSetting error:%s", err)
 		return err
 	}
 	redisConn := dao.Cpool.Get()

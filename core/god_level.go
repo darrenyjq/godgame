@@ -68,6 +68,10 @@ func (dao *Dao) ReCalcGodLevel(godID, gameID int64) error {
 		if err != nil {
 			icelog.Errorf("ReCalcGodLevel %d-%d error %s", godID, gameID, err)
 		}
+		// 根据大神等级 获取接单价格id 修改接单设置
+		if err = dao.UpdateAcceptOrderInfo(level, gameID, godID); err != nil {
+			return err
+		}
 	}
 	c := dao.Cpool.Get()
 	defer c.Close()

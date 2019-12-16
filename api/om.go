@@ -824,19 +824,9 @@ func (gg *GodGame) ModifyGodGame(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
 	}
-	priceId, err := gg.dao.LoadGamePWPrice(godGame.GameID, req.GetGodLevel())
-	if err != nil {
+	// 根据大神等级 获取接单价格id 修改接单设置
+	if err = gg.dao.UpdateAcceptOrderInfo(req.GetGodLevel(), req.GetGameId(), req.GetGodId()); err != nil {
 		return c.JSON2(ERR_CODE_INTERNAL, err.Error(), nil)
-	}
-	settings := model.ORMOrderAcceptSetting{
-		GameID:  req.GetGameId(),
-		GodID:   req.GetGodId(),
-		PriceID: priceId,
-	}
-	err = gg.dao.OmModifyAcceptOrderSetting(settings)
-	if err != nil {
-		c.Warnf("ModifyAcceptOrderSetting error:%s", err)
-		return c.JSON2(ERR_CODE_INTERNAL, "", nil)
 	}
 	if oldGrabStatus == constants.GRAB_STATUS_YES && req.GetGrabStatus() == constants.GRAB_STATUS_NO {
 		// 取消大神抢单权限需要将大神从大神池移除
