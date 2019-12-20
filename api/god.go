@@ -1700,11 +1700,20 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 	for _, v := range res {
 		coupons[v.GameId] = v.Status
 	}
+
+	banGame, _ := gg.dao.GetAppStoreConfig("11", "22")
+
+	// if err != nil {
+	// 	banGame = make(map[int64]int64)
+	// }
+
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
 		} else if gg.isVoiceCallGame(v1.GameID) {
 			// 语聊品类不展示在下定向单页面
+			continue
+		} else if _, ok := banGame[v1.GameID]; !ok {
 			continue
 		}
 		dxdResp, err = gamepb.Dxd(c, &gamepb.DxdReq{
