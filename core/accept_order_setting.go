@@ -32,6 +32,8 @@ func (dao *Dao) GetGodSpecialAcceptOrderSetting(godID, gameID int64) (model.Orde
 	oas.GrabSwitch3 = ormOas.GrabSwitch3
 	oas.GrabSwitch4 = ormOas.GrabSwitch4
 	oas.GrabSwitch5 = ormOas.GrabSwitch5
+	// 初始状态 不打折
+	oas.PriceDiscount = ormOas.GetPriceDiscount()
 	if err = json.Unmarshal([]byte(ormOas.RegionLevel), &oas); err != nil {
 		icelog.Error(err.Error())
 	}

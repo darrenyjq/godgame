@@ -1437,6 +1437,12 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			}
 		}
 		GrabSwitch6 := gg.dao.GetAutoGrabGames(godGame.GodID, godGame.GameID)
+
+		// 显示 品类单价 计算折扣以后的价格
+		uniprice := resp.GetData().GetPrices()[godGame.PriceID]
+		PriceDiscount := godGame.GetPriceDiscount()
+		uniprice_discount := (uniprice * int64(PriceDiscount*100)) / 100
+
 		settings = append(settings, map[string]interface{}{
 			"game_id":    godGame.GameID,
 			"god_id":     godGame.GodID,
@@ -1447,7 +1453,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 				"level_id":  godGame.Levels,
 			},
 			"unit_price_id":           godGame.PriceID,
-			"uniprice":                resp.GetData().GetPrices()[godGame.PriceID],
+			"uniprice":                uniprice_discount,
 			"status":                  transGodGameApplyStatus(godGame.Status, gg.dao.GetGodGameApplyStatus(godGame.GodID, godGame.GameID)),
 			"highest_level_score":     resp.GetData().GetLevels()[godGame.HighestLevelID],
 			"highest_level_id":        godGame.HighestLevelID,
@@ -1464,8 +1470,9 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"grab_switch2":            godGame.GrabSwitch2,
 			"grab_switch3":            godGame.GrabSwitch3,
 			"grab_switch4":            godGame.GrabSwitch4,
-			"grab_switch5":            godGame.GrabSwitch5,
+			"grab_switch5":            godGame.GetGrabSwitch5(),
 			"grab_switch6":            GrabSwitch6,
+			"price_discount":          PriceDiscount,
 			"is_show_auto_grab_order": IsShowAutoGrabOrder, // 1 显示 2不显示
 			"order_cnt":               godGame.AcceptNum,
 			"order_cnt_desc":          FormatAcceptOrderNumber(godGame.AcceptNum),
