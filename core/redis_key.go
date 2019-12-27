@@ -118,11 +118,6 @@ func RKJSYPaiDanGods(gameID, gender int64) string {
 	return fmt.Sprintf("JSYPaiDan:{%d}:{%d}:Gods", gameID, gender)
 }
 
-// GodConfig 大神配置
-func GodConfig(godID int64) string {
-	return fmt.Sprintf("GOD:{%d}:Config", godID)
-}
-
 // 陪玩首页权重
 func RKUpperGodGames() string {
 	return "PW_List_Up_God_Games"

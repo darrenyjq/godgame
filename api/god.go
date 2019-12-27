@@ -10,7 +10,7 @@ import (
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
 	"laoyuegou.pb/chatroom/pb"
-	"laoyuegou.pb/follow/pb"
+	followpb "laoyuegou.pb/follow/pb"
 	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
@@ -292,6 +292,7 @@ func (gg *GodGame) GenPeiWanShareURL(godAvatar, godName, gameName, desc string, 
 	return rawString
 }
 
+//  该接口已废弃，改用php接口 godDetail
 func (gg *GodGame) GodDetail(c frame.Context) error {
 	var req godgamepb.GodDetailReq
 	if err := c.Bind(&req); err != nil {
@@ -1443,6 +1444,13 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 		PriceDiscount := godGame.GetPriceDiscount()
 		uniprice_discount := (uniprice * int64(PriceDiscount*100)) / 100
 
+		// discounts := make(map[int32]interface{})
+		discounts := map[int32]interface{}{
+			100: "保持原价",
+			90:  "9折优惠",
+			80:  "8折优惠",
+		}
+
 		settings = append(settings, map[string]interface{}{
 			"game_id":    godGame.GameID,
 			"god_id":     godGame.GodID,
@@ -1475,6 +1483,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"price_discount":          PriceDiscount,
 			"is_show_auto_grab_order": IsShowAutoGrabOrder, // 1 显示 2不显示
 			"order_cnt":               godGame.AcceptNum,
+			"discounts":               discounts,
 			"order_cnt_desc":          FormatAcceptOrderNumber(godGame.AcceptNum),
 			"potential_level":         availableLevel, // 大神当前ES中的潜力等级
 		})
@@ -1556,15 +1565,23 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
+
+	PriceDiscount := req.GetPriceDiscount() / 100
+	// 供兼容老版本
+	if PriceDiscount == 0 {
+		PriceDiscount = 1
+	}
+
 	settings := model.ORMOrderAcceptSetting{
-		GameID:      req.GetGameId(),
-		GodID:       currentUser.UserID,
-		RegionLevel: string(bs),
-		GrabSwitch:  req.GetGrabSwitch(),
-		GrabSwitch2: req.GetGrabSwitch2(),
-		GrabSwitch3: req.GetGrabSwitch3(),
-		GrabSwitch4: req.GetGrabSwitch4(),
-		PriceID:     req.GetUnitPriceId(),
+		GameID:        req.GetGameId(),
+		GodID:         currentUser.UserID,
+		RegionLevel:   string(bs),
+		GrabSwitch:    req.GetGrabSwitch(),
+		GrabSwitch2:   req.GetGrabSwitch2(),
+		GrabSwitch3:   req.GetGrabSwitch3(),
+		GrabSwitch4:   req.GetGrabSwitch4(),
+		PriceID:       req.GetUnitPriceId(),
+		PriceDiscount: PriceDiscount,
 	}
 	err = gg.dao.ModifyAcceptOrderSetting(settings)
 

@@ -53,6 +53,7 @@ func (dao *Dao) ModifyAcceptOrderSetting(settings model.ORMOrderAcceptSetting) e
 			"grab_switch3":        settings.GrabSwitch3,
 			"grab_switch4":        settings.GrabSwitch4,
 			"pei_wan_uniprice_id": settings.PriceID,
+			"price_discount":      settings.GetPriceDiscount(),
 		}).
 		FirstOrCreate(&settings).Error
 	if err != nil {

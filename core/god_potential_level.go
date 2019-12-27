@@ -47,7 +47,7 @@ func (dao *Dao) GetGodPotentialLevel(god, gameId int64) model.StatisticsLevel {
 		level = 2
 	}
 	score.Discounts = level
-	icelog.Infof("大神潜力等级分数: %+v,WWWWWW %+v,WWWWWW %+v,WWWWWW %+v,WWWWWW %+v", score, t2, t3, t4, t5)
+	icelog.Infof("大神潜力等级分数: %+v,总流水 %+v,WWWWWW %+v,WWWWWW %+v,WWWWWW %+v", score, t2, t3, t4, t5)
 	return score
 
 }
@@ -99,12 +99,6 @@ func (dao *Dao) CalculateScore(godId, gameId, days int64) model.StatisticsLevel 
 		Where("god_id=? and create_time > ?", godId, end_time).
 		First(&Score).Error
 
-	icelog.Infof("DDDDDDDDDDDDD  %+v", model.StatisticsLevel{
-		TotalScore:  Score.TotalScore,
-		Repurchase:  int(repurchase),
-		TotalWater:  TotalWater,
-		TotalNumber: number,
-	})
 	return model.StatisticsLevel{
 		TotalScore:  Score.TotalScore,
 		Repurchase:  int(repurchase),
