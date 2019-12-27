@@ -22,8 +22,11 @@ func (self *GodLevelHandler) HandleMessage(msg *nsq.Message) error {
 		icelog.Errorf("%s", err.Error())
 		return nil
 	}
+
+	icelog.Infof("%+v,,,,,,,,,,,,,", message)
+
 	var godID, gameID int64
-	if message.Schema == "app" && message.Name == "play_order_comment" && message.Action == "insert" {
+	if message.Schema == "app" && message.Name == "play_order_comment" {
 		// 陪玩评价
 		godID = int64(message.Columns[0]["god_id"].(float64))
 		gameID = int64(message.Columns[0]["game_id"].(float64))
