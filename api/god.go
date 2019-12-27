@@ -9,7 +9,6 @@ import (
 	"iceberg/frame"
 	"iceberg/frame/icelog"
 	lyg_util "laoyuegou.com/util"
-	"laoyuegou.pb/chatroom/pb"
 	followpb "laoyuegou.pb/follow/pb"
 	game_const "laoyuegou.pb/game/constants"
 	"laoyuegou.pb/game/pb"
@@ -362,13 +361,13 @@ func (gg *GodGame) GodDetail(c frame.Context) error {
 			freeStatus = order_const.PW_STATUS_LIVE
 			roomID = liveResp.GetData().GetRoomId()
 		} else {
-			seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
-				UserId: v1.GodID,
-			})
-			if err == nil && seatResp.GetData() != nil {
-				freeStatus = order_const.PW_STATUS_ON_SEAT
-				roomID = seatResp.GetData().GetRoomId()
-			}
+			// seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
+			// 	UserId: v1.GodID,
+			// })
+			// if err == nil && seatResp.GetData() != nil {
+			// 	freeStatus = order_const.PW_STATUS_ON_SEAT
+			// 	roomID = seatResp.GetData().GetRoomId()
+			// }
 		}
 
 	}
@@ -1441,14 +1440,16 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 
 		// 显示 品类单价 计算折扣以后的价格
 		uniprice := resp.GetData().GetPrices()[godGame.PriceID]
-		PriceDiscount := godGame.GetPriceDiscount()
-		uniprice_discount := (uniprice * int64(PriceDiscount*100)) / 100
-
-		// discounts := make(map[int32]interface{})
-		discounts := map[int32]interface{}{
-			100: "保持原价",
-			90:  "9折优惠",
-			80:  "8折优惠",
+		var discounts map[int32]interface{}
+		var PriceDiscount float32
+		if gg.dao.IsOpenDicount() {
+			PriceDiscount := godGame.GetPriceDiscount()
+			uniprice = (uniprice * int64(PriceDiscount*100)) / 100
+			discounts = map[int32]interface{}{
+				100: "保持原价",
+				90:  "9折优惠",
+				80:  "8折优惠",
+			}
 		}
 
 		settings = append(settings, map[string]interface{}{
@@ -1461,7 +1462,7 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 				"level_id":  godGame.Levels,
 			},
 			"unit_price_id":           godGame.PriceID,
-			"uniprice":                uniprice_discount,
+			"uniprice":                uniprice,
 			"status":                  transGodGameApplyStatus(godGame.Status, gg.dao.GetGodGameApplyStatus(godGame.GodID, godGame.GameID)),
 			"highest_level_score":     resp.GetData().GetLevels()[godGame.HighestLevelID],
 			"highest_level_id":        godGame.HighestLevelID,
@@ -1565,10 +1566,14 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
-
-	PriceDiscount := req.GetPriceDiscount() / 100
-	// 供兼容老版本
-	if PriceDiscount == 0 {
+	var PriceDiscount float32
+	if gg.dao.IsOpenDicount() {
+		PriceDiscount := req.GetPriceDiscount() / 100
+		// 供兼容老版本
+		if PriceDiscount == 0 {
+			PriceDiscount = 1
+		}
+	} else {
 		PriceDiscount = 1
 	}
 
@@ -1725,19 +1730,11 @@ func (gg *GodGame) Dxd(c frame.Context) error {
 		coupons[v.GameId] = v.Status
 	}
 
-	banGame, _ := gg.dao.GetAppStoreConfig("11", "22")
-
-	// if err != nil {
-	// 	banGame = make(map[int64]int64)
-	// }
-
 	for _, v1 := range v1s {
 		if v1.GrabSwitch != constants.GRAB_SWITCH_OPEN {
 			continue
 		} else if gg.isVoiceCallGame(v1.GameID) {
 			// 语聊品类不展示在下定向单页面
-			continue
-		} else if _, ok := banGame[v1.GameID]; !ok {
 			continue
 		}
 		dxdResp, err = gamepb.Dxd(c, &gamepb.DxdReq{
@@ -1865,17 +1862,6 @@ func (gg *GodGame) buildGodDetail(c frame.Context, godID, gameID int64) (map[str
 		} else {
 			freeStatus = freeResp.GetData().GetStatus()
 			freeStatusDesc = freeResp.GetData().GetStatusDesc()
-			if freeStatus == order_const.PW_STATUS_FREE {
-				seatResp, err := pb_chatroom.IsOnSeat(c, &pb_chatroom.IsOnSeatReq{
-					UserId: v1.GodID,
-				})
-				if err == nil && seatResp.GetData() != nil {
-					freeStatus = order_const.PW_STATUS_ON_SEAT
-					freeStatusDesc = order_const.PW_STATS_DESC[order_const.PW_STATUS_ON_SEAT]
-					roomID = seatResp.GetData().GetRoomId()
-					template = seatResp.GetData().GetTemplate()
-				}
-			}
 		}
 	}
 	var tmpImages, tmpTags, tmpPowers []string

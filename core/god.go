@@ -1318,3 +1318,8 @@ func (dao *Dao) GetAutoGrabGames(godId, GameId int64) int64 {
 	}
 	return GrabSwitch6
 }
+
+// 是否全局开启单价打折功能
+func (dao *Dao) IsOpenDicount() bool {
+	return dao.Cfg.IsOpenDicount
+}

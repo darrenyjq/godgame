@@ -49,4 +49,5 @@ type Config struct {
 	UserNsq             nsq                `json:"user_nsq"`
 	FillGodListInterval time.Duration      `json:"fill_god_list_interval"`
 	GodLevelIgnoreGames map[string]int64   `json:"god_level_ignore_games"`
+	IsOpenDicount       bool               `json:"is_open_dicount"`
 }
