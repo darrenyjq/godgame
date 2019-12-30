@@ -1495,8 +1495,45 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 
 // 获取优惠折扣信息
 func (gg *GodGame) GetDiscountPrice(c frame.Context) error {
+	var req godgamepb.GetDiscountPriceReq
+	if err := c.Bind(&req); err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
+	} else if req.GetGodId() == 0 {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "god_id is empty", nil)
+	}
+	v1s, _ := gg.dao.GetGodAllGameV1(req.GetGodId())
+	if len(v1s) == 0 {
+		return c.JSON2(ERR_CODE_GOD_ACCEPT_SETTING_LOAD_FAIL, errGodAcceptSettingLoadFail, nil)
+	}
 
-	return c.RetSuccess("success", nil)
+	data := make(map[int64]godgamepb.GetDiscountPriceResp_Data, 0)
+	for _, v := range v1s {
+		PriceDiscount := int64(1)
+		Price := int64(1)
+		if gg.dao.IsOpenDicount() {
+			PriceDiscount = int64(v.GetPriceDiscount() * 100)
+		}
+
+		if v.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+			Price = FormatRMB2Gouliang(v.PeiWanPrice)
+		} else {
+			tmpCfgV2, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+				GameId: v.GameID,
+			})
+			if err == nil {
+				Price = FormatRMB2Gouliang(tmpCfgV2.GetData().GetPrices()[v.PriceID])
+			} else {
+				icelog.Info(err)
+			}
+		}
+
+		data[v.GameID] = godgamepb.GetDiscountPriceResp_Data{
+			GameId:  v.GameID,
+			Dicount: PriceDiscount,
+			Price:   Price,
+		}
+	}
+	return c.RetSuccess("success", data)
 }
 
 // 接单设置
