@@ -172,3 +172,8 @@ func RkSendImStartTime() string {
 func RkLockProtect(signal int64) string {
 	return fmt.Sprintf("lock_protect:{%d}", signal)
 }
+
+// 是否开启打折优惠功能
+func RKIsOpenDiscount() string {
+	return fmt.Sprintf("IS_OPEN_DISCOUNT")
+}

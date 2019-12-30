@@ -58,6 +58,8 @@ func NewDao(cfg config.Config, esClient *elastic.Client) *Dao {
 	} else {
 		panic("云片ApiKey为空")
 	}
+	// 每次启动 缓存配置共享给php
+	dao.SetIsOpenDiscount()
 	return dao
 }
 
@@ -116,4 +118,10 @@ func (dao *Dao) UserV1ByGouHao(gouhao int64) (UserInfoV1, error) {
 
 func (dao *Dao) GetRedisPool() *redis.Pool {
 	return dao.Cpool
+}
+
+func (dao *Dao) SetIsOpenDiscount() {
+	c := dao.Cpool.Get()
+	defer c.Close()
+	c.Do("set", RKIsOpenDiscount(), dao.Cfg.IsOpenDicount)
 }

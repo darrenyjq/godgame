@@ -1454,7 +1454,6 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 		// 显示 品类单价 计算折扣以后的价格
 		uniprice := resp.GetData().GetPrices()[godGame.PriceID]
 		PriceDiscount := int64(100)
-		icelog.Infof("%+v,&&&&&&", godGame)
 		if gg.dao.IsOpenDicount() {
 			PriceDiscount = godGame.GetPriceDiscount()
 			uniprice = (uniprice * PriceDiscount) / 100
