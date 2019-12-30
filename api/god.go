@@ -1417,6 +1417,19 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	}
 	// 获取急速接单信息 用于埋点
 	var resp *gamepb.AcceptCfgV2Resp
+	type disc struct {
+		Key   int    `json:"key"`
+		Value string `json:"value"`
+	}
+	var discounts []disc
+	if gg.dao.IsOpenDicount() {
+		discounts = []disc{
+			{100, "保持原价"},
+			{90, "9折优惠"},
+			{80, "8折优惠"},
+		}
+	}
+
 	for _, godGame := range godGames {
 		resp, err = gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
 			GameId: godGame.GameID,
@@ -1440,16 +1453,11 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 
 		// 显示 品类单价 计算折扣以后的价格
 		uniprice := resp.GetData().GetPrices()[godGame.PriceID]
-		var discounts map[int32]interface{}
-		var PriceDiscount float32
+		PriceDiscount := int64(100)
+		icelog.Infof("%+v,&&&&&&", godGame)
 		if gg.dao.IsOpenDicount() {
-			PriceDiscount := godGame.GetPriceDiscount()
-			uniprice = (uniprice * int64(PriceDiscount*100)) / 100
-			discounts = map[int32]interface{}{
-				100: "保持原价",
-				90:  "9折优惠",
-				80:  "8折优惠",
-			}
+			PriceDiscount = godGame.GetPriceDiscount()
+			uniprice = (uniprice * PriceDiscount) / 100
 		}
 
 		settings = append(settings, map[string]interface{}{
@@ -1484,12 +1492,13 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 			"price_discount":          PriceDiscount,
 			"is_show_auto_grab_order": IsShowAutoGrabOrder, // 1 显示 2不显示
 			"order_cnt":               godGame.AcceptNum,
-			"discounts":               discounts,
 			"order_cnt_desc":          FormatAcceptOrderNumber(godGame.AcceptNum),
 			"potential_level":         availableLevel, // 大神当前ES中的潜力等级
 		})
 	}
 	data["order_settings"] = settings
+	data["discounts"] = discounts
+	data["is_open_dicount"] = gg.dao.IsOpenDicount()
 	return c.JSON2(StatusOK_V3, "", data)
 }
 
@@ -1511,7 +1520,7 @@ func (gg *GodGame) GetDiscountPrice(c frame.Context) error {
 		PriceDiscount := int64(1)
 		Price := int64(1)
 		if gg.dao.IsOpenDicount() {
-			PriceDiscount = int64(v.GetPriceDiscount() * 100)
+			PriceDiscount = v.GetPriceDiscount()
 		}
 
 		if v.PriceType == constants.PW_PRICE_TYPE_BY_OM {
@@ -1524,6 +1533,7 @@ func (gg *GodGame) GetDiscountPrice(c frame.Context) error {
 				Price = FormatRMB2Gouliang(tmpCfgV2.GetData().GetPrices()[v.PriceID])
 			} else {
 				icelog.Info(err)
+				continue
 			}
 		}
 
@@ -1609,15 +1619,12 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	if err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
-	var PriceDiscount float32
+	// 供兼容老版本
+	PriceDiscount := int64(100)
 	if gg.dao.IsOpenDicount() {
-		PriceDiscount := req.GetPriceDiscount() / 100
-		// 供兼容老版本
-		if PriceDiscount == 0 {
-			PriceDiscount = 1
+		if req.GetPriceDiscount() != 0 {
+			PriceDiscount = req.GetPriceDiscount()
 		}
-	} else {
-		PriceDiscount = 1
 	}
 
 	settings := model.ORMOrderAcceptSetting{
@@ -1629,7 +1636,7 @@ func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 		GrabSwitch3:   req.GetGrabSwitch3(),
 		GrabSwitch4:   req.GetGrabSwitch4(),
 		PriceID:       req.GetUnitPriceId(),
-		PriceDiscount: PriceDiscount,
+		PriceDiscount: float32(PriceDiscount) / 100,
 	}
 	err = gg.dao.ModifyAcceptOrderSetting(settings)
 
