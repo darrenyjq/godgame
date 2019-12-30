@@ -38,6 +38,8 @@ func (self *BaseHandler) init() {
 			NsqWriters: self.cfg.Nsq.Writers,
 			NsqLookups: self.cfg.Nsq.Lookups,
 		}
+		icelog.Info("启动完成评论重算大神等级监控")
+
 		godLevelConsumer.Init2(self.ctx, self.cfg.Nsq.Topic, "god_level", &GodLevelHandler{self.dao})
 	})
 

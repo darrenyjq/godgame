@@ -4,6 +4,7 @@ import (
 	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame/icelog"
+	constants2 "laoyuegou.pb/plcomment/constants"
 	"laoyuegou.pb/plorder/constants"
 	"laoyuegou.pb/virgo/model"
 )
@@ -22,14 +23,26 @@ func (self *GodLevelHandler) HandleMessage(msg *nsq.Message) error {
 		icelog.Errorf("%s", err.Error())
 		return nil
 	}
-
-	icelog.Infof("%+v,,,,,,,,,,,,,", message)
-
+	// icelog.Infof("%+v,,,,%+v,,,,,,,,,", message, message.Action)
 	var godID, gameID int64
-	if message.Schema == "app" && message.Name == "play_order_comment" {
+	// 审核评论状态通过变成1
+	if message.Schema == "app" && message.Name == "play_order_comment" && message.Action == "update" {
+		if int64(message.Columns[1]["state"].(float64)) != constants2.ORDER_COMMENT_STATE_OK {
+			return nil
+		}
 		// 陪玩评价
 		godID = int64(message.Columns[0]["god_id"].(float64))
 		gameID = int64(message.Columns[0]["game_id"].(float64))
+
+	} else if message.Schema == "app" && message.Name == "play_order_comment" && message.Action == "insert" {
+		if int64(message.Columns[0]["state"].(float64)) != constants2.ORDER_COMMENT_STATE_OK {
+			return nil
+		}
+		// 首次5星好评默认通过
+		// 陪玩评价
+		godID = int64(message.Columns[0]["god_id"].(float64))
+		gameID = int64(message.Columns[0]["game_id"].(float64))
+
 	} else if message.Schema == "app" && message.Name == "play_order" && message.Action == "update" {
 		// 陪玩订单
 		state := int64(message.Columns[1]["state"].(float64))
