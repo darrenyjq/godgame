@@ -1493,6 +1493,12 @@ func (gg *GodGame) MyGod(c frame.Context) error {
 	return c.JSON2(StatusOK_V3, "", data)
 }
 
+// 获取优惠折扣信息
+func (gg *GodGame) GetDiscountPrice(c frame.Context) error {
+
+	return c.RetSuccess("success", nil)
+}
+
 // 接单设置
 func (gg *GodGame) AcceptOrderSetting(c frame.Context) error {
 	currentUser := gg.getCurrentUser(c)
