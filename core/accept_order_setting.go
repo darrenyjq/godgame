@@ -4,9 +4,9 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
+	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	godgamepb "laoyuegou.pb/godgame/pb"
-	"play/common/constants"
 	gamepb "play/game/pb"
 )
 
