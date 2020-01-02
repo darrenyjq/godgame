@@ -177,3 +177,8 @@ func RkLockProtect(signal int64) string {
 func RKIsOpenDiscount() string {
 	return fmt.Sprintf("IS_OPEN_DISCOUNT")
 }
+
+//RkOnlineGods 在线的大神 set类型
+func RkOnlineGods() string {
+	return fmt.Sprintf("online_gods")
+}

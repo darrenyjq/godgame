@@ -2,19 +2,20 @@ package core
 
 import (
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"iceberg/frame"
+
+	"github.com/gomodule/redigo/redis"
 	lyg_fmt "laoyuegou.com/util/format"
-	"laoyuegou.pb/chatroom/pb"
-	"laoyuegou.pb/game/pb"
+	pb_chatroom "laoyuegou.pb/chatroom/pb"
+	gamepb "laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
-	"laoyuegou.pb/lfs/pb"
-	"laoyuegou.pb/live/pb"
-	"laoyuegou.pb/plcomment/pb"
+	lfspb "laoyuegou.pb/lfs/pb"
+	livepb "laoyuegou.pb/live/pb"
+	plcommentpb "laoyuegou.pb/plcomment/pb"
 	order_const "laoyuegou.pb/plorder/constants"
-	"laoyuegou.pb/plorder/pb"
-	"laoyuegou.pb/user/pb"
+	plorderpb "laoyuegou.pb/plorder/pb"
+	userpb "laoyuegou.pb/user/pb"
 )
 
 func (dao *Dao) formatVideoInfo(c frame.Context, hash string) string {
@@ -249,4 +250,14 @@ func (dao *Dao) GetGodListsByGender(gameID, gender, offset, limit int64, ctx fra
 	}
 
 	return gods, totalCnt
+}
+
+//GetInvialdGod 获取所有审核通过的大神
+func (dao *Dao) GetInvialdGod() (results []*model.God, err error) {
+	if err := dao.dbr.Model(&model.God{}).Where("status = ?", 1).Order("updatedtime desc").Scan(&results).Error; err != nil {
+		return nil, err
+	} else if len(results) == 0 {
+		return nil, fmt.Errorf("暂无审核通过的大神")
+	}
+	return results, err
 }

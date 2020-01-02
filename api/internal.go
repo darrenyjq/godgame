@@ -4,18 +4,23 @@ import (
 	"fmt"
 	"godgame/core"
 	"iceberg/frame"
+	"iceberg/frame/config"
+	"io/ioutil"
+	"net/http"
 	"sort"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"gopkg.in/olivere/elastic.v5"
 	"laoyuegou.com/util"
-	"laoyuegou.pb/game/pb"
+	followpb "laoyuegou.pb/follow/pb"
+	gamepb "laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
-	"laoyuegou.pb/godgame/pb"
-	"laoyuegou.pb/imapi/pb"
-	"laoyuegou.pb/plorder/pb"
-	"laoyuegou.pb/user/pb"
+	godgamepb "laoyuegou.pb/godgame/pb"
+	imapipb "laoyuegou.pb/imapi/pb"
+	plorderpb "laoyuegou.pb/plorder/pb"
+	userpb "laoyuegou.pb/user/pb"
 )
 
 func (gg *GodGame) Vcard(c frame.Context) error {
@@ -347,7 +352,6 @@ func (gg *GodGame) SpecialGodOrderSetting(c frame.Context) error {
 		GrabSwitch2:    godGame.GrabSwitch2,
 		GrabSwitch3:    godGame.GrabSwitch3,
 		GrabSwitch4:    godGame.GrabSwitch4,
-		PriceDiscount:  godGame.GetPriceDiscount(),
 	})
 }
 
@@ -877,36 +881,222 @@ func (gg *GodGame) DxdInternal(c frame.Context) error {
 	})
 }
 
-// 获取大神接单最多的语音介绍和时长
-func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
-	var req godgamepb.GodMostOrderVoiceReq
+//GuessYouLike 猜你喜欢
+func (gg *GodGame) GuessYouLike(c frame.Context) error {
+	var req godgamepb.GuessYouLikeReq
 	var err error
 	if err = c.Bind(&req); err != nil {
 		return c.RetBadRequestError(err.Error())
+	} else if req.UserId <= 0 {
+		return c.RetBadRequestError("invalid userID,it's value must greater than 0")
 	}
-	god := gg.dao.GetGod(req.GetGodId())
-	if god.Status != constants.GOD_STATUS_PASSED {
-		return c.RetSuccess("非大神用户", nil)
-	}
-	v1s, err := gg.dao.GetGodAllGames(req.GetGodId())
+	userID := req.GetUserId()
+	redisConn := gg.dao.GetPlayRedisPool().Get()
+	defer redisConn.Close()
+	//获取所有审核通过的大神
+	gods, err := gg.dao.GetInvialdGod()
 	if err != nil {
-		c.Error(err.Error())
-		return c.RetSuccess("大神信息获取异常", nil)
+		return c.RetBadRequestError(err.Error())
 	}
-	var resp godgamepb.GodMostOrderVoiceResp
-	if len(v1s) > 0 {
-		sort.Slice(v1s, func(i, j int) bool {
-			return v1s[i].AcceptNum > v1s[j].AcceptNum
-		})
-		for _, v := range v1s {
-			if v.GrabSwitch == 1 {
-				resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
-					Voice:         v.Aac,
-					VoiceDuration: v.VoiceDuration,
-				}
-				return c.RetSuccess("success", resp.Data)
+	mapGods := make(map[int64]int64)
+	for _, god := range gods {
+		mapGods[god.UserID] = god.UserID
+	}
+	//过滤
+	returnSlice := make([]int64, 0)
+	//关注的大神
+	resp, err := followpb.List(frame.TODO(), &followpb.ListReq{
+		Page:     1,
+		Pagesize: 5,
+		Relation: 1,
+		Mid:      userID,
+	})
+	if err != nil || resp == nil || resp.GetErrcode() != 0 || resp.GetData() == nil {
+		return c.RetBadRequestError("内部错误，请稍后重试")
+	}
+	followObjs := make([]*followpb.ListResp_List, 0)
+	for _, follow := range resp.GetData().List {
+		if _, ok := mapGods[follow.Mid]; ok {
+			followObj := &followpb.ListResp_List{
+				Mid:   follow.Mid,   //大神ID
+				Photo: follow.Photo, //最后记录时间
 			}
+			followObjs = append(followObjs, followObj)
 		}
 	}
-	return c.RetSuccess("success", nil)
+	sort.Slice(followObjs, func(i, j int) bool {
+		return followObjs[i].Photo > followObjs[j].Photo
+	})
+	for _, follow := range followObjs {
+		if len(returnSlice) >= 5 {
+			break
+		}
+		returnSlice = append(returnSlice, follow.Mid)
+	}
+	if len(returnSlice) >= 5 {
+		respData := &godgamepb.GuessYouLikeResp_Data{
+			GodIds: returnSlice[:5],
+		}
+		return c.JSON2(StatusOK_V3, "", respData)
+	}
+
+	//调用php获取用户24小时足迹
+	footPrints, err := gg.GetFootPrint(userID)
+	if err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	footPrintObjs := make([]*FootPrint, 0)
+	for _, footPrint := range footPrints {
+		if _, ok := mapGods[footPrint.UserId]; ok {
+			footPrintObj := &FootPrint{
+				UserId: footPrint.UserId,
+				Time:   footPrint.Time,
+			}
+			footPrintObjs = append(footPrintObjs, footPrintObj)
+		}
+	}
+	for _, footPrint := range footPrintObjs {
+		if len(returnSlice) >= 5 {
+			break
+		}
+		returnSlice = append(returnSlice, footPrint.UserId)
+	}
+	if len(returnSlice) >= 5 {
+		respData := &godgamepb.GuessYouLikeResp_Data{
+			GodIds: returnSlice[:5],
+		}
+		return c.JSON2(StatusOK_V3, "", respData)
+	}
+	//下过单的大神
+	resp2, err := plorderpb.OrderList(frame.TODO(), &plorderpb.OrderListReq{
+		UserId: userID,
+	})
+	if err != nil || resp2 == nil || resp2.GetErrcode() != 0 || resp2.GetData() == nil {
+		return c.RetBadRequestError("rpc 调用plorder失败")
+	}
+	orderObjs := make([]*plorderpb.OrderListResp_Data_List, 0)
+	for _, order := range resp2.GetData().List {
+		if _, ok := mapGods[order.GodId]; ok {
+			orderObj := &plorderpb.OrderListResp_Data_List{
+				GodId:      order.GodId,
+				UpdateTime: order.UpdateTime,
+			}
+			orderObjs = append(orderObjs, orderObj)
+		}
+	}
+	for _, order := range orderObjs {
+		if len(returnSlice) >= 5 {
+			break
+		}
+		returnSlice = append(returnSlice, order.GodId)
+	}
+	if len(returnSlice) >= 5 {
+		respData := &godgamepb.GuessYouLikeResp_Data{
+			GodIds: returnSlice[:5],
+		}
+		return c.JSON2(StatusOK_V3, "", respData)
+	}
+	//在线的大神
+	onlineGods, _ := redis.Int64s(redisConn.Do("SMEMBERS", core.RkOnlineGods()))
+	for _, onlineGod := range onlineGods {
+		if len(returnSlice) >= 5 {
+			break
+		}
+		returnSlice = append(returnSlice, onlineGod)
+	}
+	if len(returnSlice) >= 5 {
+		respData := &godgamepb.GuessYouLikeResp_Data{
+			GodIds: returnSlice[:5],
+		}
+		return c.JSON2(StatusOK_V3, "", respData)
+	}
+	respData := &godgamepb.GuessYouLikeResp_Data{
+		GodIds: returnSlice,
+	}
+	return c.JSON2(StatusOK_V3, "", respData)
+
+}
+
+type FootPrintResp struct {
+	Errcode int          `json:"errcode"`
+	Data    []*FootPrint `json:"data"`
+}
+
+type FootPrint struct {
+	UserId int64 `json:"id"`
+	Time   int64 `json:"time"`
+}
+
+//FootPrints 足迹切片
+type FootPrints []*FootPrint
+
+//Len 实现sort interface接口Len()
+func (a FootPrints) Len() int {
+	return len(a)
+}
+
+//Swap 实现sort interface接口Swap()
+func (a FootPrints) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+//Less 实现sort interface接口Less()
+func (a FootPrints) Less(i, j int) bool {
+	return a[i].Time < a[j].Time
+}
+
+//Follows 关注切片
+type Follows []*followpb.ListResp_List
+
+//Len 实现sort interface接口Len()
+func (a Follows) Len() int {
+	return len(a)
+}
+
+//Swap 实现sort interface接口Swap()
+func (a Follows) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+//Less 实现sort interface接口Less()
+func (a Follows) Less(i, j int) bool {
+	return a[i].Photo < a[j].Photo
+}
+
+//GetFootPrint 获取用户24小时足迹
+func (gg *GodGame) GetFootPrint(userID int64) ([]*FootPrint, error) {
+	reqURL := fmt.Sprintf("http://api.lygou.cc/account/user/footprint?user_id=%d", userID)
+	switch gg.cfg.Env.String() {
+	case string(config.ENV_QA):
+		reqURL = fmt.Sprintf("http://latest-test-api.lygou.cc/account/user/footprint?user_id=%d", userID)
+	case string(config.ENV_STAG):
+		reqURL = fmt.Sprintf("http://latest-staging-api.lygou.cc/account/user/footprint?user_id=%d", userID)
+	default:
+		return nil, fmt.Errorf("获取系统环境失败")
+	}
+	resp, err := http.Get(reqURL)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户足迹失败")
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("Bad GET status for %q: %q", reqURL, resp.Status)
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		return nil, fmt.Errorf("fetch error: reading %s: %v", reqURL, err)
+	}
+	var ft = &FootPrintResp{}
+	err = json.Unmarshal(b, ft)
+	if err != nil {
+		return nil, err
+	}
+	if ft.Errcode != 0 {
+		return nil, fmt.Errorf("get footprint fail")
+	}
+	footPrints := ft.Data
+	sort.Slice(footPrints, func(i, j int) bool {
+		return footPrints[i].Time > footPrints[j].Time
+	})
+	return footPrints, nil
 }

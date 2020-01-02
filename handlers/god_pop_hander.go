@@ -2,16 +2,17 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	"github.com/gomodule/redigo/redis"
-	"github.com/nsqio/go-nsq"
 	"godgame/core"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
-	feedpb "laoyuegou.pb/feed/pb"
-	"laoyuegou.pb/imcourier/pb"
 	"strconv"
 	"time"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/gomodule/redigo/redis"
+	"github.com/nsqio/go-nsq"
+	feedpb "laoyuegou.pb/feed/pb"
+	imcourierpb "laoyuegou.pb/imcourier/pb"
 )
 
 type GodImOnline struct {
@@ -26,14 +27,26 @@ func (self *GodImOnline) HandleMessage(msg *nsq.Message) error {
 		icelog.Error(err.Error())
 		return err
 	}
+
+	godID := self.dao.GetGod(message.ClientInfo.ClientId).ID
+	var isGod bool = false
+	if godID > 0 {
+		isGod = true
+	}
+	c := self.dao.Cpool.Get()
+	defer c.Close()
 	// icelog.Debug("记录上下线！：", message.Event, message.ClientInfo.ClientId)
 	if message.Event == imcourierpb.IMEvent_IMEventOnline {
+		if isGod {
+			c.Do("sadd", core.RkOnlineGods(), godID)
+		}
 		self.esUpdate(message.ClientInfo.ClientId, fmt.Sprintf("%s", "lts"))
 	}
 
 	if message.Event == imcourierpb.IMEvent_IMEventOffline && message.ClientInfo.ClientId > 0 {
-		c := self.dao.Cpool.Get()
-		defer c.Close()
+		if isGod {
+			c.Do("srem", core.RkOnlineGods(), godID)
+		}
 		arr, _ := redis.Int64(c.Do("scard", core.RKGodAutoGrabGames(message.ClientInfo.ClientId)))
 		// 已开启自动接单时 计入集合
 
