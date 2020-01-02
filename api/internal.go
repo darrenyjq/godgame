@@ -1100,3 +1100,37 @@ func (gg *GodGame) GetFootPrint(userID int64) ([]*FootPrint, error) {
 	})
 	return footPrints, nil
 }
+
+// 获取大神接单最多的语音介绍和时长
+func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
+	var req godgamepb.GodMostOrderVoiceReq
+	var err error
+	if err = c.Bind(&req); err != nil {
+		return c.RetBadRequestError(err.Error())
+	}
+	god := gg.dao.GetGod(req.GetGodId())
+	if god.Status != constants.GOD_STATUS_PASSED {
+		return c.RetSuccess("非大神用户", nil)
+	}
+	v1s, err := gg.dao.GetGodAllGames(req.GetGodId())
+	if err != nil {
+		c.Error(err.Error())
+		return c.RetSuccess("大神信息获取异常", nil)
+	}
+	var resp godgamepb.GodMostOrderVoiceResp
+	if len(v1s) > 0 {
+		sort.Slice(v1s, func(i, j int) bool {
+			return v1s[i].AcceptNum > v1s[j].AcceptNum
+		})
+		for _, v := range v1s {
+			if v.GrabSwitch == 1 {
+				resp.Data = &godgamepb.GodMostOrderVoiceResp_Data{
+					Voice:         v.Aac,
+					VoiceDuration: v.VoiceDuration,
+				}
+				return c.RetSuccess("success", resp.Data)
+			}
+		}
+	}
+	return c.RetSuccess("success", nil)
+}
