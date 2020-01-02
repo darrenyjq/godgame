@@ -885,6 +885,7 @@ func (gg *GodGame) DxdInternal(c frame.Context) error {
 func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	var req godgamepb.GuessYouLikeReq
 	var err error
+	//过滤参数
 	if err = c.Bind(&req); err != nil {
 		return c.RetBadRequestError(err.Error())
 	} else if req.UserId <= 0 {
@@ -893,7 +894,8 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	userID := req.GetUserId()
 	redisConn := gg.dao.GetPlayRedisPool().Get()
 	defer redisConn.Close()
-	//获取所有审核通过的大神
+
+	//获取所有审核通过的大神的userID
 	gods, err := gg.dao.GetInvialdGod()
 	if err != nil {
 		return c.RetBadRequestError(err.Error())
@@ -902,7 +904,6 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	for _, god := range gods {
 		mapGods[god.UserID] = god.UserID
 	}
-	//过滤
 	returnSlice := make([]int64, 0)
 	//关注的大神
 	resp, err := followpb.List(frame.TODO(), &followpb.ListReq{
@@ -911,10 +912,10 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		Relation: 1,
 		Mid:      userID,
 	})
-	if err != nil || resp == nil || resp.GetErrcode() != 0 || resp.GetData() == nil {
-		return c.RetBadRequestError("内部错误，请稍后重试")
-	}
 	followObjs := make([]*followpb.ListResp_List, 0)
+	if err != nil || resp.GetErrcode() != 0 || resp.GetData() == nil || len(resp.GetData().List) == 0 {
+		goto FootPrint
+	}
 	for _, follow := range resp.GetData().List {
 		if _, ok := mapGods[follow.Mid]; ok {
 			followObj := &followpb.ListResp_List{
@@ -928,24 +929,23 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		return followObjs[i].Photo > followObjs[j].Photo
 	})
 	for _, follow := range followObjs {
-		if len(returnSlice) >= 5 {
-			break
+		if len(returnSlice) < 5 {
+			returnSlice = append(returnSlice, follow.Mid)
 		}
-		returnSlice = append(returnSlice, follow.Mid)
 	}
 	if len(returnSlice) >= 5 {
 		respData := &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
 		}
-		return c.JSON2(StatusOK_V3, "", respData)
+		return c.JSON2(StatusOK_V3, "success", respData)
 	}
-
+FootPrint:
 	//调用php获取用户24小时足迹
 	footPrints, err := gg.GetFootPrint(userID)
-	if err != nil {
-		return c.RetBadRequestError(err.Error())
-	}
 	footPrintObjs := make([]*FootPrint, 0)
+	if err != nil || len(footPrints) == 0 {
+		goto OrderList
+	}
 	for _, footPrint := range footPrints {
 		if _, ok := mapGods[footPrint.UserId]; ok {
 			footPrintObj := &FootPrint{
@@ -956,25 +956,25 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		}
 	}
 	for _, footPrint := range footPrintObjs {
-		if len(returnSlice) >= 5 {
-			break
+		if len(returnSlice) < 5 {
+			returnSlice = append(returnSlice, footPrint.UserId)
 		}
-		returnSlice = append(returnSlice, footPrint.UserId)
 	}
 	if len(returnSlice) >= 5 {
 		respData := &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
 		}
-		return c.JSON2(StatusOK_V3, "", respData)
+		return c.JSON2(StatusOK_V3, "success", respData)
 	}
+OrderList:
 	//下过单的大神
 	resp2, err := plorderpb.OrderList(frame.TODO(), &plorderpb.OrderListReq{
 		UserId: userID,
 	})
-	if err != nil || resp2 == nil || resp2.GetErrcode() != 0 || resp2.GetData() == nil {
-		return c.RetBadRequestError("rpc 调用plorder失败")
-	}
 	orderObjs := make([]*plorderpb.OrderListResp_Data_List, 0)
+	if err != nil || resp2.GetErrcode() != 0 || len(resp2.GetData().List) == 0 {
+		goto OnLineGod
+	}
 	for _, order := range resp2.GetData().List {
 		if _, ok := mapGods[order.GodId]; ok {
 			orderObj := &plorderpb.OrderListResp_Data_List{
@@ -985,43 +985,48 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		}
 	}
 	for _, order := range orderObjs {
-		if len(returnSlice) >= 5 {
-			break
+		if len(returnSlice) < 5 {
+			returnSlice = append(returnSlice, order.GodId)
 		}
-		returnSlice = append(returnSlice, order.GodId)
 	}
 	if len(returnSlice) >= 5 {
 		respData := &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
 		}
-		return c.JSON2(StatusOK_V3, "", respData)
+		return c.JSON2(StatusOK_V3, "success", respData)
 	}
+OnLineGod:
 	//在线的大神
 	onlineGods, _ := redis.Int64s(redisConn.Do("SMEMBERS", core.RkOnlineGods()))
+	if len(onlineGods) == 0 {
+		goto End
+	}
 	for _, onlineGod := range onlineGods {
-		if len(returnSlice) >= 5 {
-			break
+		if len(returnSlice) < 5 {
+			returnSlice = append(returnSlice, onlineGod)
 		}
-		returnSlice = append(returnSlice, onlineGod)
 	}
 	if len(returnSlice) >= 5 {
 		respData := &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
 		}
-		return c.JSON2(StatusOK_V3, "", respData)
+		return c.JSON2(StatusOK_V3, "success", respData)
 	}
+End:
 	respData := &godgamepb.GuessYouLikeResp_Data{
 		GodIds: returnSlice,
 	}
-	return c.JSON2(StatusOK_V3, "", respData)
+	return c.JSON2(StatusOK_V3, "success", respData)
 
 }
 
 type FootPrintResp struct {
-	Errcode int          `json:"errcode"`
-	Data    []*FootPrint `json:"data"`
+	Errcode int                `json:"errcode"`
+	Data    *FootPrintRespData `json:"data"`
 }
-
+type FootPrintRespData struct {
+	Data []*FootPrint `json:"data"`
+}
 type FootPrint struct {
 	UserId int64 `json:"id"`
 	Time   int64 `json:"time"`
@@ -1086,15 +1091,27 @@ func (gg *GodGame) GetFootPrint(userID int64) ([]*FootPrint, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetch error: reading %s: %v", reqURL, err)
 	}
-	var ft = &FootPrintResp{}
-	err = json.Unmarshal(b, ft)
+	var FootPrintResp = &FootPrintResp{}
+	err = json.Unmarshal(b, FootPrintResp)
 	if err != nil {
 		return nil, err
 	}
-	if ft.Errcode != 0 {
+	if FootPrintResp.Errcode != 0 {
 		return nil, fmt.Errorf("get footprint fail")
 	}
-	footPrints := ft.Data
+	if len(FootPrintResp.Data.Data) == 0 {
+		return nil, nil
+	}
+	footPrints := make([]*FootPrint, 0)
+	for _, data := range FootPrintResp.Data.Data {
+		if data.Time > time.Now().Unix()-86400 {
+			footPrint := &FootPrint{
+				UserId: data.UserId,
+				Time:   data.Time,
+			}
+			footPrints = append(footPrints, footPrint)
+		}
+	}
 	sort.Slice(footPrints, func(i, j int) bool {
 		return footPrints[i].Time > footPrints[j].Time
 	})
