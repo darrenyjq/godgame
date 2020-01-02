@@ -2,8 +2,12 @@ package core
 
 import (
 	"github.com/gomodule/redigo/redis"
+	"iceberg/frame"
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/godgame/model"
+	godgamepb "laoyuegou.pb/godgame/pb"
+	"play/common/constants"
+	gamepb "play/game/pb"
 )
 
 // 获取大神指定游戏的接单设置
@@ -89,4 +93,36 @@ func (dao *Dao) UpdateAcceptOrderInfo(GodLevel, GameId, GodId int64) error {
 	redisConn.Do("DEL", GodAcceptOrderSettingKey(settings.GodID), RKOneGodGameV1(settings.GodID, settings.GameID), RKSimpleGodGamesKey(settings.GodID))
 	defer redisConn.Close()
 	return nil
+}
+
+func (dao *Dao) GetGodsDiscount(gameId int64, gods []int64) (data map[int64]godgamepb.GetGodsDiscountResp_Data, err error) {
+	tmpCfgV2, err := gamepb.AcceptCfgV2(frame.TODO(), &gamepb.AcceptCfgV2Req{
+		GameId: gameId,
+	})
+	if err != nil {
+		return data, err
+	}
+	data = make(map[int64]godgamepb.GetGodsDiscountResp_Data, 0)
+	for _, godId := range gods {
+		godInfo, err := dao.GetGodSpecialGameV1(godId, gameId)
+		if err != nil {
+			continue
+		}
+		PriceDiscount := int64(1)
+		Price := int64(1)
+		if dao.IsOpenDicount() {
+			PriceDiscount = godInfo.GetPriceDiscount()
+		}
+		if godInfo.PriceType == constants.PW_PRICE_TYPE_BY_OM {
+			Price = godInfo.PeiWanPrice
+		} else {
+			Price = tmpCfgV2.GetData().GetPrices()[godInfo.PriceID]
+		}
+		data[godInfo.GodID] = godgamepb.GetGodsDiscountResp_Data{
+			GodId:    godInfo.GodID,
+			Discount: PriceDiscount,
+			Price:    Price,
+		}
+	}
+	return data, nil
 }

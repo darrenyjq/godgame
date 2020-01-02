@@ -10,6 +10,7 @@ import (
 	"iceberg/frame/icelog"
 	"laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
+	godgamepb "laoyuegou.pb/godgame/pb"
 	"strings"
 	"time"
 )
@@ -17,7 +18,7 @@ import (
 func (gg *GodGame) fetch_god_ids(game_id, gender int64, redisConn redis.Conn) {
 	var keyByGender string
 	now := time.Now()
-	//searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndex)
+	// searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndex)
 	searchService := gg.esClient.Scroll(gg.cfg.ES.PWIndexRedefine)
 	query := elastic.NewBoolQuery().
 		Must(elastic.NewRangeQuery("lts").Lte(now).Gte(now.AddDate(0, 0, gg.cfg.GodLTSDuration))).
@@ -88,4 +89,19 @@ func (gg *GodGame) FillGodList() {
 	}
 exit:
 	icelog.Info("exiting fill_god_list loop...")
+}
+
+// 获取大神列表含带打折信息
+func (gg *GodGame) GetGodsDiscount(c frame.Context) error {
+	var req godgamepb.GetGodsDiscountReq
+	if err := c.Bind(&req); err != nil {
+		return c.RetForbiddenError(errParamMsg)
+	} else if req.GetGameId() == 0 || len(req.GetGods()) == 0 {
+		return c.RetForbiddenError(errParamMsg)
+	}
+	resp, err := gg.dao.GetGodsDiscount(req.GetGameId(), req.GetGods())
+	if err != nil {
+		return c.JSON2(ERR_CODE_BAD_REQUEST, err.Error(), nil)
+	}
+	return c.RetSuccess("success", resp)
 }
