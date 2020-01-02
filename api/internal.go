@@ -934,10 +934,9 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		}
 	}
 	if len(returnSlice) >= 5 {
-		respData := &godgamepb.GuessYouLikeResp_Data{
+		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
-		}
-		return c.JSON2(StatusOK_V3, "success", respData)
+		})
 	}
 FootPrint:
 	//调用php获取用户24小时足迹
@@ -961,10 +960,9 @@ FootPrint:
 		}
 	}
 	if len(returnSlice) >= 5 {
-		respData := &godgamepb.GuessYouLikeResp_Data{
+		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
-		}
-		return c.JSON2(StatusOK_V3, "success", respData)
+		})
 	}
 OrderList:
 	//下过单的大神
@@ -990,10 +988,9 @@ OrderList:
 		}
 	}
 	if len(returnSlice) >= 5 {
-		respData := &godgamepb.GuessYouLikeResp_Data{
+		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
-		}
-		return c.JSON2(StatusOK_V3, "success", respData)
+		})
 	}
 OnLineGod:
 	//在线的大神
@@ -1007,10 +1004,9 @@ OnLineGod:
 		}
 	}
 	if len(returnSlice) >= 5 {
-		respData := &godgamepb.GuessYouLikeResp_Data{
+		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice[:5],
-		}
-		return c.JSON2(StatusOK_V3, "success", respData)
+		})
 	}
 End:
 	respData := &godgamepb.GuessYouLikeResp_Data{
@@ -1081,7 +1077,7 @@ func (gg *GodGame) GetFootPrint(userID int64) ([]*FootPrint, error) {
 	}
 	resp, err := http.Get(reqURL)
 	if err != nil {
-		return nil, fmt.Errorf("获取用户足迹失败")
+		return nil, err
 	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("Bad GET status for %q: %q", reqURL, resp.Status)
@@ -1097,7 +1093,7 @@ func (gg *GodGame) GetFootPrint(userID int64) ([]*FootPrint, error) {
 		return nil, err
 	}
 	if FootPrintResp.Errcode != 0 {
-		return nil, fmt.Errorf("get footprint fail")
+		return nil, fmt.Errorf("get footprint errcode is not 0,it's:%d", FootPrintResp.Errcode)
 	}
 	if len(FootPrintResp.Data.Data) == 0 {
 		return nil, nil
