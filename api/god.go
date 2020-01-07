@@ -731,6 +731,8 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			SortMode("min").
 			GeoDistance("plane")
 		searchService = searchService.SortBy(order)
+		ee, _ := order.Source()
+		icelog.Info(float64(args.Latitude), float64(args.Longitude), "使用附近功能且排序 信息：", ee)
 	}
 
 	resp, err := searchService.From(int(args.Offset)).
