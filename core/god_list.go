@@ -253,8 +253,8 @@ func (dao *Dao) GetGodListsByGender(gameID, gender, offset, limit int64, ctx fra
 }
 
 //GetInvialdGod 获取所有审核通过的大神
-func (dao *Dao) GetInvialdGod() (results []*model.God, err error) {
-	if err := dao.dbr.Model(&model.God{}).Where("status = ?", 1).Scan(&results).Error; err != nil {
+func (dao *Dao) GetInvialdGod(gameID int64) (results []*model.God, err error) {
+	if err := dao.dbr.Table("play_gods").Select("play_gods.*").Joins("inner join play_god_games on play_gods.userid = play_god_games.userid").Where("play_gods.status = ? and play_god_games.gameid = ?", 1, gameID).Scan(&results).Error; err != nil {
 		return nil, err
 	} else if len(results) == 0 {
 		return nil, fmt.Errorf("暂无审核通过的大神")
