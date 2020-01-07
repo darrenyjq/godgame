@@ -641,7 +641,6 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			Lte(gg.dao.GetHeadline(currentUser.UserID, args.Offset)).
 			Gte(time.Now().AddDate(0, 0, gg.cfg.GodLTSDuration)))
 
-	// if args.Nearby == 1 && args.Latitude != 0 && args.Longitude != 0 {
 	if args.Latitude != 0 && args.Longitude != 0 {
 		icelog.Info("ES搜索 附近功能")
 		q := elastic.NewGeoDistanceQuery("location2").
@@ -718,6 +717,32 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 			query = query.Must(elastic.NewTermsQuery("price_id", priceCondition...))
 		}
 		searchService = searchService.Query(query).Sort("_score", false).Sort("passedtime", false)
+	} else if args.Type == constants.SORT_TYPE_NEAR {
+		if args.GameId > 0 {
+			query = query.Must(elastic.NewTermQuery("game_id", args.GameId))
+		}
+		if args.Gender != constants.GENDER_UNKNOW {
+			query = query.Must(elastic.NewTermQuery("gender", args.Gender))
+		}
+		if len(levelCondition) > 0 {
+			query = query.Must(elastic.NewTermsQuery("highest_level_id", levelCondition...))
+		}
+		if len(priceCondition) > 0 {
+			query = query.Must(elastic.NewTermsQuery("price_id", priceCondition...))
+		}
+		// 附近的距离要排序
+		if args.Latitude != 0 && args.Longitude != 0 {
+			order := elastic.NewGeoDistanceSort("location2").Point(float64(args.Latitude), float64(args.Longitude)).
+				Order(true).
+				Unit("km").
+				SortMode("avg").
+				GeoDistance("plane")
+
+			searchService = searchService.Query(query).SortBy(order)
+			ee, _ := order.Source()
+			bs, _ := json.Marshal(ee)
+			icelog.Info(float64(args.Latitude), float64(args.Longitude), "使用附近功能且排序 信息：", string(bs))
+		}
 	}
 	src, _ := query.Source()
 	bs, _ := json.Marshal(src)
@@ -738,6 +763,11 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 		if err = json.Unmarshal(*item.Source, &pwObj); err != nil {
 			icelog.Errorf("### %s", err.Error())
 			continue
+		}
+
+		lens := len(item.Sort)
+		if lens > 0 {
+			pwObj.Distance = float64(item.Sort[lens-1].(float64))
 		}
 		pwObjs = append(pwObjs, pwObj)
 	}
@@ -921,6 +951,7 @@ func (gg *GodGame) getGodItems(pwObjs []model.ESGodGameRedefine) []map[string]in
 			"order_cnt":      god.AcceptNum,
 			"order_cnt_desc": FormatAcceptOrderNumber(god.AcceptNum),
 			"room_id":        roomID,
+			"distance":       pwObj.Distance,
 		})
 	}
 	if len(invalidItems) > 0 {
@@ -999,6 +1030,7 @@ func (gg *GodGame) GodListInternal(c frame.Context) error {
 	pwObjs, hits = gg.queryGods(req, currentUser)
 	gods = gg.getGodItems(pwObjs)
 	if hits < req.Limit && (req.Gender > 0 || len(req.Price) > 0 || len(req.Level) > 0) {
+
 		recGods = gg.getGodItems(gg.queryRecommendGods(req, currentUser))
 	}
 	return c.JSON2(StatusOK_V3, "", map[string]interface{}{
