@@ -723,6 +723,16 @@ func (gg *GodGame) queryGods(args godgamepb.GodListReq, currentUser model.Curren
 	bs, _ := json.Marshal(src)
 	icelog.Infof("_doc ### %d query:%s, gameid:%d, type:%d", currentUser.UserID, string(bs), args.GameId, args.Type)
 
+	// 附近的距离要排序
+	if args.Latitude != 0 && args.Longitude != 0 {
+		order := elastic.NewGeoDistanceSort("location2").Point(float64(args.Latitude), float64(args.Longitude)).
+			Order(true).
+			Unit("km").
+			SortMode("min").
+			GeoDistance("plane")
+		searchService = searchService.SortBy(order)
+	}
+
 	resp, err := searchService.From(int(args.Offset)).
 		Size(int(args.Limit)).
 		Pretty(true).
