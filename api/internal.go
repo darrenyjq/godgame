@@ -9,13 +9,13 @@ import (
 
 	"gopkg.in/olivere/elastic.v5"
 	"laoyuegou.com/util"
-	"laoyuegou.pb/game/pb"
+	gamepb "laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
-	"laoyuegou.pb/godgame/pb"
-	"laoyuegou.pb/imapi/pb"
-	"laoyuegou.pb/plorder/pb"
-	"laoyuegou.pb/user/pb"
+	godgamepb "laoyuegou.pb/godgame/pb"
+	imapipb "laoyuegou.pb/imapi/pb"
+	plorderpb "laoyuegou.pb/plorder/pb"
+	userpb "laoyuegou.pb/user/pb"
 )
 
 func (gg *GodGame) Vcard(c frame.Context) error {
@@ -644,7 +644,7 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 	}
 	gods := gg.dao.GetJSYPaiDanGods(req.GetGameId(), req.GetGender())
 	if len(gods) == 0 {
-		return c.JSON2(StatusOK_V3, "暂无空闲大神", 0)
+		return c.JSON2(StatusOK_V3, "暂无空闲大神", nil)
 	}
 	var gameName string
 	if gameInfo, err := gamepb.Record(c, &gamepb.RecordReq{GameId: req.GetGameId()}); err == nil && gameInfo.GetErrcode() == 0 {
