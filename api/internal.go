@@ -5,7 +5,6 @@ import (
 	"godgame/core"
 	"iceberg/frame"
 	"sort"
-	"strconv"
 	"time"
 
 	"gopkg.in/olivere/elastic.v5"
@@ -20,26 +19,24 @@ import (
 )
 
 // 获取对应appId,action的审核versions
-func GetAuditVersions(appId string, action int64) (map[string]struct{}, error) {
+func GetAuditVersions(action int64) (map[string]struct{}, error) {
 	versionMap := make(map[string]struct{})
 	resp, err := userpb.GetAuditVersions(frame.TODO(), &userpb.GetAuditVersionsReq{
-		AppId:  appId,
 		Action: action,
 	})
-	if (resp != nil && resp.GetErrcode() != 0) || err != nil {
+	if err != nil || resp.GetErrcode() != 0 {
 		return nil, err
 	}
-	if resp.GetData() != nil && len(resp.GetData().Versions) > 0 {
-		for _, v := range resp.GetData().Versions {
-			versionMap[FormatAppIdVersion(appId, v)] = struct{}{}
+	if resp.GetData() != nil && len(resp.GetData()) > 0 {
+		for _, v := range resp.GetData() {
+			versionMap[FormatAppIdVersion(v.AppId, v.Version)] = struct{}{}
 		}
 	}
 	return versionMap, nil
 }
 
 func FormatAppIdVersion(appId string, version int64) string {
-	versionStr := strconv.FormatInt(version, 10)
-	return fmt.Sprintf("%s:%s", appId, versionStr)
+	return fmt.Sprintf("%s:%d", appId, version)
 }
 
 func (gg *GodGame) Vcard(c frame.Context) error {
@@ -60,7 +57,7 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 	sort.Sort(v1s)
 
 	appId, version, _ := c.GetClientInfo()
-	resMap, err := GetAuditVersions(appId, 6)
+	resMap, err := GetAuditVersions(6)
 	if err == nil {
 		if _, ok := resMap[FormatAppIdVersion(appId, version)]; ok {
 			return c.RetSuccess("success", nil)
