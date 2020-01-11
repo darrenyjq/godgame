@@ -644,7 +644,9 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 	}
 	gods := gg.dao.GetJSYPaiDanGods(req.GetGameId(), req.GetGender())
 	if len(gods) == 0 {
-		return c.JSON2(StatusOK_V3, "暂无空闲大神", nil)
+		return c.JSON2(StatusOK_V3, "暂无空闲大神", &godgamepb.PaidanResp_Data{
+			Gods:  nil,
+			Count: 0})
 	}
 	var gameName string
 	if gameInfo, err := gamepb.Record(c, &gamepb.RecordReq{GameId: req.GetGameId()}); err == nil && gameInfo.GetErrcode() == 0 {
