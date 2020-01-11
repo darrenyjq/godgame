@@ -920,8 +920,8 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 // 判断全局审核
 func CheckAudit(ctx frame.Context) (bool, error) {
 	resp, err := userpb.CheckAudit(ctx, nil, frame.Header(ctx.Header()))
-	if err != nil || resp.GetErrcode() != 0 {
+	if err != nil || resp.GetErrcode() != 0 || resp.GetData() == nil {
 		return false, err
 	}
-	return resp.GetAllBanned(), nil
+	return resp.GetData().GetAllBanned(), nil
 }
