@@ -18,27 +18,6 @@ import (
 	userpb "laoyuegou.pb/user/pb"
 )
 
-// 获取对应appId,action的审核versions
-func GetAuditVersions(action int64) (map[string]struct{}, error) {
-	versionMap := make(map[string]struct{})
-	resp, err := userpb.GetAuditVersions(frame.TODO(), &userpb.GetAuditVersionsReq{
-		Action: action,
-	})
-	if err != nil || resp.GetErrcode() != 0 {
-		return nil, err
-	}
-	if resp.GetData() != nil && len(resp.GetData()) > 0 {
-		for _, v := range resp.GetData() {
-			versionMap[FormatAppIdVersion(v.AppId, v.Version)] = struct{}{}
-		}
-	}
-	return versionMap, nil
-}
-
-func FormatAppIdVersion(appId string, version int64) string {
-	return fmt.Sprintf("%s:%d", appId, version)
-}
-
 func (gg *GodGame) Vcard(c frame.Context) error {
 	var req godgamepb.VcardReq
 	var err error
@@ -55,13 +34,9 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 		return c.RetSuccess("大神信息获取异常", nil)
 	}
 	sort.Sort(v1s)
-
-	appId, version, _ := c.GetClientInfo()
-	resMap, err := GetAuditVersions(6)
-	if err == nil {
-		if _, ok := resMap[FormatAppIdVersion(appId, version)]; ok {
-			return c.RetSuccess("success", nil)
-		}
+	//增加AppStore判断
+	if check, err := CheckAudit(c); err == nil && check {
+		return c.RetSuccess("success", nil)
 	}
 
 	items := make([]*godgamepb.VcardResp_Data, 0, len(v1s))
@@ -940,4 +915,13 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 		}
 	}
 	return c.RetSuccess("success", nil)
+}
+
+// 判断全局审核
+func CheckAudit(ctx frame.Context) (bool, error) {
+	resp, err := userpb.CheckAudit(ctx, nil, frame.Header(ctx.Header()))
+	if err != nil || resp.GetErrcode() != 0 {
+		return false, err
+	}
+	return resp.GetAllBanned(), nil
 }
