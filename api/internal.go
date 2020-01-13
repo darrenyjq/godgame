@@ -39,6 +39,11 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 		return c.RetSuccess("大神信息获取异常", nil)
 	}
 	sort.Sort(v1s)
+	//增加AppStore判断
+	if check, err := CheckAudit(c); err == nil && check {
+		return c.RetSuccess("success", nil)
+	}
+
 	items := make([]*godgamepb.VcardResp_Data, 0, len(v1s))
 	var item *godgamepb.VcardResp_Data
 	for _, v1 := range v1s {
@@ -649,7 +654,9 @@ func (gg *GodGame) Paidan(c frame.Context) error {
 	}
 	gods := gg.dao.GetJSYPaiDanGods(req.GetGameId(), req.GetGender())
 	if len(gods) == 0 {
-		return c.JSON2(StatusOK_V3, "暂无空闲大神", 0)
+		return c.JSON2(StatusOK_V3, "暂无空闲大神", &godgamepb.PaidanResp_Data{
+			Gods:  nil,
+			Count: 0})
 	}
 	var gameName string
 	if gameInfo, err := gamepb.Record(c, &gamepb.RecordReq{GameId: req.GetGameId()}); err == nil && gameInfo.GetErrcode() == 0 {
@@ -1097,4 +1104,13 @@ func (gg *GodGame) GodMostOrderVoice(c frame.Context) error {
 		}
 	}
 	return c.RetSuccess("success", nil)
+}
+
+// 判断全局审核
+func CheckAudit(ctx frame.Context) (bool, error) {
+	resp, err := userpb.CheckAudit(ctx, nil, frame.Header(ctx.Header()))
+	if err != nil || resp.GetErrcode() != 0 || resp.GetData() == nil {
+		return false, err
+	}
+	return resp.GetData().GetAllBanned(), nil
 }
