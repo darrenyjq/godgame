@@ -4,10 +4,10 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"iceberg/frame"
 	"iceberg/frame/icelog"
+	gamepb "laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
 	godgamepb "laoyuegou.pb/godgame/pb"
-	gamepb "play/game/pb"
 )
 
 // 获取大神指定游戏的接单设置
