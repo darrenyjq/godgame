@@ -39,7 +39,7 @@ func (gg *GodGame) Vcard(c frame.Context) error {
 		return c.RetSuccess("大神信息获取异常", nil)
 	}
 	sort.Sort(v1s)
-	//增加AppStore判断
+	// 增加AppStore判断
 	if check, err := CheckAudit(c); err == nil && check {
 		return c.RetSuccess("success", nil)
 	}
@@ -335,7 +335,7 @@ func (gg *GodGame) SpecialGodOrderSetting(c frame.Context) error {
 	if err = c.Bind(&req); err != nil {
 		return c.JSON2(ERR_CODE_BAD_REQUEST, err.Error(), nil)
 	} else if req.GetGodId() == 0 || req.GetGameId() == 0 {
-		return c.JSON2(ERR_CODE_BAD_REQUEST, err.Error(), nil)
+		return c.JSON2(ERR_CODE_BAD_REQUEST, "", nil)
 	}
 	godGame, err := gg.dao.GetGodSpecialGameV1(req.GetGodId(), req.GetGameId())
 	if err != nil {
@@ -357,6 +357,7 @@ func (gg *GodGame) SpecialGodOrderSetting(c frame.Context) error {
 		GrabSwitch2:    godGame.GrabSwitch2,
 		GrabSwitch3:    godGame.GrabSwitch3,
 		GrabSwitch4:    godGame.GrabSwitch4,
+		PriceDiscount:  int64(godGame.PriceDiscount * 100),
 	})
 }
 
@@ -888,11 +889,11 @@ func (gg *GodGame) DxdInternal(c frame.Context) error {
 	})
 }
 
-//GuessYouLike 猜你喜欢
+// GuessYouLike 猜你喜欢
 func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	var req godgamepb.GuessYouLikeReq
 	var err error
-	//过滤参数
+	// 过滤参数
 	if err = c.Bind(&req); err != nil {
 		return c.RetBadRequestError(err.Error())
 	} else if req.UserId <= 0 {
@@ -905,7 +906,7 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	redisConn := gg.dao.GetPlayRedisPool().Get()
 	defer redisConn.Close()
 
-	//获取所有审核通过的大神的userID
+	// 获取所有审核通过的大神的userID
 	gods, err := gg.dao.GetInvialdGod(gameID)
 	if err != nil {
 		return c.RetBadRequestError(err.Error())
@@ -915,7 +916,7 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		mapGods[god.UserID] = god.UserID
 	}
 	returnSlice := make([]int64, 0)
-	//关注的大神
+	// 关注的大神
 	resp, err := followpb.List(frame.TODO(), &followpb.ListReq{
 		Page:     1,
 		Pagesize: 100,
@@ -929,8 +930,8 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	for _, follow := range resp.GetData().List {
 		if _, ok := mapGods[follow.Mid]; ok {
 			followObj := &followpb.ListResp_List{
-				Mid:   follow.Mid,   //大神ID
-				Photo: follow.Photo, //最后记录时间
+				Mid:   follow.Mid,   // 大神ID
+				Photo: follow.Photo, // 最后记录时间
 			}
 			followObjs = append(followObjs, followObj)
 		}
@@ -948,7 +949,7 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		})
 	}
 FootPrint:
-	//调用php获取用户24小时足迹
+	// 调用php获取用户24小时足迹
 	footPrints, err := gg.GetFootPrint(userID)
 	if err != nil {
 		goto OrderList
@@ -963,7 +964,7 @@ FootPrint:
 		})
 	}
 OrderList:
-	//下过单的大神
+	// 下过单的大神
 	resp2, err := plorderpb.OrderList(frame.TODO(), &plorderpb.OrderListReq{
 		UserId: userID,
 	})
@@ -990,7 +991,7 @@ OrderList:
 		})
 	}
 OnLineGod:
-	//在线的大神
+	// 在线的大神
 	onlineGods, _ := redis.Int64s(redisConn.Do("SMEMBERS", core.RkOnlineGods()))
 	if len(onlineGods) == 0 {
 		goto End
@@ -1017,25 +1018,25 @@ type FootPrintResp struct {
 	Data    []int64 `json:"data"`
 }
 
-//Follows 关注切片
+// Follows 关注切片
 type Follows []*followpb.ListResp_List
 
-//Len 实现sort interface接口Len()
+// Len 实现sort interface接口Len()
 func (a Follows) Len() int {
 	return len(a)
 }
 
-//Swap 实现sort interface接口Swap()
+// Swap 实现sort interface接口Swap()
 func (a Follows) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-//Less 实现sort interface接口Less()
+// Less 实现sort interface接口Less()
 func (a Follows) Less(i, j int) bool {
 	return a[i].Photo < a[j].Photo
 }
 
-//GetFootPrint 获取用户24小时足迹
+// GetFootPrint 获取用户24小时足迹
 func (gg *GodGame) GetFootPrint(userID int64) ([]int64, error) {
 	reqURL := fmt.Sprintf("https://api.lygou.cc/account/internal/user/footprints?user_id=%d", userID)
 	switch gg.cfg.Env.String() {
