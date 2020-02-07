@@ -1266,6 +1266,7 @@ func (dao *Dao) SimpleGodGames(godID int64, hidePirce bool) *godgamepb.SimpleGod
 				continue
 			}
 			uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
+			uniprice = uniprice * int64(v1.PriceDiscount*100) / 100
 		}
 		items = append(items, &godgamepb.SimpleGodGamesResp_Item{
 			GameId: v1.GameID,
