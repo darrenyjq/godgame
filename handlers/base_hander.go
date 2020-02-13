@@ -43,14 +43,14 @@ func (self *BaseHandler) init() {
 		godLevelConsumer.Init2(self.ctx, self.cfg.Nsq.Topic, "god_level", &GodLevelHandler{self.dao})
 	})
 
-	// self.waitGroup.Wrap(func() {
-	// 	godGameImOnline := &mq.NsqConsumer{
-	// 		NsqWriters: self.cfg.IMNsq.Writers,
-	// 		NsqLookups: self.cfg.IMNsq.Lookups,
-	// 	}
-	// 	icelog.Info("启动大神上下线事件监控")
-	// 	godGameImOnline.Init2(self.ctx, self.cfg.IMNsq.Topic, "godgame_time", &GodImOnline{self.dao})
-	// })
+	self.waitGroup.Wrap(func() {
+		godGameImOnline := &mq.NsqConsumer{
+			NsqWriters: self.cfg.IMNsq.Writers,
+			NsqLookups: self.cfg.IMNsq.Lookups,
+		}
+		icelog.Info("启动大神上下线事件监控")
+		godGameImOnline.Init2(self.ctx, self.cfg.IMNsq.Topic, "godgame_time", &GodImOnline{self.dao})
+	})
 
 	// 私聊自动回复
 	self.waitGroup.Wrap(func() {
