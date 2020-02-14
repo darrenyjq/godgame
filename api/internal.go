@@ -951,12 +951,18 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 FootPrint:
 	// 调用php获取用户24小时足迹
 	footPrints, err := gg.GetFootPrint(userID)
+	footPrintObjs := make([]int64, 0)
 	if err != nil {
 		goto OrderList
 	}
+	for _, footPrint := range footPrints {
+		if _, ok := mapGods[footPrint]; ok {
+			footPrintObjs = append(footPrintObjs, footPrint)
+		}
+	}
 	if len(returnSlice) < 5 {
-		for _, footPrint := range footPrints {
-			returnSlice = append(returnSlice, footPrint)
+		for _, footPrintObj := range footPrintObjs {
+			returnSlice = append(returnSlice, footPrintObj)
 		}
 	} else {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
@@ -993,12 +999,18 @@ OrderList:
 OnLineGod:
 	// 在线的大神
 	onlineGods, _ := redis.Int64s(redisConn.Do("SMEMBERS", core.RkOnlineGods()))
+	onlineGodObjs := make([]int64, 0)
 	if len(onlineGods) == 0 {
 		goto End
 	}
+	for _, onlineGod := range onlineGods {
+		if _, ok := mapGods[onlineGod]; ok {
+			onlineGodObjs = append(onlineGodObjs, onlineGod)
+		}
+	}
 	if len(returnSlice) < 5 {
-		for _, onlineGod := range onlineGods {
-			returnSlice = append(returnSlice, onlineGod)
+		for _, onlineGodObj := range onlineGodObjs {
+			returnSlice = append(returnSlice, onlineGodObj)
 		}
 	} else {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
