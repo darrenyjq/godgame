@@ -889,6 +889,11 @@ func (gg *GodGame) DxdInternal(c frame.Context) error {
 	})
 }
 
+type FollowSlice []*Follow
+type Follow struct {
+	GodID, Time int64
+}
+
 // GuessYouLike 猜你喜欢
 func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	var req godgamepb.GuessYouLikeReq
@@ -913,7 +918,7 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	}
 	mapGods := make(map[int64]int64)
 	for _, god := range gods {
-		mapGods[god.UserID] = god.UserID
+		mapGods[god.ID] = god.ID
 	}
 	returnSlice := make([]int64, 0)
 	// 关注的大神
@@ -923,25 +928,27 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		Relation: 1,
 		Mid:      userID,
 	})
-	followObjs := make([]*followpb.ListResp_List, 0)
+	followObjs := make([]*Follow, 0)
 	if err != nil || resp.GetErrcode() != 0 || len(resp.GetData().List) == 0 {
 		goto FootPrint
 	}
+
 	for _, follow := range resp.GetData().List {
-		if _, ok := mapGods[follow.Mid]; ok {
-			followObj := &followpb.ListResp_List{
-				Mid:   follow.Mid,   // 大神ID
-				Photo: follow.Photo, // 最后记录时间
+		god := gg.dao.GetGod(follow.Mid)
+		if _, ok := mapGods[god.ID]; ok {
+			followObj := &Follow{
+				GodID: god.ID,       // 大神ID
+				Time:  follow.Photo, // 最后记录时间
 			}
 			followObjs = append(followObjs, followObj)
 		}
 	}
 	sort.Slice(followObjs, func(i, j int) bool {
-		return followObjs[i].Photo > followObjs[j].Photo
+		return followObjs[i].Time > followObjs[j].Time
 	})
 	if len(returnSlice) < 5 {
 		for _, follow := range followObjs {
-			returnSlice = append(returnSlice, follow.Mid)
+			returnSlice = append(returnSlice, follow.GodID)
 		}
 	} else {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
@@ -956,8 +963,9 @@ FootPrint:
 		goto OrderList
 	}
 	for _, footPrint := range footPrints {
-		if _, ok := mapGods[footPrint]; ok {
-			footPrintObjs = append(footPrintObjs, footPrint)
+		god := gg.dao.GetGod(footPrint)
+		if _, ok := mapGods[god.ID]; ok {
+			footPrintObjs = append(footPrintObjs, god.ID)
 		}
 	}
 	if len(returnSlice) < 5 {
@@ -1025,11 +1033,9 @@ OnLineGod:
 		})
 	}
 End:
-	respData := &godgamepb.GuessYouLikeResp_Data{
-		GodIds: returnSlice,
-	}
-	return c.JSON2(StatusOK_V3, "success", respData)
-
+	return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
+		GodIds: returnSlice[:5],
+	})
 }
 
 func removeRepeatedElement(arr []*plorderpb.OrderListResp_Data_List) (newArr []*plorderpb.OrderListResp_Data_List) {
@@ -1043,7 +1049,10 @@ func removeRepeatedElement(arr []*plorderpb.OrderListResp_Data_List) (newArr []*
 			}
 		}
 		if !repeat {
-			newArr = append(newArr, arr[i])
+			newArr = append(newArr, &plorderpb.OrderListResp_Data_List{
+				GodId:      arr[i].GodId,
+				CreateTime: arr[i].CreateTime,
+			})
 		}
 	}
 	return
