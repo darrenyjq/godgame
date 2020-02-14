@@ -989,7 +989,7 @@ OrderList:
 		if _, ok := mapGods[order.GodId]; ok {
 			orderObj := &plorderpb.OrderListResp_Data_List{
 				GodId:      order.GodId,
-				UpdateTime: order.UpdateTime,
+				CreateTime: order.CreateTime,
 			}
 			orderObjs = append(orderObjs, orderObj)
 		}
