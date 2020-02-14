@@ -973,12 +973,19 @@ OrderList:
 	// 下过单的大神
 	resp2, err := plorderpb.OrderList(frame.TODO(), &plorderpb.OrderListReq{
 		UserId: userID,
+		GameId: gameID,
 	})
 	orderObjs := make([]*plorderpb.OrderListResp_Data_List, 0)
+	orders := make([]*plorderpb.OrderListResp_Data_List, 0)
 	if err != nil || resp2.GetErrcode() != 0 || len(resp2.GetData().List) == 0 {
 		goto OnLineGod
 	}
-	for _, order := range resp2.GetData().List {
+	//去重
+	orders = removeRepeatedElement(resp2.GetData().List)
+	if len(orders) >= 5 {
+		orders = orders[:5]
+	}
+	for _, order := range orders {
 		if _, ok := mapGods[order.GodId]; ok {
 			orderObj := &plorderpb.OrderListResp_Data_List{
 				GodId:      order.GodId,
@@ -1023,6 +1030,23 @@ End:
 	}
 	return c.JSON2(StatusOK_V3, "success", respData)
 
+}
+
+func removeRepeatedElement(arr []*plorderpb.OrderListResp_Data_List) (newArr []*plorderpb.OrderListResp_Data_List) {
+	newArr = make([]*plorderpb.OrderListResp_Data_List, 0)
+	for i := 0; i < len(arr); i++ {
+		repeat := false
+		for j := i + 1; j < len(arr); j++ {
+			if arr[i].GodId == arr[j].GodId {
+				repeat = true
+				break
+			}
+		}
+		if !repeat {
+			newArr = append(newArr, arr[i])
+		}
+	}
+	return
 }
 
 type FootPrintResp struct {
