@@ -1033,6 +1033,11 @@ OnLineGod:
 		})
 	}
 End:
+	if len(returnSlice) < 5 {
+		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
+			GodIds: returnSlice,
+		})
+	}
 	return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
 		GodIds: returnSlice[:5],
 	})
