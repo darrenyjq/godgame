@@ -778,6 +778,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 	v1.GrabSwitch3 = constants.GRAB_SWITCH3_CLOSE
 	v1.GrabSwitch4 = constants.GRAB_SWITCH4_CLOSE
 	v1.GrabSwitch5 = constants.GRAB_SWITCH5_CLOSE
+	v1.PriceDiscount = 1
 	accpetOrderSetting, err := dao.GetGodSpecialAcceptOrderSetting(godID, gameID)
 	if err == nil {
 		v1.PriceID = accpetOrderSetting.PriceID
@@ -788,7 +789,7 @@ func (dao *Dao) GetGodSpecialGameV1(godID, gameID int64) (model.GodGameV1, error
 		v1.GrabSwitch3 = accpetOrderSetting.GrabSwitch3
 		v1.GrabSwitch4 = accpetOrderSetting.GrabSwitch4
 		v1.GrabSwitch5 = accpetOrderSetting.GrabSwitch5
-		v1.PriceDiscount = accpetOrderSetting.PriceDiscount
+		v1.PriceDiscount = accpetOrderSetting.GetPriceDiscount()
 	}
 	v1.GodIcon = godIconUrl
 	if bs, err := json.Marshal(v1); err == nil {
@@ -1266,7 +1267,7 @@ func (dao *Dao) SimpleGodGames(godID int64, hidePirce bool) *godgamepb.SimpleGod
 				continue
 			}
 			uniprice = cfgResp.GetData().GetPrices()[v1.PriceID]
-			uniprice = uniprice * int64(v1.PriceDiscount*100) / 100
+			uniprice = uniprice * v1.GetPriceDiscount() / 100
 		}
 		items = append(items, &godgamepb.SimpleGodGamesResp_Item{
 			GameId: v1.GameID,
