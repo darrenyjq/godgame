@@ -73,6 +73,11 @@ func RKGodInfo(godID int64) string {
 	return fmt.Sprintf("God:{%d}", godID)
 }
 
+// 大神信息根据god_id获取play_god表杭数据
+func RKGodInfoByGodID(godID int64) string {
+	return fmt.Sprintf("GodInfoByGodID:{%d}", godID)
+}
+
 // 大神陪玩品类信息
 func RKGodGameInfo(godID, gameID int64) string {
 	return fmt.Sprintf("God:{%d}:Game:{%d}", godID, gameID)

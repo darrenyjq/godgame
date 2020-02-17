@@ -13,12 +13,12 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	game_const "laoyuegou.pb/game/constants"
-	"laoyuegou.pb/game/pb"
+	gamepb "laoyuegou.pb/game/pb"
 	"laoyuegou.pb/godgame/constants"
 	"laoyuegou.pb/godgame/model"
-	"laoyuegou.pb/godgame/pb"
+	godgamepb "laoyuegou.pb/godgame/pb"
 	plcommentpb "laoyuegou.pb/plcomment/pb"
-	"laoyuegou.pb/plorder/pb"
+	plorderpb "laoyuegou.pb/plorder/pb"
 	purse_pb "laoyuegou.pb/purse/pb"
 )
 
@@ -158,6 +158,24 @@ func (dao *Dao) GetGod(userID int64) model.God {
 	}
 	bs, _ = json.Marshal(god)
 	c.Do("SET", RKGodInfo(userID), string(bs))
+	return god
+}
+
+func (dao *Dao) GetUserIDByGodID(godID int64) *model.God {
+	var god *model.God
+	c := dao.Cpool.Get()
+	defer c.Close()
+	bs, _ := redis.Bytes(c.Do("GET", RKGodInfoByGodID(godID)))
+	err := json.Unmarshal(bs, god)
+	if err == nil {
+		return god
+	}
+	err = dao.dbr.Where("id=?", godID).Scan(god).Error
+	if err != nil {
+		return god
+	}
+	bs, _ = json.Marshal(god)
+	c.Do("SET", RKGodInfoByGodID(godID), string(bs))
 	return god
 }
 
