@@ -357,7 +357,7 @@ func (gg *GodGame) SpecialGodOrderSetting(c frame.Context) error {
 		GrabSwitch2:    godGame.GrabSwitch2,
 		GrabSwitch3:    godGame.GrabSwitch3,
 		GrabSwitch4:    godGame.GrabSwitch4,
-		PriceDiscount:  int64(godGame.PriceDiscount * 100),
+		PriceDiscount:  godGame.GetPriceDiscount(),
 	})
 }
 
