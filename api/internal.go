@@ -939,13 +939,13 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	sort.Slice(followObjs, func(i, j int) bool {
 		return followObjs[i].Photo > followObjs[j].Photo
 	})
-	if len(returnSlice) < 5 {
+	if len(returnSlice) < 20 {
 		for _, follow := range followObjs {
 			returnSlice = append(returnSlice, follow.Mid)
 		}
 	} else {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
-			GodIds: returnSlice[:5],
+			GodIds: returnSlice[:20],
 		})
 	}
 FootPrint:
@@ -960,13 +960,14 @@ FootPrint:
 			footPrintObjs = append(footPrintObjs, footPrint)
 		}
 	}
-	if len(returnSlice) < 5 {
-		for _, footPrintObj := range footPrintObjs {
-			returnSlice = append(returnSlice, footPrintObj)
-		}
-	} else {
+	for _, footPrintObj := range footPrintObjs {
+		returnSlice = append(returnSlice, footPrintObj)
+	}
+	//returnSlice去重
+	returnSlice = removeRepeatedInt64s(returnSlice)
+	if len(returnSlice) >= 20 {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
-			GodIds: returnSlice[:5],
+			GodIds: returnSlice[:20],
 		})
 	}
 OrderList:
@@ -982,8 +983,8 @@ OrderList:
 	}
 	//去重
 	orders = removeRepeatedElement(resp2.GetData().List)
-	if len(orders) >= 5 {
-		orders = orders[:5]
+	if len(orders) >= 20 {
+		orders = orders[:20]
 	}
 	for _, order := range orders {
 		if _, ok := mapGods[order.UserId]; ok {
@@ -995,13 +996,14 @@ OrderList:
 			orderObjs = append(orderObjs, orderObj)
 		}
 	}
-	if len(returnSlice) < 5 {
-		for _, order := range orderObjs {
-			returnSlice = append(returnSlice, order.UserId)
-		}
-	} else {
+	for _, order := range orderObjs {
+		returnSlice = append(returnSlice, order.UserId)
+	}
+	//returnSlice去重
+	returnSlice = removeRepeatedInt64s(returnSlice)
+	if len(returnSlice) >= 20 {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
-			GodIds: returnSlice[:5],
+			GodIds: returnSlice[:20],
 		})
 	}
 OnLineGod:
@@ -1020,23 +1022,24 @@ OnLineGod:
 			onlineGodObjs = append(onlineGodObjs, god.UserID)
 		}
 	}
-	if len(returnSlice) < 5 {
-		for _, onlineGodObj := range onlineGodObjs {
-			returnSlice = append(returnSlice, onlineGodObj)
-		}
-	} else {
+	for _, onlineGodObj := range onlineGodObjs {
+		returnSlice = append(returnSlice, onlineGodObj)
+	}
+	//returnSlice去重
+	returnSlice = removeRepeatedInt64s(returnSlice)
+	if len(returnSlice) >= 20 {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
-			GodIds: returnSlice[:5],
+			GodIds: returnSlice[:20],
 		})
 	}
 End:
-	if len(returnSlice) < 5 {
+	if len(returnSlice) < 20 {
 		return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
 			GodIds: returnSlice,
 		})
 	}
 	return c.JSON2(StatusOK_V3, "success", &godgamepb.GuessYouLikeResp_Data{
-		GodIds: returnSlice[:5],
+		GodIds: returnSlice[:20],
 	})
 }
 
@@ -1056,6 +1059,23 @@ func removeRepeatedElement(arr []*plorderpb.OrderListResp_Data_List) (newArr []*
 				GodId:      arr[i].GodId,
 				CreateTime: arr[i].CreateTime,
 			})
+		}
+	}
+	return
+}
+
+func removeRepeatedInt64s(arr []int64) (newArr []int64) {
+	newArr = make([]int64, 0)
+	for i := 0; i < len(arr); i++ {
+		repeat := false
+		for j := i + 1; j < len(arr); j++ {
+			if arr[i] == arr[j] {
+				repeat = true
+				break
+			}
+		}
+		if !repeat {
+			newArr = append(newArr, arr[i])
 		}
 	}
 	return
