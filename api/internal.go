@@ -1064,21 +1064,17 @@ func removeRepeatedElement(arr []*plorderpb.OrderListResp_Data_List) (newArr []*
 	return
 }
 
-func removeRepeatedInt64s(arr []int64) (newArr []int64) {
-	newArr = make([]int64, 0)
-	for i := 0; i < len(arr); i++ {
-		repeat := false
-		for j := i + 1; j < len(arr); j++ {
-			if arr[i] == arr[j] {
-				repeat = true
-				break
-			}
-		}
-		if !repeat {
-			newArr = append(newArr, arr[i])
+func removeRepeatedInt64s(arr []int64) []int64 {
+	result := []int64{}
+	tempMap := map[int64]byte{}
+	for _, e := range arr {
+		l := len(tempMap)
+		tempMap[e] = 0
+		if len(tempMap) != l {
+			result = append(result, e)
 		}
 	}
-	return
+	return result
 }
 
 type FootPrintResp struct {
