@@ -87,6 +87,10 @@ func RKOneGodGameV1(godID, gameID int64) string {
 	return fmt.Sprintf("GGV1:{%d}:{%d}", godID, gameID)
 }
 
+func RKPHPOneGodGameV1(godID, gameID int64) string {
+	return fmt.Sprintf("PHP_GGV1:{%d}:{%d}", godID, gameID)
+}
+
 // 大神品类申请缓存
 func RKGodGameApply(godID, gameID int64) string {
 	return fmt.Sprintf("GGA:{%d}:{%d}", godID, gameID)
