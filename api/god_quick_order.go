@@ -78,7 +78,7 @@ func (gg *GodGame) ESDeleteQuickOrder(esIDs []string) error {
 			Id(id).
 			Do(context.Background())
 
-		icelog.Info("删除结果：", err, id)
+		icelog.Info("急速接单池 删除结果：", err, id)
 		if err != nil {
 			return err
 		}
