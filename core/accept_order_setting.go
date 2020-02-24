@@ -108,7 +108,7 @@ func (dao *Dao) GetGodsDiscount(gameId int64, gods []int64) (data map[int64]godg
 		if err != nil {
 			continue
 		}
-		PriceDiscount := int64(1)
+		PriceDiscount := int64(100)
 		Price := int64(1)
 		if dao.IsOpenDicount() {
 			PriceDiscount = godInfo.GetPriceDiscount()
