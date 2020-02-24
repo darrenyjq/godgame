@@ -1343,3 +1343,14 @@ func (dao *Dao) GetAutoGrabGames(godId, GameId int64) int64 {
 func (dao *Dao) IsOpenDicount() bool {
 	return dao.Cfg.IsOpenDicount
 }
+
+// 是否有申请通过的品类
+func (dao *Dao) HasAccessGodGame(godId int64) bool {
+	var games model.GodGame
+	err := dao.dbr.Table("play_god_games").Select("gameid").Where("userid=? AND status=?", godId, constants.GOD_GAME_STATUS_PASSED).First(&games).Error
+	if err != nil {
+		icelog.Errorf("Has godgame status [%d] error:%s", godId, err.Error())
+		return false
+	}
+	return true
+}

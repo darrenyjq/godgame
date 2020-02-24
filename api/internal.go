@@ -220,7 +220,7 @@ func (gg *GodGame) GodGameStatus(c frame.Context) error {
 		data.GodStatus = god.Status
 	} else {
 		data.GodStatus = constants.GOD_STATUS_UNAUTHED
-		return c.JSON2(StatusOK_V3, "", &data)
+		// return c.JSON2(StatusOK_V3, "", &data)
 	}
 	if req.GetGameId() > 0 {
 		godGame := gg.dao.GetGodGame(req.GetGodId(), req.GetGameId())
@@ -231,6 +231,12 @@ func (gg *GodGame) GodGameStatus(c frame.Context) error {
 			data.GameStatus = constants.GOD_GAME_STATUS_UNAUTHED
 		}
 		data.HighestLevelId = godGame.HighestLevelID
+	} else {
+		// 只要申请品类通过，就是大神（不考虑身份认证）
+		isGodGame := gg.dao.HasAccessGodGame(req.GetGodId())
+		if isGodGame {
+			data.GameStatus = constants.GOD_GAME_STATUS_PASSED
+		}
 	}
 	return c.JSON2(StatusOK_V3, "", &data)
 }
