@@ -917,10 +917,10 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	if err != nil {
 		return c.RetBadRequestError(err.Error())
 	}
-	mapGods := make(map[int64]int64)
-	for _, god := range gods {
-		mapGods[god.UserID] = god.UserID
-	}
+// 	mapGods := make(map[int64]int64)
+// 	for _, god := range gods {
+// 		mapGods[god.UserID] = god.UserID
+// 	}
 	returnSlice := make([]int64, 0)
 	// 关注的大神
 	resp, err := followpb.List(frame.TODO(), &followpb.ListReq{
@@ -934,13 +934,13 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 		goto FootPrint
 	}
 	for _, follow := range resp.GetData().List {
-		if _, ok := mapGods[follow.Mid]; ok {
+// 		if _, ok := mapGods[follow.Mid]; ok {
 			followObj := &followpb.ListResp_List{
 				Mid:   follow.Mid,   // 用户ID
 				Photo: follow.Photo, // 最后记录时间
 			}
 			followObjs = append(followObjs, followObj)
-		}
+// 		}
 	}
 	sort.Slice(followObjs, func(i, j int) bool {
 		return followObjs[i].Photo > followObjs[j].Photo
@@ -962,9 +962,9 @@ FootPrint:
 		goto OrderList
 	}
 	for _, footPrint := range footPrints {
-		if _, ok := mapGods[footPrint]; ok {
+// 		if _, ok := mapGods[footPrint]; ok {
 			footPrintObjs = append(footPrintObjs, footPrint)
-		}
+// 		}
 	}
 	for _, footPrintObj := range footPrintObjs {
 		returnSlice = append(returnSlice, footPrintObj)
@@ -993,14 +993,14 @@ OrderList:
 		orders = orders[:20]
 	}
 	for _, order := range orders {
-		if _, ok := mapGods[order.UserId]; ok {
+// 		if _, ok := mapGods[order.UserId]; ok {
 			orderObj := &plorderpb.OrderListResp_Data_List{
 				UserId:     order.UserId,
 				GodId:      order.GodId,
 				CreateTime: order.CreateTime,
 			}
 			orderObjs = append(orderObjs, orderObj)
-		}
+// 		}
 	}
 	for _, order := range orderObjs {
 		returnSlice = append(returnSlice, order.UserId)
@@ -1024,9 +1024,9 @@ OnLineGod:
 		if god == nil {
 			continue
 		}
-		if _, ok := mapGods[god.UserID]; ok {
+// 		if _, ok := mapGods[god.UserID]; ok {
 			onlineGodObjs = append(onlineGodObjs, god.UserID)
-		}
+// 		}
 	}
 	for _, onlineGodObj := range onlineGodObjs {
 		returnSlice = append(returnSlice, onlineGodObj)
