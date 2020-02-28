@@ -913,10 +913,10 @@ func (gg *GodGame) GuessYouLike(c frame.Context) error {
 	defer redisConn.Close()
 
 	// 获取所有审核通过的大神的userID
-	gods, err := gg.dao.GetInvialdGod(gameID)
-	if err != nil {
-		return c.RetBadRequestError(err.Error())
-	}
+// 	gods, err := gg.dao.GetInvialdGod(gameID)
+// 	if err != nil {
+// 		return c.RetBadRequestError(err.Error())
+// 	}
 // 	mapGods := make(map[int64]int64)
 // 	for _, god := range gods {
 // 		mapGods[god.UserID] = god.UserID
